@@ -15,20 +15,27 @@ export class StoreModule {
         {
           provide: 'Store',
           useFactory: () => {
-            StoreModule.store = initialize ? initialize(module): createStore(module.reducer, supervisor(module));
-            StoreModule.modulesFn.forEach(fn => fn());
+            if (!StoreModule.store) {
+              StoreModule.store = createStore(module.reducer, supervisor(module));
+              StoreModule.modulesFn.forEach(fn => fn());
+            }
             return StoreModule.store;
           }
         }
       ]
     };
   }
-  static forFeature(module: FeatureModule, initialize?: (store: Store, module: FeatureModule) => void): ModuleWithProviders<StoreModule> {
-    if(!StoreModule.store) {
-      this.modulesFn.push(() => {
-        StoreModule.store.dispatch(actionCreators.loadModule(module));
-      });
+  static forFeature(module: FeatureModule): ModuleWithProviders<StoreModule> {
+    const loadFeatureModule = () => {
+      StoreModule.store.dispatch(actionCreators.loadModule(module));
+    };
+
+    if (!StoreModule.store) {
+      StoreModule.modulesFn.push(loadFeatureModule);
+    } else {
+      loadFeatureModule();
     }
+
     return {
       ngModule: StoreModule,
     };
