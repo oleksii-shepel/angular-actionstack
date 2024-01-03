@@ -11,26 +11,6 @@ const actions = {
   UNREGISTER_EFFECTS: 'UNREGISTER_EFFECTS'
 };
 
-const MAIN_MODULE_DEFAULT = {
-  middlewares: [],
-  reducer: (state: any = {}, action: Action<any>) => state,
-  effects: []
-};
-
-const MODULES_DEFAULT: FeatureModule[] = [];
-
-const PIPELINE_DEFAULT = {
-  middlewares: [],
-  reducer: (state: any = {}, action: Action<any>) => state,
-  effects: []
-};
-
-const ACTION_STREAM_DEFAULT = new ReplaySubject<Observable<Action<any>>>();
-
-const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
-
-const DISPATCHING_DEFAULT = false;
-
 // Define the action creators
 export const actionCreators = {
   initStore: () => ({ type: actions.INIT_STORE }),
@@ -103,6 +83,26 @@ export function supervisor(mainModule: MainModule) {
 }
 
 export function initStore(store: Store, mainModule: MainModule): EnhancedStore {
+  const MAIN_MODULE_DEFAULT = {
+    middlewares: [],
+    reducer: (state: any = {}, action: Action<any>) => state,
+    effects: []
+  };
+
+  const MODULES_DEFAULT: FeatureModule[] = [];
+
+  const PIPELINE_DEFAULT = {
+    middlewares: [],
+    reducer: (state: any = {}, action: Action<any>) => state,
+    effects: []
+  };
+
+  const ACTION_STREAM_DEFAULT = new ReplaySubject<Observable<Action<any>>>();
+
+  const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
+
+  const DISPATCHING_DEFAULT = false;
+
   return {
     ...store,
     mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
