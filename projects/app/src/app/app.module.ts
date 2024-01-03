@@ -39,15 +39,20 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
       deps: [PlatformLocation],
     },
   ],
-  imports: [BrowserModule, FormsModule, AppRoutingModule, StoreModule.forRoot({
-    middlewares: [sequential(thunk), logger, epic],
-    reducer: (state: any = {}, action: Action<any>) => state,
-    effects: [pingEpic],
-  }),
+  imports: [
+    StoreModule.forRoot({
+      middlewares: [sequential(thunk), logger, epic],
+      reducer: (state: any = {}, action: Action<any>) => state,
+      effects: [pingEpic],
+    }),
+    BrowserModule,
+    FormsModule,
+    AppRoutingModule,
     DashboardModule,
     HeroesModule,
     HeroDetailModule,
-    MessagesModule
+    MessagesModule,
+
   ],
   declarations: [
     AppComponent
