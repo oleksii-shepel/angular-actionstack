@@ -1,4 +1,5 @@
 import { Action, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
+import { BehaviorSubject, Observable, ReplaySubject } from "rxjs";
 import { EnhancedStore, FeatureModule, MainModule, SideEffect } from "./types";
 
 const actions = {
@@ -22,9 +23,29 @@ const actionCreators = {
 
 
 export function supervisor(mainModule: MainModule) {
+  const MAIN_MODULE_DEFAULT = {
+    middlewares: [],
+    reducer: (state: any = {}, action: Action<any>) => state,
+    effects: []
+  };
+
+  const MODULES_DEFAULT: FeatureModule[] = [];
+
+  const PIPELINE_DEFAULT = {
+    middlewares: [],
+    reducer: (state: any = {}, action: Action<any>) => state,
+    effects: []
+  };
+
+  const ACTION_STREAM_DEFAULT = new ReplaySubject<Observable<Action<any>>>();
+
+  const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
+
+  const DISPATCHING_DEFAULT = false;
+
   return (createStore: StoreCreator) => (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => {
     // Create the store as usual
-    let store = createStore(reducer, preloadedState, enhancer) as any;
+    let store = createStore(reducer, preloadedState, enhancer) as EnhancedStore;
 
     // Enhance the dispatch function
     const originalDispatch = store.dispatch;
@@ -37,7 +58,15 @@ export function supervisor(mainModule: MainModule) {
         // Handle specific actions
         switch (action.type) {
           case actions.INIT_STORE:
-            store = { ...store, mainModule };
+            store = {
+              ...store,
+              mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
+              modules: MODULES_DEFAULT,
+              pipeline: Object.assign(PIPELINE_DEFAULT, mainModule),
+              actionStream: ACTION_STREAM_DEFAULT,
+              currentState: CURRENT_STATE_DEFAULT,
+              isDispatching: DISPATCHING_DEFAULT
+            };
             break;
           case actions.LOAD_MODULE:
             store = loadModule(store, action.payload);
