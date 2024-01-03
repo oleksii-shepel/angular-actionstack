@@ -12,7 +12,7 @@ const actions = {
 
 // Define the action creators
 const actionCreators = {
-  initStore: () => ({ type: actions.INIT_STORE, payload: module }),
+  initStore: () => ({ type: actions.INIT_STORE }),
   applyMiddlewares: () => ({ type: actions.APPLY_MIDDLEWARES }),
   registerEffects: () => ({ type: actions.REGISTER_EFFECTS }),
   loadModule: (module: FeatureModule) => ({ type: actions.LOAD_MODULE, payload: module }),
