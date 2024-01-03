@@ -12,7 +12,7 @@ const actions = {
 };
 
 // Define the action creators
-const actionCreators = {
+export const actionCreators = {
   initStore: () => ({ type: actions.INIT_STORE }),
   applyMiddlewares: () => ({ type: actions.APPLY_MIDDLEWARES }),
   registerEffects: () => ({ type: actions.REGISTER_EFFECTS }),

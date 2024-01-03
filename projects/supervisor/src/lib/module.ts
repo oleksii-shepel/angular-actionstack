@@ -1,6 +1,6 @@
 import { ModuleWithProviders, NgModule } from "@angular/core";
 import { Store, createStore } from "redux-replica";
-import { loadModule, supervisor } from "./supervisor";
+import { actionCreators, supervisor } from "./supervisor";
 import { FeatureModule, MainModule } from "./types";
 
 @NgModule({})
@@ -26,7 +26,7 @@ export class StoreModule {
   static forFeature(module: FeatureModule, initialize?: (store: Store, module: FeatureModule) => void): ModuleWithProviders<StoreModule> {
     if(!StoreModule.store) {
       this.modulesFn.push(() => {
-        initialize? initialize(StoreModule.store, module) : loadModule(StoreModule.store, module);
+        StoreModule.store.dispatch(actionCreators.loadModule(module));
       });
     }
     return {
