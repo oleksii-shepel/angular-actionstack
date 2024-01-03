@@ -1,5 +1,5 @@
 import { Action, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
-import { BehaviorSubject, Observable, ReplaySubject } from "rxjs";
+import { BehaviorSubject, Observable, ReplaySubject, scan, tap } from "rxjs";
 import { EnhancedStore, FeatureModule, MainModule, SideEffect } from "./types";
 
 const actions = {
@@ -47,6 +47,18 @@ export function supervisor(mainModule: MainModule) {
     // Create the store as usual
     let store = createStore(reducer, preloadedState, enhancer) as EnhancedStore;
 
+    store = {
+      ...store,
+      mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
+      modules: MODULES_DEFAULT,
+      pipeline: Object.assign(PIPELINE_DEFAULT, mainModule),
+      actionStream: ACTION_STREAM_DEFAULT,
+      currentState: CURRENT_STATE_DEFAULT,
+      isDispatching: DISPATCHING_DEFAULT
+    };
+
+    store = applyMiddlewares(store);
+
     // Enhance the dispatch function
     const originalDispatch = store.dispatch;
     store.dispatch = (action: Action<any>) => {
@@ -58,15 +70,6 @@ export function supervisor(mainModule: MainModule) {
         // Handle specific actions
         switch (action.type) {
           case actions.INIT_STORE:
-            store = {
-              ...store,
-              mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
-              modules: MODULES_DEFAULT,
-              pipeline: Object.assign(PIPELINE_DEFAULT, mainModule),
-              actionStream: ACTION_STREAM_DEFAULT,
-              currentState: CURRENT_STATE_DEFAULT,
-              isDispatching: DISPATCHING_DEFAULT
-            };
             break;
           case actions.LOAD_MODULE:
             store = loadModule(store, action.payload);
@@ -75,7 +78,6 @@ export function supervisor(mainModule: MainModule) {
             store = unloadModule(store, action.payload);
             break;
           case actions.APPLY_MIDDLEWARES:
-            store = applyMiddlewares(store);
             break;
           case actions.REGISTER_EFFECTS:
             store = { ...store, pipeline: {...store.pipeline, effects: registerEffects(store) }};
@@ -96,7 +98,14 @@ export function supervisor(mainModule: MainModule) {
     store.dispatch(actionCreators.applyMiddlewares());
     store.dispatch(actionCreators.registerEffects());
 
-    return store;
+    let subscription = store.actionStream.pipe(
+      tap(() => store.isDispatching = true),
+      scan((state, action: any) => store.pipeline.reducer(state, action), store.currentState.value),
+      tap(() => store.isDispatching = false),
+      tap((state: any) => store.currentState.next(state)),
+    ).subscribe()
+
+    return { ...store, subscription };
   };
 }
 

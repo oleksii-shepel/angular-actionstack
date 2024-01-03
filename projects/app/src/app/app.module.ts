@@ -3,10 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 
 import { AppComponent } from './app.component';
-import { DashboardComponent } from './dashboard/dashboard.component';
-import { HeroDetailComponent } from './hero-detail/hero-detail.component';
-import { HeroesComponent } from './heroes/heroes.component';
-import { MessagesComponent } from './messages/messages.component';
 
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import logger from 'redux-logger';
@@ -17,6 +13,10 @@ import { thunk } from 'redux-thunk';
 import { Observable, map } from 'rxjs';
 import { StoreModule } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { HeroDetailModule } from './hero-detail/hero-detail.module';
+import { HeroesModule } from './heroes/heroes.module';
+import { MessagesModule } from './messages/messages.module';
 
 
 const epic = createEpicMiddleware();
@@ -43,13 +43,14 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
     middlewares: [sequential(thunk), logger, epic],
     reducer: (state: any = {}, action: Action<any>) => state,
     effects: [pingEpic],
-  })],
+  }),
+    DashboardModule,
+    HeroesModule,
+    HeroDetailModule,
+    MessagesModule
+  ],
   declarations: [
-    AppComponent,
-    DashboardComponent,
-    HeroesComponent,
-    HeroDetailComponent,
-    MessagesComponent,
+    AppComponent
   ],
   bootstrap: [AppComponent],
 })
