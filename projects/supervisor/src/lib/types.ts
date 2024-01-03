@@ -104,7 +104,6 @@ export interface EnhancedStore {
   getState: () => any;
   addReducer: (featureKey: string, reducer: Reducer) => void;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
-  subscription: Subscription;
   pipeline: {
     middlewares: Middleware[];
     reducer: Reducer;

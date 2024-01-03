@@ -1,6 +1,6 @@
 import { Action, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
 import { BehaviorSubject, Observable, ReplaySubject, scan, tap } from "rxjs";
-import { EnhancedStore, FeatureModule, MainModule, SideEffect } from "./types";
+import { EnhancedStore, FeatureModule, MainModule, SideEffect, Store } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -10,6 +10,26 @@ const actions = {
   REGISTER_EFFECTS: 'REGISTER_EFFECTS',
   UNREGISTER_EFFECTS: 'UNREGISTER_EFFECTS'
 };
+
+const MAIN_MODULE_DEFAULT = {
+  middlewares: [],
+  reducer: (state: any = {}, action: Action<any>) => state,
+  effects: []
+};
+
+const MODULES_DEFAULT: FeatureModule[] = [];
+
+const PIPELINE_DEFAULT = {
+  middlewares: [],
+  reducer: (state: any = {}, action: Action<any>) => state,
+  effects: []
+};
+
+const ACTION_STREAM_DEFAULT = new ReplaySubject<Observable<Action<any>>>();
+
+const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
+
+const DISPATCHING_DEFAULT = false;
 
 // Define the action creators
 export const actionCreators = {
@@ -22,41 +42,14 @@ export const actionCreators = {
 };
 
 
+
 export function supervisor(mainModule: MainModule) {
-  const MAIN_MODULE_DEFAULT = {
-    middlewares: [],
-    reducer: (state: any = {}, action: Action<any>) => state,
-    effects: []
-  };
-
-  const MODULES_DEFAULT: FeatureModule[] = [];
-
-  const PIPELINE_DEFAULT = {
-    middlewares: [],
-    reducer: (state: any = {}, action: Action<any>) => state,
-    effects: []
-  };
-
-  const ACTION_STREAM_DEFAULT = new ReplaySubject<Observable<Action<any>>>();
-
-  const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
-
-  const DISPATCHING_DEFAULT = false;
 
   return (createStore: StoreCreator) => (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => {
     // Create the store as usual
     let store = createStore(reducer, preloadedState, enhancer) as EnhancedStore;
 
-    store = {
-      ...store,
-      mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
-      modules: MODULES_DEFAULT,
-      pipeline: Object.assign(PIPELINE_DEFAULT, mainModule),
-      actionStream: ACTION_STREAM_DEFAULT,
-      currentState: CURRENT_STATE_DEFAULT,
-      isDispatching: DISPATCHING_DEFAULT
-    };
-
+    store = initStore(store, mainModule);
     store = applyMiddlewares(store);
 
     // Enhance the dispatch function
@@ -108,6 +101,18 @@ export function supervisor(mainModule: MainModule) {
     return { ...store, subscription };
   };
 }
+
+export function initStore(store: Store, mainModule: MainModule): EnhancedStore {
+  return {
+    ...store,
+    mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
+    modules: MODULES_DEFAULT,
+    pipeline: Object.assign(PIPELINE_DEFAULT, mainModule),
+    actionStream: ACTION_STREAM_DEFAULT,
+    currentState: CURRENT_STATE_DEFAULT,
+    isDispatching: DISPATCHING_DEFAULT
+  };
+};
 
 export function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
   // Check if the module already exists in the store's modules
