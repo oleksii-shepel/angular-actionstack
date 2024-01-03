@@ -20,7 +20,8 @@
     "module": "ES2022",
     "paths": {
       "supervisor": [
-        "dist/supervisor"
+        "./dist/supervisor",
+        "./projects/supervisor/src/public-api.ts"
       ]
     },
     "useDefineForClassFields": false,
