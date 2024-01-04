@@ -1,6 +1,6 @@
 import { Action, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
 import { BehaviorSubject, Observable, ReplaySubject, scan, tap } from "rxjs";
-import { EnhancedStore, FeatureModule, MainModule, SideEffect, Store } from "./types";
+import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -12,7 +12,7 @@ const actions = {
 };
 
 // Define the action creators
-export const actionCreators = {
+const actionCreators = {
   initStore: () => ({ type: actions.INIT_STORE }),
   applyMiddlewares: () => ({ type: actions.APPLY_MIDDLEWARES }),
   registerEffects: () => ({ type: actions.REGISTER_EFFECTS }),
@@ -21,8 +21,6 @@ export const actionCreators = {
   unregisterEffects: (module: FeatureModule) => ({ type: actions.UNREGISTER_EFFECTS, payload: module }),
 };
 
-
-
 export function supervisor(mainModule: MainModule) {
 
   return (createStore: StoreCreator) => (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => {
@@ -30,46 +28,7 @@ export function supervisor(mainModule: MainModule) {
     let store = createStore(reducer, preloadedState, enhancer) as EnhancedStore;
 
     store = initStore(store, mainModule);
-    store = applyMiddlewares(store);
-
-    // Enhance the dispatch function
-    const originalDispatch = store.dispatch;
-    store.dispatch = (action: Action<any>) => {
-      // Handle Action
-      let result = originalDispatch(action);
-
-      action = action as Action<any>;
-      if(action?.type) {
-        // Handle specific actions
-        switch (action.type) {
-          case actions.INIT_STORE:
-            break;
-          case actions.LOAD_MODULE:
-            store = loadModule(store, action.payload);
-            break;
-          case actions.UNLOAD_MODULE:
-            store = unloadModule(store, action.payload);
-            break;
-          case actions.APPLY_MIDDLEWARES:
-            break;
-          case actions.REGISTER_EFFECTS:
-            store = { ...store, pipeline: {...store.pipeline, effects: registerEffects(store) }};
-            break;
-          case actions.UNREGISTER_EFFECTS:
-            store = { ...store, pipeline: {...store.pipeline, effects: unregisterEffects(store, action.payload) }};
-            break;
-          default:
-            break;
-        }
-      }
-
-      return result;
-    };
-
-    // Initialize the store with the main module
-    store.dispatch(actionCreators.initStore());
-    store.dispatch(actionCreators.applyMiddlewares());
-    store.dispatch(actionCreators.registerEffects());
+    store = registerEffects(store);
 
     let subscription = store.actionStream.pipe(
       tap(() => store.isDispatching = true),
@@ -77,6 +36,8 @@ export function supervisor(mainModule: MainModule) {
       tap(() => store.isDispatching = false),
       tap((state: any) => store.currentState.next(state)),
     ).subscribe()
+
+    store.dispatch(actionCreators.initStore());
 
     return { ...store, subscription };
   };
@@ -121,17 +82,16 @@ export function loadModule(store: EnhancedStore, module: FeatureModule): Enhance
     return store;
   }
 
+  store = setupReducer(store);
+
   // Create a new array with the module added to the store's modules
   const newModules = [...store.modules, module];
-
-  // Setup the reducers
-  const newReducer = setupReducer(store);
 
   // Register the module's effects
   const newEffects = [...store.pipeline.effects, ...module.effects];
 
   // Return a new store with the updated properties
-  return {...store, modules: newModules, pipeline: {...store.pipeline, reducer: newReducer, effects: newEffects}};
+  return { ...store, modules: newModules, pipeline: {...store.pipeline, effects: newEffects }};
 }
 
 export function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
@@ -139,35 +99,35 @@ export function unloadModule(store: EnhancedStore, module: FeatureModule): Enhan
   const newModules = store.modules.filter(m => m.slice !== module.slice);
 
   // Setup the reducers
-  const newReducer = setupReducer(store);
+  store = setupReducer(store);
 
   // Unregister the module's effects
-  const newEffects = unregisterEffects(store, module);
+  store = unregisterEffects(store, module);
 
   // Return a new store with the updated properties
-  return {...store, modules: newModules, pipeline: {...store.pipeline, reducer: newReducer, effects: newEffects}}
+  return { ...store };
 }
 
-function registerEffects(store: EnhancedStore): SideEffect[]  {
+function registerEffects(store: EnhancedStore): EnhancedStore  {
   // Iterate over each module and add its effects to the pipeline
   let effects = store.mainModule.effects ? [...store.mainModule.effects] : [];
   for (const module of store.modules) {
     effects.push(...module.effects);
   }
 
-  return effects;
+  return { ...store, pipeline: { ...store.pipeline, effects } };
 }
 
-function unregisterEffects(store: EnhancedStore, module: FeatureModule): SideEffect[] {
+function unregisterEffects(store: EnhancedStore, module: FeatureModule): EnhancedStore {
   // Create a new array excluding the effects of the module to be unloaded
   const remainingEffects = store.pipeline.effects.filter(effect => !module.effects.includes(effect));
 
   // Return the array of remaining effects
-  return remainingEffects;
+  return { ...store, pipeline: { ...store.pipeline, effects: remainingEffects } };
 }
 
 
-function setupReducer(store: EnhancedStore): Reducer {
+function setupReducer(store: EnhancedStore): EnhancedStore {
   // Get the main module reducer
   const mainReducer = store.mainModule.reducer;
 
@@ -188,7 +148,7 @@ function setupReducer(store: EnhancedStore): Reducer {
     return newState;
   };
 
-  return combinedReducer;
+  return { ...store, pipeline: { ...store.pipeline, reducer: combinedReducer }};
 }
 
 function applyMiddlewares(store: EnhancedStore): EnhancedStore {

@@ -1,14 +1,14 @@
 import { ModuleWithProviders, NgModule } from "@angular/core";
-import { Store, createStore } from "redux-replica";
-import { actionCreators, supervisor } from "./supervisor";
-import { FeatureModule, MainModule } from "./types";
+import { applyMiddleware, compose, createStore } from "redux-replica";
+import { loadModule, supervisor } from "./supervisor";
+import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
 @NgModule({})
 export class StoreModule {
-  static store: any = undefined;
+  static store: EnhancedStore | undefined = undefined;
   static modulesFn: Function[] = [];
 
-  static forRoot(module: MainModule, initialize?: (module: MainModule) => Store): ModuleWithProviders<StoreModule> {
+  static forRoot(module: MainModule): ModuleWithProviders<StoreModule> {
     return {
       ngModule: StoreModule,
       providers: [
@@ -16,7 +16,8 @@ export class StoreModule {
           provide: 'Store',
           useFactory: () => {
             if (!StoreModule.store) {
-              StoreModule.store = createStore(module.reducer, supervisor(module));
+              const enhancer = compose(applyMiddleware(...module.middlewares), supervisor(module));
+              StoreModule.store = createStore(module.reducer, undefined, enhancer) as EnhancedStore;
               StoreModule.modulesFn.forEach(fn => fn());
             }
             return StoreModule.store;
@@ -27,7 +28,7 @@ export class StoreModule {
   }
   static forFeature(module: FeatureModule): ModuleWithProviders<StoreModule> {
     const loadFeatureModule = () => {
-      StoreModule.store.dispatch(actionCreators.loadModule(module));
+      loadModule(StoreModule.store!, module);
     };
 
     if (!StoreModule.store) {
