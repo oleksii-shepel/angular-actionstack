@@ -1,4 +1,4 @@
-import { Action, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
+import { Action, Reducer, StoreCreator, StoreEnhancer } from "redux-replica";
 import { BehaviorSubject, Observable, OperatorFunction, ReplaySubject, concatAll, concatMap, filter, from, map, mergeMap, of, tap } from "rxjs";
 import { EnhancedStore, FeatureModule, MainModule, SideEffect, Store } from "./types";
 
@@ -200,21 +200,6 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
   return { ...store, pipeline: { ...store.pipeline, reducer: combinedReducer }};
 }
 
-function applyMiddlewares(store: EnhancedStore): EnhancedStore {
-  // Define the middleware API
-  const middlewareAPI = {
-    getState: store.getState,
-    dispatch: (action: Action<any>) => store.dispatch(action),
-  };
-
-  // Create a chain of middleware functions
-  const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));
-
-  // Compose the middleware functions and enhance the dispatch function
-  const dispatch = compose(...chain)(store.dispatch);
-
-  return { ...store, dispatch };
-}
 function patchDispatch(store: EnhancedStore): EnhancedStore {
   // Save the original dispatch function
   const originalDispatch = store.dispatch;
