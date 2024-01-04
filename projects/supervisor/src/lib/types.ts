@@ -28,6 +28,10 @@ export interface EnhancedStore {
   getState: () => any;
   addReducer: (featureKey: string, reducer: Reducer) => void;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
+  initStore: (module: MainModule) => void;
+  loadModule: (module: FeatureModule) => void;
+  unloadModule: (module: FeatureModule) => void;
+
   pipeline: {
     middlewares: Middleware[];
     reducer: Reducer;

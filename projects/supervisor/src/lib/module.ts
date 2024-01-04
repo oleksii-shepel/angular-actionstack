@@ -1,6 +1,6 @@
 import { ModuleWithProviders, NgModule } from "@angular/core";
 import { applyMiddleware, compose, createStore } from "redux-replica";
-import { loadModule, supervisor } from "./supervisor";
+import { supervisor } from "./supervisor";
 import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
 @NgModule({})
@@ -28,7 +28,7 @@ export class StoreModule {
   }
   static forFeature(module: FeatureModule): ModuleWithProviders<StoreModule> {
     const loadFeatureModule = () => {
-      loadModule(StoreModule.store!, module);
+      StoreModule.store!.loadModule(module);
     };
 
     if (!StoreModule.store) {

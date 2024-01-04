@@ -23,13 +23,15 @@ const actionCreators = {
 
 export function supervisor(mainModule: MainModule) {
 
-  const runSideEffectsSequentially = (sideEffects: SideEffect[]) => concatMap(([action, state]: [any, any]) =>
-    sideEffects.map((sideEffect: SideEffect) => from(sideEffect(of(action), of(state))))
-  );
+  function runSideEffectsSequentially(sideEffects: SideEffect[]) {
+    return concatMap(([action, state]: [any, any]) =>
+      sideEffects.map((sideEffect: SideEffect) => from(sideEffect(of(action), of(state)))));
+  }
 
-  const runSideEffectsInParallel = (sideEffects: SideEffect[]) => mergeMap(([action, state]: [any, any]) =>
-    sideEffects.map((sideEffect: SideEffect) => from(sideEffect(of(action), of(state))))
-  );
+  function runSideEffectsInParallel(sideEffects: SideEffect[]) {
+    return mergeMap(([action, state]: [any, any]) =>
+      sideEffects.map((sideEffect: SideEffect) => from(sideEffect(of(action), of(state)))));
+  }
 
   function scanWithAction<T, R>(reducer: (acc: R, value: T) => R, seed: R): OperatorFunction<T, [T, R]> {
     return (source: Observable<T>) => source.pipe(
@@ -40,11 +42,23 @@ export function supervisor(mainModule: MainModule) {
     );
   }
 
+  function init(store: EnhancedStore) {
+    return (module: MainModule) => initStore(store, module);
+  }
+
+  function load(store: EnhancedStore) {
+    return (module: FeatureModule) => loadModule(store, module);
+  }
+
+  function unload(store: EnhancedStore) {
+    return (module: FeatureModule) => unloadModule(store, module);
+  }
+
   return (createStore: StoreCreator) => (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => {
-    // Create the store as usual
+
     let store = createStore(reducer, preloadedState, enhancer) as EnhancedStore;
 
-    store = initStore(store, mainModule);
+    store = init(store)(mainModule);
     store = patchDispatch(store);
     store = registerEffects(store);
 
@@ -53,7 +67,7 @@ export function supervisor(mainModule: MainModule) {
       tap(() => store.isDispatching = true),
       scanWithAction(store.pipeline.reducer, store.currentState.value),
       tap(() => store.isDispatching = false),
-      tap(([action, state]) => store.currentState.next(state)),
+      tap(([, state]) => store.currentState.next(state)),
       runSideEffectsSequentially(store.pipeline.effects),
       concatAll(),
       filter(action => action),
@@ -62,11 +76,21 @@ export function supervisor(mainModule: MainModule) {
 
     store.dispatch(actionCreators.initStore());
 
-    return { ...store, subscription };
+    return {
+      subscription,
+      initStore: init,
+      loadModule: load,
+      unloadModule: unload,
+      dispatch: store.dispatch,
+      getState: store.dispatch,
+      addReducer: store.addReducer,
+      subscribe: store.subscribe
+    };
   };
 }
 
 export function initStore(store: Store, mainModule: MainModule): EnhancedStore {
+
   const MAIN_MODULE_DEFAULT = {
     middlewares: [],
     reducer: (state: any = {}, action: Action<any>) => state,
@@ -95,7 +119,7 @@ export function initStore(store: Store, mainModule: MainModule): EnhancedStore {
     actionStream: ACTION_STREAM_DEFAULT,
     currentState: CURRENT_STATE_DEFAULT,
     isDispatching: DISPATCHING_DEFAULT
-  };
+  } as any;
 };
 
 export function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
