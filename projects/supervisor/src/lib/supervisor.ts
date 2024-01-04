@@ -1,6 +1,6 @@
 import { Action, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
-import { BehaviorSubject, Observable, ReplaySubject, scan, tap } from "rxjs";
-import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
+import { BehaviorSubject, Observable, OperatorFunction, ReplaySubject, concatAll, concatMap, filter, from, map, mergeMap, of, tap } from "rxjs";
+import { EnhancedStore, FeatureModule, MainModule, SideEffect, Store } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -23,18 +23,41 @@ const actionCreators = {
 
 export function supervisor(mainModule: MainModule) {
 
+  const runSideEffectsSequentially = (sideEffects: SideEffect[]) => concatMap(([action, state]: [any, any]) =>
+    sideEffects.map((sideEffect: SideEffect) => from(sideEffect(of(action), of(state))))
+  );
+
+  const runSideEffectsInParallel = (sideEffects: SideEffect[]) => mergeMap(([action, state]: [any, any]) =>
+    sideEffects.map((sideEffect: SideEffect) => from(sideEffect(of(action), of(state))))
+  );
+
+  function scanWithAction<T, R>(reducer: (acc: R, value: T) => R, seed: R): OperatorFunction<T, [T, R]> {
+    return (source: Observable<T>) => source.pipe(
+      map(value => {
+        const newState = reducer(seed, value);
+        return [value, newState] as [T, R];
+      })
+    );
+  }
+
   return (createStore: StoreCreator) => (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => {
     // Create the store as usual
     let store = createStore(reducer, preloadedState, enhancer) as EnhancedStore;
 
     store = initStore(store, mainModule);
+    store = patchDispatch(store);
     store = registerEffects(store);
 
     let subscription = store.actionStream.pipe(
+      concatMap(action => action),
       tap(() => store.isDispatching = true),
-      scan((state, action: any) => store.pipeline.reducer(state, action), store.currentState.value),
+      scanWithAction(store.pipeline.reducer, store.currentState.value),
       tap(() => store.isDispatching = false),
-      tap((state: any) => store.currentState.next(state)),
+      tap(([action, state]) => store.currentState.next(state)),
+      runSideEffectsSequentially(store.pipeline.effects),
+      concatAll(),
+      filter(action => action),
+      tap((action) => store.dispatch(action))
     ).subscribe()
 
     store.dispatch(actionCreators.initStore());
@@ -126,7 +149,6 @@ function unregisterEffects(store: EnhancedStore, module: FeatureModule): Enhance
   return { ...store, pipeline: { ...store.pipeline, effects: remainingEffects } };
 }
 
-
 function setupReducer(store: EnhancedStore): EnhancedStore {
   // Get the main module reducer
   const mainReducer = store.mainModule.reducer;
@@ -166,3 +188,18 @@ function applyMiddlewares(store: EnhancedStore): EnhancedStore {
 
   return { ...store, dispatch };
 }
+function patchDispatch(store: EnhancedStore): EnhancedStore {
+  // Save the original dispatch function
+  const originalDispatch = store.dispatch;
+
+  // Patch the dispatch function
+  const dispatch = function(action: Action<any>) {
+    // Dispatch the action as usual
+    originalDispatch(action);
+    // Also pass the action to the actionStream
+    store.actionStream.next(of(action));
+  };
+
+  return { ...store, dispatch };
+}
+

@@ -23,7 +23,7 @@ const epic = createEpicMiddleware();
 
 const pingEpic = (action$: Observable<any>) => action$.pipe(
   ofType('PING'),
-  map(() => { type: 'PONG' })
+  map(() => ({ type: 'PONG' }))
 );
 
 export function getBaseHref(platformLocation: PlatformLocation): string {
