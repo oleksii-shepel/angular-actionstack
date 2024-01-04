@@ -17,7 +17,7 @@ export class StoreModule {
           useFactory: () => {
             if (!StoreModule.store) {
               const enhancer = compose(supervisor(module), applyMiddleware(...module.middlewares));
-              StoreModule.store = createStore(module.reducer, undefined, enhancer) as EnhancedStore;
+              StoreModule.store = createStore(module.reducer, enhancer) as EnhancedStore;
               StoreModule.modulesFn.forEach(fn => fn());
             }
             return StoreModule.store;
