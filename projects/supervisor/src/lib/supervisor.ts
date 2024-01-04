@@ -113,13 +113,16 @@ export function initStore(store: Store, mainModule: MainModule): EnhancedStore {
 
   return {
     ...store,
+    initStore: () => { throw new Error('initStore method is not defined'); },
+    loadModule: () =>  { throw new Error('loadModule method is not defined'); },
+    unloadModule: () => { throw new Error('unloadModule method is not defined'); },
     mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
     modules: MODULES_DEFAULT,
     pipeline: Object.assign(PIPELINE_DEFAULT, mainModule),
     actionStream: ACTION_STREAM_DEFAULT,
     currentState: CURRENT_STATE_DEFAULT,
     isDispatching: DISPATCHING_DEFAULT
-  } as any;
+  };
 };
 
 export function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
