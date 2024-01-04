@@ -89,7 +89,7 @@ export function supervisor(mainModule: MainModule) {
   };
 }
 
-export function initStore(store: Store, mainModule: MainModule): EnhancedStore {
+function initStore(store: Store, mainModule: MainModule): EnhancedStore {
 
   const MAIN_MODULE_DEFAULT = {
     middlewares: [],
@@ -125,7 +125,7 @@ export function initStore(store: Store, mainModule: MainModule): EnhancedStore {
   };
 };
 
-export function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
+function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
   // Check if the module already exists in the store's modules
   if (store.modules.some(m => m.slice === module.slice)) {
     // If the module already exists, return the store without changes
@@ -144,7 +144,7 @@ export function loadModule(store: EnhancedStore, module: FeatureModule): Enhance
   return { ...store, modules: newModules, pipeline: {...store.pipeline, effects: newEffects }};
 }
 
-export function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
+function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
   // Create a new array with the module removed from the store's modules
   const newModules = store.modules.filter(m => m.slice !== module.slice);
 
