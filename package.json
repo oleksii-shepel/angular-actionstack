@@ -20,7 +20,7 @@
     "@angular/router": "^16.2.0",
     "redux-logger": "^3.0.6",
     "redux-observable": "^3.0.0-rc.2",
-    "redux-replica": "file:redux-replica-1.0.0.tgz",
+    "redux-replica": "file:redux-replica-1.0.1.tgz",
     "redux-sequential": "file:redux-sequential-1.0.1.tgz",
     "redux-thunk": "^3.1.0",
     "rxjs": "~7.8.0",

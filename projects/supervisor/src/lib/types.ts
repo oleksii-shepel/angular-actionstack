@@ -16,18 +16,14 @@ export interface MainModule {
 }
 
 export interface Store {
-  dispatch: (action: Action<any>) => any;
+  dispatch: (action: any) => any;
   getState: () => any;
   addReducer: (featureKey: string, reducer: Reducer) => void;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
 }
 
 
-export interface EnhancedStore {
-  dispatch: (action: Action<any>) => any;
-  getState: () => any;
-  addReducer: (featureKey: string, reducer: Reducer) => void;
-  subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
+export interface EnhancedStore extends Store {
   initStore: (module: MainModule) => void;
   loadModule: (module: FeatureModule) => void;
   unloadModule: (module: FeatureModule) => void;

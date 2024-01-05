@@ -8,8 +8,6 @@ import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import logger from 'redux-logger';
 import { createEpicMiddleware, ofType } from 'redux-observable';
 import { Action } from 'redux-replica';
-import { sequential } from 'redux-sequential';
-import { thunk } from 'redux-thunk';
 import { Observable, map } from 'rxjs';
 import { StoreModule } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
@@ -41,7 +39,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
   ],
   imports: [
     StoreModule.forRoot({
-      middlewares: [sequential(thunk), logger, epic],
+      middlewares: [epic, logger],
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [pingEpic],
     }),

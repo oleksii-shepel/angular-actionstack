@@ -1,5 +1,5 @@
 import { Component, Inject } from '@angular/core';
-import { Store } from 'redux-replica';
+import { Store, createAction } from 'supervisor';
 
 @Component({
   selector: 'app-root',
@@ -10,6 +10,9 @@ export class AppComponent {
   title = 'Tour of Heroes';
 
   constructor(@Inject('Store') store: Store) {
+    store.subscribe((state) => console.log(state));
     store.dispatch({type: 'PING'});
+    let action = createAction('PONG', (...args: any[]) => async (dispatch, getState) => 1);
+    store.dispatch(action());
   }
 }

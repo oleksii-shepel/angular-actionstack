@@ -1,5 +1,5 @@
 import { ModuleWithProviders, NgModule } from "@angular/core";
-import { applyMiddleware, compose, createStore } from "redux-replica";
+import { createStore } from "redux-replica";
 import { supervisor } from "./supervisor";
 import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
@@ -16,8 +16,7 @@ export class StoreModule {
           provide: 'Store',
           useFactory: () => {
             if (!StoreModule.store) {
-              const enhancer = compose(supervisor(module), applyMiddleware(...module.middlewares));
-              StoreModule.store = createStore(module.reducer, enhancer) as EnhancedStore;
+              StoreModule.store = createStore(module.reducer, supervisor(module)) as EnhancedStore;
               StoreModule.modulesFn.forEach(fn => fn());
             }
             return StoreModule.store;

@@ -1,5 +1,5 @@
-import { Action, Reducer, StoreCreator, StoreEnhancer } from "redux-replica";
-import { BehaviorSubject, Observable, OperatorFunction, ReplaySubject, concatAll, concatMap, filter, from, map, mergeMap, of, tap } from "rxjs";
+import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, kindOf } from "redux-replica";
+import { BehaviorSubject, Observable, OperatorFunction, ReplaySubject, combineLatestWith, concatAll, concatMap, filter, from, isObservable, map, mergeMap, of, scan, tap } from "rxjs";
 import { EnhancedStore, FeatureModule, MainModule, SideEffect, Store } from "./types";
 
 const actions = {
@@ -25,12 +25,12 @@ export function supervisor(mainModule: MainModule) {
 
   function runSideEffectsSequentially(sideEffects: SideEffect[]) {
     return concatMap(([action, state]: [any, any]) =>
-      sideEffects.map((sideEffect: SideEffect) => from(sideEffect(of(action), of(state)))));
+      sideEffects.map((sideEffect: SideEffect) => from(sideEffect(action, state))));
   }
 
   function runSideEffectsInParallel(sideEffects: SideEffect[]) {
     return mergeMap(([action, state]: [any, any]) =>
-      sideEffects.map((sideEffect: SideEffect) => from(sideEffect(of(action), of(state)))));
+      sideEffects.map((sideEffect: SideEffect) => from(sideEffect(action, state))));
   }
 
   function scanWithAction<T, R>(reducer: (acc: R, value: T) => R, seed: R): OperatorFunction<T, [T, R]> {
@@ -62,17 +62,25 @@ export function supervisor(mainModule: MainModule) {
     store = patchDispatch(store);
     store = registerEffects(store);
 
-    let subscription = store.actionStream.pipe(
+    let middlewares = applyMiddleware(store);
+
+    let action$ = store.actionStream.asObservable();
+    let state$ = action$.pipe(
       concatMap(action => action),
+      concatMap(action => middlewares(action)),
       tap(() => store.isDispatching = true),
-      scanWithAction(store.pipeline.reducer, store.currentState.value),
+      scan((state, action) => store.pipeline.reducer(state, action), store.currentState.value),
       tap(() => store.isDispatching = false),
-      tap(([, state]) => store.currentState.next(state)),
+      map((state) => of(state))
+    );
+
+    let subscription = action$.pipe(
+      combineLatestWith(state$),
       runSideEffectsSequentially(store.pipeline.effects),
       concatAll(),
       filter(action => action),
       tap((action) => store.dispatch(action))
-    ).subscribe()
+    ).subscribe();
 
     store.dispatch(actionCreators.initStore());
 
@@ -82,7 +90,7 @@ export function supervisor(mainModule: MainModule) {
       loadModule: load,
       unloadModule: unload,
       dispatch: store.dispatch,
-      getState: store.dispatch,
+      getState: store.getState,
       addReducer: store.addReducer,
       subscribe: store.subscribe
     };
@@ -201,17 +209,33 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
 }
 
 function patchDispatch(store: EnhancedStore): EnhancedStore {
-  // Save the original dispatch function
-  const originalDispatch = store.dispatch;
+  let result = { ...store };
 
-  // Patch the dispatch function
-  const dispatch = function(action: Action<any>) {
-    // Dispatch the action as usual
-    originalDispatch(action);
-    // Also pass the action to the actionStream
-    store.actionStream.next(of(action));
+  result.dispatch = (action: Action<any> | AsyncAction<any>) => {
+    // If action is of type Action<any>, return Observable of action
+    if (typeof action === 'object' && (action as any)?.type) {
+      result.actionStream.next(of(action));
+    } else if (typeof action === 'function') {
+      result.actionStream.next(from(action(result.dispatch, result.getState)));
+    } else {
+      throw new Error(`Expected the action to be an object with a 'type' property or a function. Instead, received: '${kindOf(action)}'`);
+    }
   };
 
-  return { ...store, dispatch };
+  return result;
+}
+
+function applyMiddleware(store: EnhancedStore) {
+  const cachedProcessors = store.pipeline.middlewares.map(processor => processor(store));
+  return (action: Action<any>) => {
+    const chain = cachedProcessors.reduceRight((next, processor) => {
+      return (action: Action<any>) => {
+        const result = processor(next)(action);
+        return isObservable(result) ? result : of(result);
+      };
+    }, (action: Action<any>) => of(action)); // Wrap the action in an Observable
+    let result = chain(action);
+    return result;
+  };
 }
 
