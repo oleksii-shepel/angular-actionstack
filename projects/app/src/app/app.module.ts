@@ -6,7 +6,7 @@ import { AppComponent } from './app.component';
 
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import logger from 'redux-logger';
-import { createEpicMiddleware, ofType } from 'redux-observable';
+import { ofType } from 'redux-observable';
 import { Action } from 'redux-replica';
 import { Observable, map } from 'rxjs';
 import { StoreModule } from 'supervisor';
@@ -16,8 +16,6 @@ import { HeroDetailModule } from './hero-detail/hero-detail.module';
 import { HeroesModule } from './heroes/heroes.module';
 import { MessagesModule } from './messages/messages.module';
 
-
-const epic = createEpicMiddleware();
 
 const pingEpic = (action$: Observable<any>) => action$.pipe(
   ofType('PING'),
@@ -39,7 +37,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
   ],
   imports: [
     StoreModule.forRoot({
-      middlewares: [epic, logger],
+      middlewares: [logger],
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [pingEpic],
     }),

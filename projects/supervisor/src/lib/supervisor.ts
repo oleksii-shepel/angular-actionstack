@@ -1,5 +1,5 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, kindOf } from "redux-replica";
-import { BehaviorSubject, Observable, OperatorFunction, ReplaySubject, combineLatestWith, concatAll, concatMap, filter, from, isObservable, map, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, Observable, ReplaySubject, concatMap, filter, from, isObservable, mergeMap, of, scan, shareReplay, tap, withLatestFrom } from "rxjs";
 import { EnhancedStore, FeatureModule, MainModule, SideEffect, Store } from "./types";
 
 const actions = {
@@ -24,22 +24,17 @@ const actionCreators = {
 export function supervisor(mainModule: MainModule) {
 
   function runSideEffectsSequentially(sideEffects: SideEffect[]) {
-    return concatMap(([action, state]: [any, any]) =>
-      sideEffects.map((sideEffect: SideEffect) => from(sideEffect(action, state))));
+    return ([action, state]: [any, any]) =>
+      from(sideEffects).pipe(
+        concatMap((sideEffect: SideEffect) => from(sideEffect(action, state)))
+      );
   }
 
   function runSideEffectsInParallel(sideEffects: SideEffect[]) {
-    return mergeMap(([action, state]: [any, any]) =>
-      sideEffects.map((sideEffect: SideEffect) => from(sideEffect(action, state))));
-  }
-
-  function scanWithAction<T, R>(reducer: (acc: R, value: T) => R, seed: R): OperatorFunction<T, [T, R]> {
-    return (source: Observable<T>) => source.pipe(
-      map(value => {
-        const newState = reducer(seed, value);
-        return [value, newState] as [T, R];
-      })
-    );
+    return ([action, state]: [any, any]) =>
+      from(sideEffects).pipe(
+        mergeMap((sideEffect: SideEffect) => from(sideEffect(action, state)))
+      );
   }
 
   function init(store: EnhancedStore) {
@@ -71,13 +66,12 @@ export function supervisor(mainModule: MainModule) {
       tap(() => store.isDispatching = true),
       scan((state, action) => store.pipeline.reducer(state, action), store.currentState.value),
       tap(() => store.isDispatching = false),
-      map((state) => of(state))
+      shareReplay(1)
     );
 
     let subscription = action$.pipe(
-      combineLatestWith(state$),
-      runSideEffectsSequentially(store.pipeline.effects),
-      concatAll(),
+      withLatestFrom(state$),
+      concatMap(runSideEffectsSequentially(store.pipeline.effects)),
       filter(action => action),
       tap((action) => store.dispatch(action))
     ).subscribe();
