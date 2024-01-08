@@ -1,24 +1,11 @@
 # Supervisor
+The Supervisor is a robust store enhancer designed for Redux-like stores, specifically tailored for Angular environments. It seamlessly integrates with Angular’s module structure, promoting a clean and well-organized codebase.
 
-This library was generated with [Angular CLI](https://github.com/angular/angular-cli) version 16.2.0.
+## Features
+```Module Lifecycle Management```: The Supervisor provides additional methods to manage the lifecycle of modules. It allows for initializing the store with a main module and supports dynamic loading and unloading of feature modules. This flexibility facilitates modular development and enhances code maintainability.
 
-## Code scaffolding
+```Side Effects Handling```: One of the key features of the Supervisor is its support for side effects. Side effects are operations that do not sync immediately with the state transition, such as asynchronous actions or other effects resulting from state changes. Handling side effects is crucial in complex applications where a state change can trigger multiple side effects.
 
-Run `ng generate component component-name --project supervisor` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module --project supervisor`.
-> Note: Don't forget to add `--project supervisor` or else it will be added to the default project in your `angular.json` file. 
+```Redux-like State Management```: The Supervisor is an excellent choice for Angular applications that employ a Redux-like state management pattern. It extends the Redux store capabilities, providing a more robust solution for state management.
 
-## Build
-
-Run `ng build supervisor` to build the project. The build artifacts will be stored in the `dist/` directory.
-
-## Publishing
-
-After building your library with `ng build supervisor`, go to the dist folder `cd dist/supervisor` and run `npm publish`.
-
-## Running unit tests
-
-Run `ng test supervisor` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+In summary, the Supervisor is a powerful tool for managing complex state transitions in Angular applications. It offers a comprehensive solution for handling side effects and organizing code in a modular structure, making it an invaluable asset for modern Angular development.
