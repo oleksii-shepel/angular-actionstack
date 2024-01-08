@@ -1,5 +1,5 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, kindOf } from "redux-replica";
-import { BehaviorSubject, Observable, ReplaySubject, concatMap, filter, from, isObservable, mergeMap, of, scan, shareReplay, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, Observable, ReplaySubject, concatMap, from, isObservable, mergeMap, of, scan, shareReplay, tap, withLatestFrom } from "rxjs";
 import { EnhancedStore, FeatureModule, MainModule, SideEffect, Store } from "./types";
 
 const actions = {
@@ -50,7 +50,6 @@ export function supervisor(mainModule: MainModule) {
   }
 
   return (createStore: StoreCreator) => (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => {
-
     let store = createStore(reducer, preloadedState, enhancer) as EnhancedStore;
 
     store = init(store)(mainModule);
@@ -62,6 +61,7 @@ export function supervisor(mainModule: MainModule) {
     let action$ = store.actionStream.asObservable();
     let state$ = action$.pipe(
       concatMap(action => action),
+      tap(console.log),
       concatMap(action => middlewares(action)),
       tap(() => store.isDispatching = true),
       scan((state, action) => store.pipeline.reducer(state, action), store.currentState.value),
@@ -72,7 +72,6 @@ export function supervisor(mainModule: MainModule) {
     let subscription = action$.pipe(
       withLatestFrom(state$),
       concatMap(runSideEffectsSequentially(store.pipeline.effects)),
-      filter(action => action),
       tap((action) => store.dispatch(action))
     ).subscribe();
 
@@ -210,7 +209,7 @@ function patchDispatch(store: EnhancedStore): EnhancedStore {
     if (typeof action === 'object' && (action as any)?.type) {
       result.actionStream.next(of(action));
     } else if (typeof action === 'function') {
-      result.actionStream.next(from(action(result.dispatch, result.getState)));
+      action(result.dispatch, result.getState);
     } else {
       throw new Error(`Expected the action to be an object with a 'type' property or a function. Instead, received: '${kindOf(action)}'`);
     }
@@ -219,17 +218,19 @@ function patchDispatch(store: EnhancedStore): EnhancedStore {
   return result;
 }
 
+
 function applyMiddleware(store: EnhancedStore) {
   const cachedProcessors = store.pipeline.middlewares.map(processor => processor(store));
   return (action: Action<any>) => {
     const chain = cachedProcessors.reduceRight((next, processor) => {
-      return (action: Action<any>) => {
-        const result = processor(next)(action);
+      return (innerAction: Action<any>) => {
+        const result = processor(next)(innerAction);
         return isObservable(result) ? result : of(result);
       };
-    }, (action: Action<any>) => of(action)); // Wrap the action in an Observable
+    }, (innerAction: Action<any>) => of(innerAction)); // Wrap the action in an Observable
     let result = chain(action);
     return result;
   };
 }
+
 

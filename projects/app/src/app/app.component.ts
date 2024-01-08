@@ -1,5 +1,6 @@
 import { Component, Inject } from '@angular/core';
-import { Store, createAction } from 'supervisor';
+import { createAction } from 'redux-replica';
+import { Store } from 'supervisor';
 
 @Component({
   selector: 'app-root',
