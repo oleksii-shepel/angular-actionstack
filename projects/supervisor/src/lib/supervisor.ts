@@ -1,6 +1,7 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, kindOf } from "redux-replica";
-import { BehaviorSubject, Observable, ReplaySubject, concatMap, from, isObservable, mergeMap, of, scan, shareReplay, tap, withLatestFrom } from "rxjs";
-import { EnhancedStore, FeatureModule, MainModule, SideEffect, Store } from "./types";
+import { BehaviorSubject, Observable, ReplaySubject, concatMap, isObservable, of, scan, shareReplay, tap, withLatestFrom } from "rxjs";
+import { runSideEffectsSequentially } from "./effects";
+import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -22,20 +23,6 @@ const actionCreators = {
 };
 
 export function supervisor(mainModule: MainModule) {
-
-  function runSideEffectsSequentially(sideEffects: SideEffect[]) {
-    return ([action, state]: [any, any]) =>
-      from(sideEffects).pipe(
-        concatMap((sideEffect: SideEffect) => from(sideEffect(action, state)))
-      );
-  }
-
-  function runSideEffectsInParallel(sideEffects: SideEffect[]) {
-    return ([action, state]: [any, any]) =>
-      from(sideEffects).pipe(
-        mergeMap((sideEffect: SideEffect) => from(sideEffect(action, state)))
-      );
-  }
 
   function init(store: EnhancedStore) {
     return (module: MainModule) => initStore(store, module);
