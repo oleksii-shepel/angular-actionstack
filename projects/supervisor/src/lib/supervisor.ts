@@ -1,5 +1,5 @@
-import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, kindOf } from "redux-replica";
-import { BehaviorSubject, Observable, ReplaySubject, concatMap, isObservable, of, scan, shareReplay, tap, withLatestFrom } from "rxjs";
+import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
+import { BehaviorSubject, Observable, ReplaySubject, concatMap, of, scan, shareReplay, tap, withLatestFrom } from "rxjs";
 import { runSideEffectsSequentially } from "./effects";
 import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
 
@@ -41,15 +41,12 @@ export function supervisor(mainModule: MainModule) {
 
     store = init(store)(mainModule);
     store = patchDispatch(store);
+    store = applyMiddleware(store);
     store = registerEffects(store);
-
-    let middlewares = applyMiddleware(store);
 
     let action$ = store.actionStream.asObservable();
     let state$ = action$.pipe(
       concatMap(action => action),
-      tap(console.log),
-      concatMap(action => middlewares(action)),
       tap(() => store.isDispatching = true),
       scan((state, action) => store.pipeline.reducer(state, action), store.currentState.value),
       tap(() => store.isDispatching = false),
@@ -195,10 +192,6 @@ function patchDispatch(store: EnhancedStore): EnhancedStore {
     // If action is of type Action<any>, return Observable of action
     if (typeof action === 'object' && (action as any)?.type) {
       result.actionStream.next(of(action));
-    } else if (typeof action === 'function') {
-      action(result.dispatch, result.getState);
-    } else {
-      throw new Error(`Expected the action to be an object with a 'type' property or a function. Instead, received: '${kindOf(action)}'`);
     }
   };
 
@@ -206,17 +199,23 @@ function patchDispatch(store: EnhancedStore): EnhancedStore {
 }
 
 
-function applyMiddleware(store: EnhancedStore) {
-  const cachedProcessors = store.pipeline.middlewares.map(processor => processor(store));
-  return (action: Action<any>) => {
-    const chain = cachedProcessors.reduceRight((next, processor) => {
-      return (innerAction: Action<any>) => {
-        const result = processor(next)(innerAction);
-        return isObservable(result) ? result : of(result);
-      };
-    }, (innerAction: Action<any>) => of(innerAction)); // Wrap the action in an Observable
-    let result = chain(action);
-    return result;
+function applyMiddleware(store: EnhancedStore): EnhancedStore {
+
+  let dispatch = (action: any, ...args: any[]) => {
+    throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
+  }
+
+  const middlewareAPI = {
+    getState: store.getState,
+    dispatch: (action: any, ...args: any[]) => dispatch(action, ...args)
+  };
+
+  const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));
+  dispatch = compose(...chain)(store.dispatch);
+
+  return {
+    ...store,
+    dispatch
   };
 }
 
