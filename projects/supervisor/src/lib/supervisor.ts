@@ -1,5 +1,5 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
-import { BehaviorSubject, Observable, ReplaySubject, concatMap, of, scan, shareReplay, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, Observable, ReplaySubject, concatMap, of, scan, shareReplay, tap } from "rxjs";
 import { runSideEffectsSequentially } from "./effects";
 import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
 
@@ -54,8 +54,7 @@ export function supervisor(mainModule: MainModule) {
     );
 
     let subscription = actionStream$.pipe(
-      withLatestFrom(state$),
-      concatMap(([action,]) => runSideEffectsSequentially(store.pipeline.effects)([action, state$])),
+      concatMap((action$) => runSideEffectsSequentially(store.pipeline.effects)([action$, state$])),
       concatMap(action => action),
       tap((action) => store.dispatch(action))
     ).subscribe();
