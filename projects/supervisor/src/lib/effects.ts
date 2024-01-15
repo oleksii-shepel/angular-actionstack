@@ -1,5 +1,5 @@
 import { Action, isAction } from 'redux-replica';
-import { OperatorFunction, concatMap, filter, from, merge, mergeMap } from 'rxjs';
+import { Observable, OperatorFunction, concatMap, filter, from, merge, mergeMap, of, withLatestFrom } from 'rxjs';
 import { SideEffect } from './types';
 
 
@@ -28,15 +28,26 @@ export function combine(...effects: SideEffect[]): SideEffect {
 
 
 export function runSideEffectsSequentially(sideEffects: SideEffect[]) {
-  return ([action, state]: [any, any]) =>
-    from(sideEffects).pipe(
-      concatMap((sideEffect: SideEffect) => from(sideEffect(action, state)))
+  return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
+    action$.pipe(
+      withLatestFrom(state$),
+      concatMap(([action, state]) =>
+        from(sideEffects).pipe(
+          concatMap((sideEffect: SideEffect) => of(sideEffect(action$, state$)))
+        )
+      )
     );
 }
 
+
 export function runSideEffectsInParallel(sideEffects: SideEffect[]) {
-  return ([action, state]: [any, any]) =>
-    from(sideEffects).pipe(
-      mergeMap((sideEffect: SideEffect) => from(sideEffect(action, state)))
+  return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
+    action$.pipe(
+      withLatestFrom(state$),
+      mergeMap(([action, state]) =>
+        from(sideEffects).pipe(
+          mergeMap((sideEffect: SideEffect) => of(sideEffect(action$, state$)))
+        )
+      )
     );
 }

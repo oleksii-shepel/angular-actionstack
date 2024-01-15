@@ -10,7 +10,7 @@ import { ofType } from 'redux-observable';
 import { Action } from 'redux-replica';
 import { sequential } from 'redux-sequential';
 import { thunk } from 'redux-thunk';
-import { Observable, map } from 'rxjs';
+import { Observable, ignoreElements, map, tap, withLatestFrom } from 'rxjs';
 import { StoreModule } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -19,9 +19,25 @@ import { HeroesModule } from './heroes/heroes.module';
 import { MessagesModule } from './messages/messages.module';
 
 
-const pingEpic = (action$: Observable<any>) => action$.pipe(
+const pingEpic = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
   ofType('PING'),
+  withLatestFrom(state$),
+  tap(([action, state]) => {}),
   map(() => ({ type: 'PONG' }))
+);
+
+const pingEpic2 = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
+  ofType('PING'),
+  withLatestFrom(state$),
+  tap(([action, state]) => {}),
+  ignoreElements()
+);
+
+const pingEpic3 = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
+  ofType('PING'),
+  withLatestFrom(state$),
+  tap(([action, state]) => {}),
+  map(() => ({ type: 'PONG3' }))
 );
 
 export function getBaseHref(platformLocation: PlatformLocation): string {
@@ -41,7 +57,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
     StoreModule.forRoot({
       middlewares: [sequential(thunk), logger],
       reducer: (state: any = {}, action: Action<any>) => state,
-      effects: [pingEpic],
+      effects: [pingEpic, pingEpic2, pingEpic3],
     }),
     BrowserModule,
     FormsModule,

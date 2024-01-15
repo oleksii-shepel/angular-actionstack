@@ -44,8 +44,8 @@ export function supervisor(mainModule: MainModule) {
     store = applyMiddleware(store);
     store = registerEffects(store);
 
-    let action$ = store.actionStream.asObservable();
-    let state$ = action$.pipe(
+    let actionStream$ = store.actionStream.asObservable();
+    let state$ = actionStream$.pipe(
       concatMap(action => action),
       tap(() => store.isDispatching = true),
       scan((state, action) => store.pipeline.reducer(state, action), store.currentState.value),
@@ -53,9 +53,10 @@ export function supervisor(mainModule: MainModule) {
       shareReplay(1)
     );
 
-    let subscription = action$.pipe(
+    let subscription = actionStream$.pipe(
       withLatestFrom(state$),
-      concatMap(runSideEffectsSequentially(store.pipeline.effects)),
+      concatMap(([action,]) => runSideEffectsSequentially(store.pipeline.effects)([action, state$])),
+      concatMap(action => action),
       tap((action) => store.dispatch(action))
     ).subscribe();
 

@@ -1,7 +1,7 @@
 import { Action, AnyFn, Middleware, Reducer } from "redux-replica";
 import { BehaviorSubject, Observable, Observer, ReplaySubject, Subscription } from "rxjs";
 
-export type SideEffect = (action: Observable<Action<any>>, state?: Observable<any>) => Observable<any>;
+export type SideEffect = (action: Observable<Action<any>>, state: Observable<any>) => Observable<Action<any>>;
 
 export interface FeatureModule {
   slice: string;
