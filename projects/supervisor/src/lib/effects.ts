@@ -1,5 +1,5 @@
 import { Action, isAction } from 'redux-replica';
-import { EMPTY, Observable, OperatorFunction, concatMap, filter, from, ignoreElements, merge, mergeMap, of, tap, toArray, withLatestFrom } from 'rxjs';
+import { EMPTY, Observable, OperatorFunction, concatMap, filter, finalize, from, ignoreElements, merge, mergeMap, of, tap, toArray, withLatestFrom } from 'rxjs';
 import { EnhancedStore, SideEffect } from './types';
 
 
@@ -11,6 +11,7 @@ export function ofType(...types: [string, ...string[]]): OperatorFunction<Action
     return false;
   });
 }
+
 
 export function combine(...effects: SideEffect[]): SideEffect {
   const merger: SideEffect = (...args) => merge(...effects.map((effect) => {
@@ -40,6 +41,7 @@ export function runSideEffectsSequentially(sideEffects: SideEffect[]) {
     );
 }
 
+
 export function runSideEffectsInParallel(sideEffects: SideEffect[]) {
   return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
     action$.pipe(
@@ -53,10 +55,17 @@ export function runSideEffectsInParallel(sideEffects: SideEffect[]) {
     );
 }
 
+
 export function dispatchAction(store: EnhancedStore, actionStack: ActionStack): OperatorFunction<Action<any>, void> {
+
+  actionStack.clear();
+
   return (source: Observable<Action<any>>) =>
     source.pipe(
       concatMap((action: Action<any>) => {
+        // Push the parent action to the stack
+        actionStack.push(action);
+
         // Call the reducer for the action
         store.pipeline.reducer(store.currentState.value, action);
 
@@ -69,11 +78,20 @@ export function dispatchAction(store: EnhancedStore, actionStack: ActionStack): 
             // Push child actions to the stack
             if (childActions.length > 0) {
               return from(childActions).pipe(
-                tap((nextAction: Action<any>) => store.dispatch(nextAction))
+                tap((action) => actionStack.push(action)),
+                tap((nextAction: Action<any>) => store.dispatch(nextAction)),
+                finalize(() => {
+                  // Pop the child action from the stack once it has been dispatched
+                  actionStack.pop();
+                })
               );
             }
 
             return EMPTY;
+          }),
+          finalize(() => {
+            // Pop the parent action from the stack once all its child actions have been processed
+            actionStack.pop();
           })
         );
       }),
@@ -82,31 +100,22 @@ export function dispatchAction(store: EnhancedStore, actionStack: ActionStack): 
 }
 
 
-
-///////////////////////////////////////////////////////////////////////
-//
-//
-///////////////////////////////////////////////////////////////////////
-
 export class ActionStack {
-  private stack: Action<any>[][] = [];
+  private stack: Action<any>[] = [];
 
   get length(): number {
     return this.stack.length;
   }
 
-  push(actions: Action<any>[]): void {
-    if (!this.stack.length || Object.isSealed(this.stack[this.stack.length - 1])) {
-      this.stack.push([]);
-    }
-    this.stack[this.stack.length - 1] = [...this.stack[this.stack.length - 1], ...actions];
+  push(action: Action<any>): void {
+    this.stack.push(action);
   }
 
-  seal(): void {
-    Object.seal(this.stack[this.stack.length - 1]);
-  }
-
-  pop(): Action<any>[] | undefined {
+  pop(): Action<any> | undefined {
     return this.stack.pop();
+  }
+
+  clear() : void {
+    this.stack = [];
   }
 }
