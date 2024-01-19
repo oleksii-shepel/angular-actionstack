@@ -1,5 +1,5 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
-import { BehaviorSubject, Observable, ReplaySubject, concatMap, of, tap } from "rxjs";
+import { BehaviorSubject, ReplaySubject, tap } from "rxjs";
 import { ActionStack, dispatchAction } from "./effects";
 import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
 
@@ -48,7 +48,6 @@ export function supervisor(mainModule: MainModule) {
     let actionStream$ = store.actionStream.asObservable();
 
     let subscription = actionStream$.pipe(
-      concatMap(action$ => action$),
       tap(() => store.isDispatching.next(true)),
       dispatchAction(store, actionStack),
       tap(() => store.isDispatching.next(false))
@@ -85,7 +84,7 @@ function initStore(store: Store, mainModule: MainModule): EnhancedStore {
     effects: []
   };
 
-  const ACTION_STREAM_DEFAULT = new ReplaySubject<Observable<Action<any>>>();
+  const ACTION_STREAM_DEFAULT = new ReplaySubject<Action<any>>();
 
   const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
 
@@ -186,7 +185,7 @@ function patchDispatch(store: EnhancedStore): EnhancedStore {
   result.dispatch = (action: Action<any> | AsyncAction<any>) => {
     // If action is of type Action<any>, return Observable of action
     if (typeof action === 'object' && (action as any)?.type) {
-      result.actionStream.next(of(action));
+      result.actionStream.next(action);
     }
   };
 
