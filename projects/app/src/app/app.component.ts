@@ -12,6 +12,8 @@ export class AppComponent {
   constructor(@Inject('Store') store: Store) {
     store.subscribe((state) => console.log(state));
     store.dispatch({type: 'PING'});
+    store.dispatch({type: 'PING'});
+
     //let action = createAction('PONG', (...args: any[]) => async (dispatch, getState) => 1);
     //store.dispatch(action());
   }

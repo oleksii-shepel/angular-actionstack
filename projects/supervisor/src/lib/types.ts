@@ -37,7 +37,7 @@ export interface EnhancedStore extends Store {
   modules: FeatureModule[];
   actionStream: ReplaySubject<Observable<Action<any>>>;
   currentState: BehaviorSubject<any>;
-  isDispatching: boolean;
+  isDispatching: BehaviorSubject<boolean>;
 }
 
 

@@ -1,6 +1,6 @@
 import { Action, isAction } from 'redux-replica';
-import { Observable, OperatorFunction, concatMap, filter, from, merge, mergeMap, of, withLatestFrom } from 'rxjs';
-import { SideEffect } from './types';
+import { EMPTY, Observable, OperatorFunction, concatMap, filter, from, ignoreElements, merge, mergeMap, of, tap, toArray, withLatestFrom } from 'rxjs';
+import { EnhancedStore, SideEffect } from './types';
 
 
 export function ofType(...types: [string, ...string[]]): OperatorFunction<Action<any>, Action<any>> {
@@ -33,12 +33,12 @@ export function runSideEffectsSequentially(sideEffects: SideEffect[]) {
       withLatestFrom(state$),
       concatMap(([action, state]) =>
         from(sideEffects).pipe(
-          concatMap((sideEffect: SideEffect) => of(sideEffect(action$, state$)))
+          concatMap((sideEffect: SideEffect) => sideEffect(action$, state$))
         )
-      )
+      ),
+      toArray()
     );
 }
-
 
 export function runSideEffectsInParallel(sideEffects: SideEffect[]) {
   return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
@@ -46,8 +46,67 @@ export function runSideEffectsInParallel(sideEffects: SideEffect[]) {
       withLatestFrom(state$),
       mergeMap(([action, state]) =>
         from(sideEffects).pipe(
-          mergeMap((sideEffect: SideEffect) => of(sideEffect(action$, state$)))
+          mergeMap((sideEffect: SideEffect) => sideEffect(action$, state$))
         )
-      )
+      ),
+      toArray()
     );
+}
+
+export function dispatchAction(store: EnhancedStore, actionStack: ActionStack): OperatorFunction<Action<any>, void> {
+  return (source: Observable<Action<any>>) =>
+    source.pipe(
+      concatMap((action: Action<any>) => {
+        // Call the reducer for the action
+        store.pipeline.reducer(store.currentState.value, action);
+
+        // Execute side effects and get an Observable of child actions
+        let action$ = of(action);
+        let state$ = of(store.currentState.value);
+
+        return runSideEffectsSequentially(store.pipeline.effects)([action$, state$]).pipe(
+          concatMap((childActions: Action<any>[]) => {
+            // Push child actions to the stack
+            if (childActions.length > 0) {
+              return from(childActions).pipe(
+                tap((nextAction: Action<any>) => store.dispatch(nextAction))
+              );
+            }
+
+            return EMPTY;
+          })
+        );
+      }),
+      ignoreElements() // Ignore all elements and only pass along termination notification
+    );
+}
+
+
+
+///////////////////////////////////////////////////////////////////////
+//
+//
+///////////////////////////////////////////////////////////////////////
+
+export class ActionStack {
+  private stack: Action<any>[][] = [];
+
+  get length(): number {
+    return this.stack.length;
+  }
+
+  push(actions: Action<any>[]): void {
+    if (!this.stack.length || Object.isSealed(this.stack[this.stack.length - 1])) {
+      this.stack.push([]);
+    }
+    this.stack[this.stack.length - 1] = [...this.stack[this.stack.length - 1], ...actions];
+  }
+
+  seal(): void {
+    Object.seal(this.stack[this.stack.length - 1]);
+  }
+
+  pop(): Action<any>[] | undefined {
+    return this.stack.pop();
+  }
 }

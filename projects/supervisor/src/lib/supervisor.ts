@@ -1,6 +1,6 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
-import { BehaviorSubject, Observable, ReplaySubject, concatMap, of, scan, shareReplay, tap } from "rxjs";
-import { runSideEffectsSequentially } from "./effects";
+import { BehaviorSubject, Observable, ReplaySubject, concatMap, of, tap } from "rxjs";
+import { ActionStack, dispatchAction } from "./effects";
 import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
 
 const actions = {
@@ -44,19 +44,14 @@ export function supervisor(mainModule: MainModule) {
     store = applyMiddleware(store);
     store = registerEffects(store);
 
+    let actionStack = new ActionStack();
     let actionStream$ = store.actionStream.asObservable();
-    let state$ = actionStream$.pipe(
-      concatMap(action => action),
-      tap(() => store.isDispatching = true),
-      scan((state, action) => store.pipeline.reducer(state, action), store.currentState.value),
-      tap(() => store.isDispatching = false),
-      shareReplay(1)
-    );
 
     let subscription = actionStream$.pipe(
-      concatMap((action$) => runSideEffectsSequentially(store.pipeline.effects)([action$, state$])),
-      concatMap(action => action),
-      tap((action) => store.dispatch(action))
+      concatMap(action$ => action$),
+      tap(() => store.isDispatching.next(true)),
+      dispatchAction(store, actionStack),
+      tap(() => store.isDispatching.next(false))
     ).subscribe();
 
     store.dispatch(actionCreators.initStore());
@@ -94,7 +89,7 @@ function initStore(store: Store, mainModule: MainModule): EnhancedStore {
 
   const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
 
-  const DISPATCHING_DEFAULT = false;
+  const DISPATCHING_DEFAULT = new BehaviorSubject(false);
 
   return {
     ...store,
@@ -198,7 +193,6 @@ function patchDispatch(store: EnhancedStore): EnhancedStore {
   return result;
 }
 
-
 function applyMiddleware(store: EnhancedStore): EnhancedStore {
 
   let dispatch = (action: any, ...args: any[]) => {
@@ -207,7 +201,8 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
 
   const middlewareAPI = {
     getState: store.getState,
-    dispatch: (action: any, ...args: any[]) => dispatch(action, ...args)
+    dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
+    isDispatching: store.isDispatching
   };
 
   const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));
