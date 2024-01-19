@@ -53,7 +53,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
   ],
   imports: [
     StoreModule.forRoot({
-      middlewares: [bufferize, logger],
+      middlewares: [logger],
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [pingEpic, pingEpic2, pingEpic3],
     }),
