@@ -9,7 +9,7 @@ import logger from 'redux-logger';
 import { ofType } from 'redux-observable';
 import { Action } from 'redux-replica';
 import { Observable, ignoreElements, map, tap, withLatestFrom } from 'rxjs';
-import { StoreModule, bufferize } from 'supervisor';
+import { StoreModule } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeroDetailModule } from './hero-detail/hero-detail.module';
