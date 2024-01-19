@@ -9,7 +9,7 @@ import logger from 'redux-logger';
 import { ofType } from 'redux-observable';
 import { Action } from 'redux-replica';
 import { Observable, ignoreElements, map, tap, withLatestFrom } from 'rxjs';
-import { StoreModule } from 'supervisor';
+import { StoreModule, bufferize } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeroDetailModule } from './hero-detail/hero-detail.module';
@@ -53,7 +53,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
   ],
   imports: [
     StoreModule.forRoot({
-      middlewares: [logger],
+      middlewares: [bufferize, logger],
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [pingEpic, pingEpic2, pingEpic3],
     }),
