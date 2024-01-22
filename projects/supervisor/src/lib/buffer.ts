@@ -14,7 +14,7 @@ export const createBufferize = (lock: Lock) => {
       await lock.acquire();
 
       try {
-        // Wait until isDispatching is false
+        // Wait until isProcessing is false
         await firstValueFrom((isProcessing).pipe(
           filter((value) => value === false),
           take(1)
