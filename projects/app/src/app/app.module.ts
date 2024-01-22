@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
-import { sequential } from 'redux-sequential';
 
 import { AppComponent } from './app.component';
 
@@ -11,7 +10,7 @@ import { ofType } from 'redux-observable';
 import { Action } from 'redux-replica';
 import { thunk } from 'redux-thunk';
 import { Observable, ignoreElements, map, tap, withLatestFrom } from 'rxjs';
-import { StoreModule } from 'supervisor';
+import { StoreModule, bufferize } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeroDetailModule } from './hero-detail/hero-detail.module';
@@ -55,7 +54,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
   ],
   imports: [
     StoreModule.forRoot({
-      middlewares: [sequential(thunk), logger],
+      middlewares: [bufferize, thunk, logger],
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [pingEpic, pingEpic2, pingEpic3],
     }),

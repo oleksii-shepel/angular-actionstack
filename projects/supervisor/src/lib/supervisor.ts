@@ -1,6 +1,6 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
-import { BehaviorSubject, Subject, tap } from "rxjs";
-import { ActionStack, dispatchAction } from "./effects";
+import { BehaviorSubject, EMPTY, Observable, OperatorFunction, Subject, concatMap, finalize, from, ignoreElements, map, of, tap } from "rxjs";
+import { ActionStack, runSideEffectsSequentially } from "./effects";
 import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
 
 const actions = {
@@ -44,13 +44,12 @@ export function supervisor(mainModule: MainModule) {
     store = applyMiddleware(store);
     store = registerEffects(store);
 
-    let actionStack = new ActionStack();
-    let actionStream$ = store.actionStream.asObservable();
+    let action$ = store.actionStream.asObservable();
 
-    let subscription = actionStream$.pipe(
-      tap(() => store.isDispatching.next(true)),
-      dispatchAction(store, actionStack),
-      tap(() => store.isDispatching.next(false))
+    let subscription = action$.pipe(
+      tap(() => store.isProcessing.next(true)),
+      processAction(store, store.actionStack),
+      tap(() => store.isProcessing.next(false))
     ).subscribe();
 
     store.dispatch(actionCreators.initStore());
@@ -85,6 +84,7 @@ function initStore(store: Store, mainModule: MainModule): EnhancedStore {
   };
 
   const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
+  const ACTION_STACK_DEFAULT = new ActionStack();
 
   const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
 
@@ -99,8 +99,9 @@ function initStore(store: Store, mainModule: MainModule): EnhancedStore {
     modules: MODULES_DEFAULT,
     pipeline: Object.assign(PIPELINE_DEFAULT, mainModule),
     actionStream: ACTION_STREAM_DEFAULT,
+    actionStack: ACTION_STACK_DEFAULT,
     currentState: CURRENT_STATE_DEFAULT,
-    isDispatching: DISPATCHING_DEFAULT
+    isProcessing: DISPATCHING_DEFAULT
   };
 };
 
@@ -179,6 +180,32 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
   return { ...store, pipeline: { ...store.pipeline, reducer: combinedReducer }};
 }
 
+export function processAction(store: EnhancedStore, actionStack: ActionStack): OperatorFunction<Action<any>, void> {
+  return (source: Observable<Action<any>>) => {
+    actionStack.clear();
+    return source.pipe(
+      tap((action: Action<any>) => actionStack.push(action)),
+      map((action) => [action, store.pipeline.reducer(store.currentState.value, action)]),
+      tap(([_, state]) => store.currentState.next(state)),
+      concatMap(([action, state]) => runSideEffectsSequentially(store.pipeline.effects)([of(action), of(state)]).pipe(
+        concatMap((childActions: Action<any>[]) => {
+          if (childActions.length > 0) {
+            return from(childActions).pipe(
+              tap((nextAction: Action<any>) => store.dispatch(nextAction)),
+              finalize(() => actionStack.pop())
+            );
+          }
+
+          return EMPTY;
+        }),
+        finalize(() => actionStack.pop())
+      )),
+      ignoreElements()
+    );
+  }
+}
+
+
 function patchDispatch(store: EnhancedStore): EnhancedStore {
   let result = { ...store };
 
@@ -201,7 +228,8 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
   const middlewareAPI = {
     getState: store.getState,
     dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
-    isDispatching: store.isDispatching
+    actionStack: store.actionStack,
+    isProcessing: store.isProcessing
   };
 
   const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));

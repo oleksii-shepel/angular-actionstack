@@ -1,6 +1,6 @@
 import { Action, isAction } from 'redux-replica';
-import { EMPTY, Observable, OperatorFunction, concatMap, filter, finalize, from, ignoreElements, map, merge, mergeMap, of, tap, toArray, withLatestFrom } from 'rxjs';
-import { EnhancedStore, SideEffect } from './types';
+import { Observable, OperatorFunction, concatMap, filter, from, merge, mergeMap, toArray, withLatestFrom } from 'rxjs';
+import { SideEffect } from './types';
 
 
 export function ofType(...types: [string, ...string[]]): OperatorFunction<Action<any>, Action<any>> {
@@ -56,39 +56,6 @@ export function runSideEffectsInParallel(sideEffects: SideEffect[]) {
 }
 
 
-export function dispatchAction(store: EnhancedStore, actionStack: ActionStack): OperatorFunction<Action<any>, void> {
-
-  actionStack.clear();
-
-  return (source: Observable<Action<any>>) =>
-    source.pipe(
-      tap((action: Action<any>) => actionStack.push(action)),
-      map((action) => [action, store.pipeline.reducer(store.currentState.value, action)]),
-      tap(([action, state]) => store.currentState.next(state)),
-      concatMap(([action, state]) => runSideEffectsSequentially(store.pipeline.effects)([of(action), of(state)]).pipe(
-          concatMap((childActions: Action<any>[]) => {
-            // Push child actions to the stack
-            if (childActions.length > 0) {
-              return from(childActions).pipe(
-                tap((action) => actionStack.push(action)),
-                tap((nextAction: Action<any>) => store.dispatch(nextAction)),
-                finalize(() => {
-                  // Pop the child action from the stack once it has been dispatched
-                  actionStack.pop();
-                })
-              );
-            }
-
-            return EMPTY;
-          }),
-          finalize(() => {
-            // Pop the parent action from the stack once all its child actions have been processed
-            actionStack.pop();
-          })
-      )),
-      ignoreElements() // Ignore all elements and only pass along termination notification
-    );
-}
 
 
 export class ActionStack {
@@ -108,5 +75,9 @@ export class ActionStack {
 
   clear() : void {
     this.stack = [];
+  }
+
+  get actions() {
+    return this.stack;
   }
 }

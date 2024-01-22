@@ -4,10 +4,9 @@ import { filter, firstValueFrom, take } from "rxjs";
 
 // Define your higher-order function
 export const createBufferize = (lock: Lock) => {
-  const bufferize = ({ dispatch, getState, isDispatching } : any) => (next: Function) => async (action: Action<any>) => {
-    const isChildAction = action.meta && action.meta.child;
+  const bufferize = ({ dispatch, getState, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
 
-    if(isChildAction) {
+    if(isProcessing) {
       // If it's a child action, process it immediately
       next(action);
     } else {
@@ -16,7 +15,7 @@ export const createBufferize = (lock: Lock) => {
 
       try {
         // Wait until isDispatching is false
-        await firstValueFrom((isDispatching).pipe(
+        await firstValueFrom((isProcessing).pipe(
           filter((value) => value === false),
           take(1)
         ));
