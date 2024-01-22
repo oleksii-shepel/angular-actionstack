@@ -1,5 +1,5 @@
 import { Action, isAction } from 'redux-replica';
-import { EMPTY, Observable, OperatorFunction, concatMap, filter, finalize, from, ignoreElements, merge, mergeMap, of, tap, toArray, withLatestFrom } from 'rxjs';
+import { EMPTY, Observable, OperatorFunction, concatMap, filter, finalize, from, ignoreElements, map, merge, mergeMap, of, tap, toArray, withLatestFrom } from 'rxjs';
 import { EnhancedStore, SideEffect } from './types';
 
 
@@ -62,18 +62,10 @@ export function dispatchAction(store: EnhancedStore, actionStack: ActionStack): 
 
   return (source: Observable<Action<any>>) =>
     source.pipe(
-      concatMap((action: Action<any>) => {
-        // Push the parent action to the stack
-        actionStack.push(action);
-
-        // Call the reducer for the action
-        store.pipeline.reducer(store.currentState.value, action);
-
-        // Execute side effects and get an Observable of child actions
-        let action$ = of(action);
-        let state$ = of(store.currentState.value);
-
-        return runSideEffectsSequentially(store.pipeline.effects)([action$, state$]).pipe(
+      tap((action: Action<any>) => actionStack.push(action)),
+      map((action) => [action, store.pipeline.reducer(store.currentState.value, action)]),
+      tap(([action, state]) => store.currentState.next(state)),
+      concatMap(([action, state]) => runSideEffectsSequentially(store.pipeline.effects)([of(action), of(state)]).pipe(
           concatMap((childActions: Action<any>[]) => {
             // Push child actions to the stack
             if (childActions.length > 0) {
@@ -93,8 +85,7 @@ export function dispatchAction(store: EnhancedStore, actionStack: ActionStack): 
             // Pop the parent action from the stack once all its child actions have been processed
             actionStack.pop();
           })
-        );
-      }),
+      )),
       ignoreElements() // Ignore all elements and only pass along termination notification
     );
 }

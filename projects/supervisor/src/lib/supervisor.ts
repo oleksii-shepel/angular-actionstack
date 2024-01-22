@@ -1,5 +1,5 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
-import { BehaviorSubject, ReplaySubject, tap } from "rxjs";
+import { BehaviorSubject, Subject, tap } from "rxjs";
 import { ActionStack, dispatchAction } from "./effects";
 import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
 
@@ -84,7 +84,7 @@ function initStore(store: Store, mainModule: MainModule): EnhancedStore {
     effects: []
   };
 
-  const ACTION_STREAM_DEFAULT = new ReplaySubject<Action<any>>();
+  const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
 
   const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
 

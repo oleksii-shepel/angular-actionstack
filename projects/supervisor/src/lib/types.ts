@@ -1,5 +1,5 @@
 import { Action, AnyFn, Middleware, Reducer } from "redux-replica";
-import { BehaviorSubject, Observable, Observer, ReplaySubject, Subscription } from "rxjs";
+import { BehaviorSubject, Observable, Observer, Subject, Subscription } from "rxjs";
 
 export type SideEffect = (action: Observable<Action<any>>, state: Observable<any>) => Observable<Action<any>>;
 
@@ -35,7 +35,7 @@ export interface EnhancedStore extends Store {
   };
   mainModule: MainModule;
   modules: FeatureModule[];
-  actionStream: ReplaySubject<Action<any>>;
+  actionStream: Subject<Action<any>>;
   currentState: BehaviorSubject<any>;
   isDispatching: BehaviorSubject<boolean>;
 }
