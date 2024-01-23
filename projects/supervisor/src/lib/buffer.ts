@@ -4,14 +4,19 @@ import { filter, firstValueFrom, take } from "rxjs";
 
 // Define your higher-order function
 export const createBufferize = (lock: Lock) => {
+  const actionQueue: Action<any>[] = [];
   const bufferize = ({ dispatch, getState, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
 
     if(isProcessing) {
       // If it's a child action, process it immediately
       next(action);
     } else {
+      actionQueue.unshift(action);
+
       // If it's a parent action, acquire the lock
       await lock.acquire();
+
+      action = actionQueue.pop()!;
 
       try {
         // Wait until isProcessing is false
