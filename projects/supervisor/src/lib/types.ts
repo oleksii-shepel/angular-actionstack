@@ -1,6 +1,6 @@
 import { Action, AnyFn, Middleware, Reducer } from "redux-replica";
 import { BehaviorSubject, Observable, Observer, Subject, Subscription } from "rxjs";
-import { ActionStack } from './stack';
+import { ActionStack } from './structures';
 
 export type SideEffect = (action: Observable<Action<any>>, state: Observable<any>, dependencies: Record<string, any>) => Observable<Action<any>>;
 
