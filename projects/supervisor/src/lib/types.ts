@@ -90,7 +90,9 @@ export interface EnhancedStore extends Store {
     middlewares: Middleware[];
     reducer: Reducer;
     effects: SideEffect[];
+    dependencies: Record<string, any>;
   };
+
   mainModule: MainModule;
   modules: FeatureModule[];
   actionStream: Subject<Action<any>>;
@@ -102,7 +104,6 @@ export interface EnhancedStore extends Store {
 
 export type StoreCreator = (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => Store;
 export type StoreEnhancer = (next: StoreCreator) => StoreCreator;
-
 
 
 function isAction(action: any): boolean {

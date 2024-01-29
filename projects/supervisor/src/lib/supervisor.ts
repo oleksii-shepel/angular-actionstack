@@ -1,4 +1,4 @@
-import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, map, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, of, tap } from "rxjs";
 import { runSideEffectsSequentially } from "./effects";
 import { ActionStack } from "./structures";
 import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Reducer, Store, StoreCreator, StoreEnhancer, isPlainObject, kindOf } from "./types";
@@ -289,10 +289,12 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
   return (source: Observable<Action<any>>) => {
     actionStack.clear();
     return source.pipe(
-      tap((action: Action<any>) => actionStack.push(action)),
-      map((action) => [action, store.pipeline.reducer(store.currentState.value, action)]),
-      tap(([_, state]) => store.currentState.next(state)),
-      concatMap(([action, state]) => runSideEffectsSequentially(store.pipeline.effects)([of(action), of(state)]).pipe(
+      concatMap((action: Action<any>) => {
+        actionStack.push(action);
+        let state = store.pipeline.reducer(store.currentState.value, action);
+        store.currentState.next(state);
+
+        return runSideEffectsSequentially(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
         concatMap((childActions: Action<any>[]) => {
           if (childActions.length > 0) {
             return from(childActions).pipe(
@@ -304,7 +306,7 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
           return EMPTY;
         }),
         finalize(() => actionStack.pop())
-      )),
+      )}),
       ignoreElements()
     );
   }

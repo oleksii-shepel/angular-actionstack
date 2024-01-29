@@ -48,13 +48,13 @@ export function combine(...effects: SideEffect[]): SideEffect {
 }
 
 
-export function runSideEffectsSequentially(sideEffects: SideEffect[]) {
+export function runSideEffectsSequentially(sideEffects: SideEffect[], dependencies: Record<string, any>) {
   return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
     action$.pipe(
       withLatestFrom(state$),
       concatMap(([action, state]) =>
         from(sideEffects).pipe(
-          concatMap((sideEffect: SideEffect) => sideEffect(action$, state$, {}))
+          concatMap((sideEffect: SideEffect) => sideEffect(action$, state$, dependencies))
         )
       ),
       toArray()
@@ -62,13 +62,13 @@ export function runSideEffectsSequentially(sideEffects: SideEffect[]) {
 }
 
 
-export function runSideEffectsInParallel(sideEffects: SideEffect[]) {
+export function runSideEffectsInParallel(sideEffects: SideEffect[], dependencies: Record<string, any>) {
   return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
     action$.pipe(
       withLatestFrom(state$),
       concatMap(([action, state]) =>
         from(sideEffects).pipe(
-          mergeMap((sideEffect: SideEffect) => sideEffect(action$, state$, {}))
+          mergeMap((sideEffect: SideEffect) => sideEffect(action$, state$, dependencies))
         )
       ),
       toArray()
