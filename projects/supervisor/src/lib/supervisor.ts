@@ -1,7 +1,7 @@
 import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, of, tap } from "rxjs";
 import { runSideEffectsSequentially } from "./effects";
 import { ActionStack } from "./structures";
-import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Middleware, Reducer, Store, StoreEnhancer, kindOf } from "./types";
+import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Middleware, Reducer, Store, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 
 const actions = {
@@ -62,11 +62,18 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer): E
     }
   }
 
-  function dispatch(action: Action<any> | AsyncAction<any>): any {
+  function dispatch(action: Action<any>): any {
+    if (!isPlainObject(action)) {
+      throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your store setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-store#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.`);
+    }
+    if (typeof action.type === "undefined") {
+      throw new Error('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
+    }
+    if (typeof action.type !== "string") {
+      throw new Error(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
+    }
     if (typeof action === 'object' && (action as any)?.type) {
       store.actionStream.next(action);
-    } else if(typeof action === 'function') {
-      action({})
     }
   }
 
@@ -333,7 +340,7 @@ export function applyMiddleware(...middlewares: Middleware[]) {
     const middlewareAPI = {
       getState: store.getState,
       dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
-      actionStack: store.actionStack,
+      dependencies: store.pipeline.dependencies,
       isProcessing: store.isProcessing
     };
 

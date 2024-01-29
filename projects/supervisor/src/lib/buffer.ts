@@ -1,12 +1,12 @@
 import { Lock } from "redux-sequential";
 import { filter, firstValueFrom, take } from "rxjs";
 import { ActionQueue } from "./structures";
-import { Action } from "./types";
+import { Action, AsyncAction } from "./types";
 
 // Define your higher-order function
 export const createBufferize = (lock: Lock) => {
   const actionQueue = new ActionQueue();
-  const bufferize = ({ dispatch, getState, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
+  const bufferize = ({ dispatch, getState, dependencies, isProcessing } : any) => (next: Function) => async (action: Action<any>) => {
 
     if(isProcessing) {
       // If it's a child action, process it immediately
@@ -27,7 +27,12 @@ export const createBufferize = (lock: Lock) => {
         ));
 
         // Process the parent action
-        next(action);
+        if(typeof action === 'object' && action?.type === 'string') {
+          next(action);
+        } else if (typeof action === 'function') {
+          (action as AsyncAction<any>)(dispatch, getState, dependencies);
+        }
+
       } finally {
         // Release the lock
         lock.release();
