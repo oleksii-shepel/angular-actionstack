@@ -12,8 +12,8 @@ export interface AsyncAction<T = any> {
   (...args: any[]): Promise<T>;
 }
 
-export type SyncFunction<T> = (...args: any[]) => (dispatch: Function, getState?: Function) => T;
-export type AsyncFunction<T> = (...args: any[]) => (dispatch: Function, getState?: Function) => Promise<T>;
+export type SyncFunction<T> = (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => T;
+export type AsyncFunction<T> = (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => Promise<T>;
 
 export type Reducer = (state: any, action: Action<any>) => any;
 export type MetaReducer = (reducer: Reducer) => Reducer;
@@ -82,9 +82,14 @@ export interface Store {
 
 
 export interface EnhancedStore extends Store {
-  initStore: (module: MainModule) => void;
-  loadModule: (module: FeatureModule) => void;
-  unloadModule: (module: FeatureModule) => void;
+  dispatch: (action: any) => any;
+  getState: () => any;
+  addReducer: (featureKey: string, reducer: Reducer) => void;
+  subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
+
+  initStore: (module: MainModule) => EnhancedStore;
+  loadModule: (module: FeatureModule) => EnhancedStore;
+  unloadModule: (module: FeatureModule) => EnhancedStore;
 
   pipeline: {
     middlewares: Middleware[];
@@ -95,14 +100,16 @@ export interface EnhancedStore extends Store {
 
   mainModule: MainModule;
   modules: FeatureModule[];
+
   actionStream: Subject<Action<any>>;
   actionStack: ActionStack;
+
   currentState: BehaviorSubject<any>;
   isProcessing: BehaviorSubject<boolean>;
 }
 
 
-export type StoreCreator = (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => Store;
+export type StoreCreator = (mainModule: MainModule, enhancer?: StoreEnhancer) => EnhancedStore;
 export type StoreEnhancer = (next: StoreCreator) => StoreCreator;
 
 

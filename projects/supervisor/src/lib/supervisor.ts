@@ -1,7 +1,7 @@
 import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, of, tap } from "rxjs";
 import { runSideEffectsSequentially } from "./effects";
 import { ActionStack } from "./structures";
-import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Reducer, Store, StoreCreator, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Middleware, Reducer, Store, StoreEnhancer, kindOf } from "./types";
 
 
 const actions = {
@@ -13,16 +13,6 @@ const actions = {
   UNREGISTER_EFFECTS: 'UNREGISTER_EFFECTS'
 };
 
-const randomString = (): string => Math.random().toString(36).substring(7).split("").join(".");
-
-const ActionTypes = {
-  INIT: `@@redux/INIT${/* @__PURE__ */ randomString()}`,
-  REPLACE: `@@redux/REPLACE${/* @__PURE__ */ randomString()}`,
-  PROBE_UNKNOWN_ACTION: (): string => `@@redux/PROBE_UNKNOWN_ACTION${randomString()}`
-};
-
-const actionTypes_default = ActionTypes;
-
 // Define the action creators
 const actionCreators = {
   initStore: () => ({ type: actions.INIT_STORE }),
@@ -33,32 +23,32 @@ const actionCreators = {
   unregisterEffects: (module: FeatureModule) => ({ type: actions.UNREGISTER_EFFECTS, payload: module }),
 };
 
-export function createStore(reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer): Store {
 
-  if (typeof reducer !== "function") {
-    throw new Error(`Expected the root reducer to be a function. Instead, received: '${kindOf(reducer)}'`);
-  }
-
-  if ((typeof preloadedState === "function" && typeof enhancer === "function") || (typeof enhancer === "function" && typeof arguments[3] === "function")) {
-    throw new Error("It looks like you are passing several store enhancers to createStore(). This is not supported. Instead, compose them together to a single function. See https://redux.js.org/tutorials/fundamentals/part-4-store#creating-a-store-with-enhancers for an example.");
-  }
-
-  if (typeof preloadedState === "function" && typeof enhancer === "undefined") {
-    enhancer = preloadedState;
-    preloadedState = undefined;
-  }
+export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer): EnhancedStore {
 
   if (typeof enhancer !== "undefined") {
     if (typeof enhancer !== "function") {
       throw new Error(`Expected the enhancer to be a function. Instead, received: '${kindOf(enhancer)}'`);
     }
-    return enhancer(createStore)(reducer, preloadedState);
+    return enhancer(createStore)(mainModule);
   }
 
-  let reducers = {main: reducer} as Record<string, Reducer>;
+  let reducers = { 'main': mainModule.reducer } as Record<string, Reducer>;
   let currentReducer = combineReducers(reducers);
-  let currentState = new BehaviorSubject<any>(preloadedState);
-  let isDispatching = false;
+  let currentState = new BehaviorSubject<any>({});
+
+  let store = { dispatch, getState, subscribe, addReducer, currentState } as EnhancedStore;
+  store = init(store)(mainModule);
+
+  let action$ = store.actionStream.asObservable();
+
+  let subscription = action$.pipe(
+    tap(() => store.isProcessing.next(true)),
+    processAction(store, store.actionStack),
+    tap(() => store.isProcessing.next(false))
+  ).subscribe();
+
+  store.dispatch(actionCreators.initStore());
 
   function getState(): any {
     return currentState.value;
@@ -72,31 +62,11 @@ export function createStore(reducer: Reducer, preloadedState?: any, enhancer?: S
     }
   }
 
-  function dispatch(action: Action<any>): any {
-    if (!isPlainObject(action)) {
-      throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your store setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-store#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.`);
-    }
-    if (typeof action.type === "undefined") {
-      throw new Error('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
-    }
-    if (typeof action.type !== "string") {
-      throw new Error(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
-    }
-    if (isDispatching) {
-      throw new Error("Reducers may not dispatch actions.");
-    }
-
-    processAction(action);
-    return action;
-  }
-
-  function processAction(action: Action<any>): void {
-    try {
-      isDispatching = true;
-      const nextState = currentReducer(currentState.value, action);
-      currentState.next(nextState);
-    } finally {
-      isDispatching = false;
+  function dispatch(action: Action<any> | AsyncAction<any>): any {
+    if (typeof action === 'object' && (action as any)?.type) {
+      store.actionStream.next(action);
+    } else if(typeof action === 'function') {
+      action({})
     }
   }
 
@@ -104,30 +74,14 @@ export function createStore(reducer: Reducer, preloadedState?: any, enhancer?: S
     if (typeof nextReducer !== "function") {
       throw new Error(`Expected the nextReducer to be a function. Instead, received: '${kindOf(nextReducer)}`);
     }
+
     currentReducer = nextReducer;
-    dispatch({
-      type: actionTypes_default.REPLACE
-    });
   }
 
   function addReducer(featureKey: string, reducer: Reducer) {
     reducers[featureKey] = reducer;
     replaceReducer(combineReducers(reducers));
   }
-
-  dispatch({
-    type: actionTypes_default.INIT
-  });
-
-  return {
-    dispatch,
-    getState,
-    addReducer,
-    subscribe
-  }
-}
-
-export function supervisor(mainModule: MainModule) {
 
   function init(store: EnhancedStore) {
     return (module: MainModule) => initStore(store, module);
@@ -141,35 +95,13 @@ export function supervisor(mainModule: MainModule) {
     return (module: FeatureModule) => unloadModule(store, module);
   }
 
-  return (createStore: StoreCreator) => (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => {
-    let store = createStore(reducer, preloadedState, enhancer) as EnhancedStore;
-
-    store = init(store)(mainModule);
-    store = patchDispatch(store);
-    store = applyMiddleware(store);
-    store = registerEffects(store);
-
-    let action$ = store.actionStream.asObservable();
-
-    let subscription = action$.pipe(
-      tap(() => store.isProcessing.next(true)),
-      processAction(store, store.actionStack),
-      tap(() => store.isProcessing.next(false))
-    ).subscribe();
-
-    store.dispatch(actionCreators.initStore());
-
-    return {
-      subscription,
-      initStore: init,
-      loadModule: load,
-      unloadModule: unload,
-      dispatch: store.dispatch,
-      getState: store.getState,
-      addReducer: store.addReducer,
-      subscribe: store.subscribe
-    };
-  };
+  return {
+    ...store,
+    subscription,
+    initStore: init(store),
+    loadModule: load(store),
+    unloadModule: unload(store),
+  } as EnhancedStore;
 }
 
 function initStore(store: Store, mainModule: MainModule): EnhancedStore {
@@ -390,26 +322,29 @@ function compose(...funcs: AnyFn[]): AnyFn {
   return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
 }
 
-function applyMiddleware(store: EnhancedStore): EnhancedStore {
+export function applyMiddleware(...middlewares: Middleware[]) {
+  return (createStore: AnyFn) => (mainModule: MainModule) => {
+    const store = createStore(mainModule) as EnhancedStore;
 
-  let dispatch = (action: any, ...args: any[]) => {
-    throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
+    let dispatch = (action: any, ...args: any[]) => {
+      throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
+    }
+
+    const middlewareAPI = {
+      getState: store.getState,
+      dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
+      actionStack: store.actionStack,
+      isProcessing: store.isProcessing
+    };
+
+    const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));
+    dispatch = compose(...chain)(store.dispatch);
+
+    return {
+      ...store,
+      dispatch
+    };
   }
-
-  const middlewareAPI = {
-    getState: store.getState,
-    dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
-    actionStack: store.actionStack,
-    isProcessing: store.isProcessing
-  };
-
-  const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));
-  dispatch = compose(...chain)(store.dispatch);
-
-  return {
-    ...store,
-    dispatch
-  };
 }
 
 

@@ -1,8 +1,8 @@
 import { AsyncFunction, SyncFunction, kindOf } from "./types";
 
 export function createAction(type: string, fn: SyncFunction<any> | AsyncFunction<any>) {
-  return (...args: any[]) => async (dispatch: Function, getState?: Function) => {
-    const result = fn(...args)(dispatch, getState) as any;
+  return (...args: any[]) => async (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => {
+    const result = fn(...args)(dispatch, getState, dependencies) as any;
     if (result instanceof Promise && result?.then instanceof Function) {
       dispatch({ type: `${type}_REQUEST` });
       return result.then(

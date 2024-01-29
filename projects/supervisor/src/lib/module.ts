@@ -1,5 +1,6 @@
 import { ModuleWithProviders, NgModule } from "@angular/core";
-import { createStore, supervisor } from "./supervisor";
+import logger from "redux-logger";
+import { applyMiddleware, createStore } from "./supervisor";
 import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
 @NgModule({})
@@ -15,7 +16,7 @@ export class StoreModule {
           provide: 'Store',
           useFactory: () => {
             if (!StoreModule.store) {
-              StoreModule.store = createStore(module.reducer, supervisor(module)) as EnhancedStore;
+              StoreModule.store = createStore(module, applyMiddleware(logger));
               StoreModule.modulesFn.forEach(fn => fn());
             }
             return StoreModule.store;
