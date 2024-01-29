@@ -250,15 +250,23 @@ function registerEffects(store: EnhancedStore): EnhancedStore  {
     effects.push(...module.effects);
   }
 
-  return { ...store, pipeline: { ...store.pipeline, effects } };
+  let dependencies = store.mainModule.dependencies ? {...store.mainModule.dependencies} : {} as Record<string, any>;
+  for (const module of store.modules) {
+    dependencies[module.slice] = module.dependencies;
+  }
+
+  return { ...store, pipeline: { ...store.pipeline, effects, dependencies } };
 }
 
 function unregisterEffects(store: EnhancedStore, module: FeatureModule): EnhancedStore {
   // Create a new array excluding the effects of the module to be unloaded
   const remainingEffects = store.pipeline.effects.filter(effect => !module.effects.includes(effect));
 
+  let dependencies = store.pipeline.dependencies ? {...store.pipeline.dependencies} : {} as Record<string, any>;
+  delete dependencies[module.slice];
+
   // Return the array of remaining effects
-  return { ...store, pipeline: { ...store.pipeline, effects: remainingEffects } };
+  return { ...store, pipeline: { ...store.pipeline, effects: remainingEffects, dependencies } };
 }
 
 function setupReducer(store: EnhancedStore): EnhancedStore {
