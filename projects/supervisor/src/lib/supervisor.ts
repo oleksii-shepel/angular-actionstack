@@ -1,7 +1,7 @@
-import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, map, of, tap } from "rxjs";
 import { runSideEffectsSequentially } from "./effects";
 import { ActionStack } from "./structures";
-import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Middleware, Reducer, Store, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Reducer, Store, StoreCreator, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 
 const actions = {
@@ -13,6 +13,16 @@ const actions = {
   UNREGISTER_EFFECTS: 'UNREGISTER_EFFECTS'
 };
 
+const randomString = (): string => Math.random().toString(36).substring(7).split("").join(".");
+
+const ActionTypes = {
+  INIT: `@@redux/INIT${/* @__PURE__ */ randomString()}`,
+  REPLACE: `@@redux/REPLACE${/* @__PURE__ */ randomString()}`,
+  PROBE_UNKNOWN_ACTION: (): string => `@@redux/PROBE_UNKNOWN_ACTION${randomString()}`
+};
+
+const actionTypes_default = ActionTypes;
+
 // Define the action creators
 const actionCreators = {
   initStore: () => ({ type: actions.INIT_STORE }),
@@ -23,32 +33,32 @@ const actionCreators = {
   unregisterEffects: (module: FeatureModule) => ({ type: actions.UNREGISTER_EFFECTS, payload: module }),
 };
 
+export function createStore(reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer): Store {
 
-export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer): EnhancedStore {
+  if (typeof reducer !== "function") {
+    throw new Error(`Expected the root reducer to be a function. Instead, received: '${kindOf(reducer)}'`);
+  }
+
+  if ((typeof preloadedState === "function" && typeof enhancer === "function") || (typeof enhancer === "function" && typeof arguments[3] === "function")) {
+    throw new Error("It looks like you are passing several store enhancers to createStore(). This is not supported. Instead, compose them together to a single function. See https://redux.js.org/tutorials/fundamentals/part-4-store#creating-a-store-with-enhancers for an example.");
+  }
+
+  if (typeof preloadedState === "function" && typeof enhancer === "undefined") {
+    enhancer = preloadedState;
+    preloadedState = undefined;
+  }
 
   if (typeof enhancer !== "undefined") {
     if (typeof enhancer !== "function") {
       throw new Error(`Expected the enhancer to be a function. Instead, received: '${kindOf(enhancer)}'`);
     }
-    return enhancer(createStore)(mainModule);
+    return enhancer(createStore)(reducer, preloadedState);
   }
 
-  let reducers = { 'main': mainModule.reducer } as Record<string, Reducer>;
+  let reducers = {main: reducer} as Record<string, Reducer>;
   let currentReducer = combineReducers(reducers);
-  let currentState = new BehaviorSubject<any>(mainModule.preloadedState);
-
-  let store = { dispatch, getState, subscribe, addReducer, currentState } as EnhancedStore;
-  store = init(store)(mainModule);
-
-  let action$ = store.actionStream.asObservable();
-
-  let subscription = action$.pipe(
-    tap(() => store.isProcessing.next(true)),
-    processAction(store, store.actionStack),
-    tap(() => store.isProcessing.next(false))
-  ).subscribe();
-
-  store.dispatch(actionCreators.initStore());
+  let currentState = new BehaviorSubject<any>(preloadedState);
+  let isDispatching = false;
 
   function getState(): any {
     return currentState.value;
@@ -72,8 +82,21 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer): E
     if (typeof action.type !== "string") {
       throw new Error(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
     }
-    if (typeof action === 'object' && (action as any)?.type) {
-      store.actionStream.next(action);
+    if (isDispatching) {
+      throw new Error("Reducers may not dispatch actions.");
+    }
+
+    processAction(action);
+    return action;
+  }
+
+  function processAction(action: Action<any>): void {
+    try {
+      isDispatching = true;
+      const nextState = currentReducer(currentState.value, action);
+      currentState.next(nextState);
+    } finally {
+      isDispatching = false;
     }
   }
 
@@ -81,14 +104,30 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer): E
     if (typeof nextReducer !== "function") {
       throw new Error(`Expected the nextReducer to be a function. Instead, received: '${kindOf(nextReducer)}`);
     }
-
     currentReducer = nextReducer;
+    dispatch({
+      type: actionTypes_default.REPLACE
+    });
   }
 
   function addReducer(featureKey: string, reducer: Reducer) {
     reducers[featureKey] = reducer;
     replaceReducer(combineReducers(reducers));
   }
+
+  dispatch({
+    type: actionTypes_default.INIT
+  });
+
+  return {
+    dispatch,
+    getState,
+    addReducer,
+    subscribe
+  }
+}
+
+export function supervisor(mainModule: MainModule) {
 
   function init(store: EnhancedStore) {
     return (module: MainModule) => initStore(store, module);
@@ -102,13 +141,36 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer): E
     return (module: FeatureModule) => unloadModule(store, module);
   }
 
-  return {
-    ...store,
-    subscription,
-    initStore: init(store),
-    loadModule: load(store),
-    unloadModule: unload(store),
-  } as EnhancedStore;
+  return (createStore: StoreCreator) => (reducer: Reducer, preloadedState?: any, enhancer?: StoreEnhancer) => {
+    let store = createStore(reducer, preloadedState) as EnhancedStore;
+
+    store = init(store)(mainModule);
+    store = patchDispatch(store);
+    store = applyMiddleware(store);
+    store = registerEffects(store);
+
+    let action$ = store.actionStream.asObservable();
+
+    let subscription = action$.pipe(
+      tap(() => store.isProcessing.next(true)),
+      processAction(store, store.actionStack),
+      tap(() => store.isProcessing.next(false))
+    ).subscribe();
+
+    store.dispatch(actionCreators.initStore());
+
+    return {
+      ...store,
+      subscription,
+      initStore: init,
+      loadModule: load,
+      unloadModule: unload,
+      dispatch: store.dispatch,
+      getState: store.getState,
+      addReducer: store.addReducer,
+      subscribe: store.subscribe
+    };
+  };
 }
 
 function initStore(store: Store, mainModule: MainModule): EnhancedStore {
@@ -124,8 +186,7 @@ function initStore(store: Store, mainModule: MainModule): EnhancedStore {
   const PIPELINE_DEFAULT = {
     middlewares: [],
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: [],
-    dependencies: {}
+    effects: []
   };
 
   const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
@@ -190,23 +251,15 @@ function registerEffects(store: EnhancedStore): EnhancedStore  {
     effects.push(...module.effects);
   }
 
-  let dependencies = store.mainModule.dependencies ? {...store.mainModule.dependencies} : {} as Record<string, any>;
-  for (const module of store.modules) {
-    dependencies[module.slice] = module.dependencies;
-  }
-
-  return { ...store, pipeline: { ...store.pipeline, effects, dependencies } };
+  return { ...store, pipeline: { ...store.pipeline, effects } };
 }
 
 function unregisterEffects(store: EnhancedStore, module: FeatureModule): EnhancedStore {
   // Create a new array excluding the effects of the module to be unloaded
   const remainingEffects = store.pipeline.effects.filter(effect => !module.effects.includes(effect));
 
-  let dependencies = store.pipeline.dependencies ? {...store.pipeline.dependencies} : {} as Record<string, any>;
-  delete dependencies[module.slice];
-
   // Return the array of remaining effects
-  return { ...store, pipeline: { ...store.pipeline, effects: remainingEffects, dependencies } };
+  return { ...store, pipeline: { ...store.pipeline, effects: remainingEffects } };
 }
 
 function setupReducer(store: EnhancedStore): EnhancedStore {
@@ -237,12 +290,10 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
   return (source: Observable<Action<any>>) => {
     actionStack.clear();
     return source.pipe(
-      concatMap((action: Action<any>) => {
-        actionStack.push(action);
-        let state = store.pipeline.reducer(store.currentState.value, action);
-        store.currentState.next(state);
-
-        return runSideEffectsSequentially(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
+      tap((action: Action<any>) => actionStack.push(action)),
+      map((action) => [action, store.pipeline.reducer(store.currentState.value, action)]),
+      tap(([_, state]) => store.currentState.next(state)),
+      concatMap(([action, state]) => runSideEffectsSequentially(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
         concatMap((childActions: Action<any>[]) => {
           if (childActions.length > 0) {
             return from(childActions).pipe(
@@ -254,7 +305,7 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
           return EMPTY;
         }),
         finalize(() => actionStack.pop())
-      )}),
+      )),
       ignoreElements()
     );
   }
@@ -329,29 +380,26 @@ function compose(...funcs: AnyFn[]): AnyFn {
   return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
 }
 
-export function applyMiddleware(...middlewares: Middleware[]) {
-  return (createStore: AnyFn) => (mainModule: MainModule) => {
-    const store = createStore(mainModule) as EnhancedStore;
+function applyMiddleware(store: EnhancedStore): EnhancedStore {
 
-    let dispatch = (action: any, ...args: any[]) => {
-      throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
-    }
-
-    const middlewareAPI = {
-      getState: store.getState,
-      dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
-      dependencies: store.pipeline.dependencies,
-      isProcessing: store.isProcessing
-    };
-
-    const chain = store.pipeline.middlewares.map(middleware => middleware(middlewareAPI));
-    dispatch = compose(...chain)(store.dispatch);
-
-    return {
-      ...store,
-      dispatch
-    };
+  let dispatch = (action: any, ...args: any[]) => {
+    throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
   }
+
+  const middlewareAPI = {
+    getState: store.getState,
+    dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
+    dependencies: () => store.pipeline.dependencies,
+    isProcessing: store.isProcessing
+  };
+
+  const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));
+  dispatch = compose(...chain)(store.dispatch);
+
+  return {
+    ...store,
+    dispatch
+  };
 }
 
 
