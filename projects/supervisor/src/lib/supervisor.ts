@@ -185,7 +185,8 @@ function initStore(store: Store, mainModule: MainModule): EnhancedStore {
   const PIPELINE_DEFAULT = {
     middlewares: [],
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: []
+    effects: [],
+    dependencies: {}
   };
 
   const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
