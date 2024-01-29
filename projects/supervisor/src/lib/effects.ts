@@ -1,6 +1,5 @@
-import { Action, isAction } from 'redux-replica';
 import { Observable, OperatorFunction, concatMap, filter, from, ignoreElements, merge, mergeMap, toArray, withLatestFrom } from 'rxjs';
-import { SideEffect } from './types';
+import { Action, SideEffect, isAction } from "./types";
 
 
 export function createEffect(

@@ -1,6 +1,5 @@
 import { ModuleWithProviders, NgModule } from "@angular/core";
-import { createStore } from "redux-replica";
-import { supervisor } from "./supervisor";
+import { createStore, supervisor } from "./supervisor";
 import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
 @NgModule({})

@@ -1,4 +1,4 @@
-import { AsyncFunction, SyncFunction, kindOf } from "redux-replica";
+import { AsyncFunction, SyncFunction, kindOf } from "./types";
 
 export function createAction(type: string, fn: SyncFunction<any> | AsyncFunction<any>) {
   return (...args: any[]) => async (dispatch: Function, getState?: Function) => {

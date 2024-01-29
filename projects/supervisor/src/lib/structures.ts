@@ -1,4 +1,4 @@
-import { Action } from "redux-replica";
+import { Action } from "./types";
 
 export class ActionStack {
   private stack: Action<any>[] = [];

@@ -1,4 +1,4 @@
-import { AnyFn, MemoizedFunction, MemoizedSelector, ProjectorFunction, SelectorFunction } from "redux-replica";
+import { AnyFn, MemoizedFunction, MemoizedSelector, ProjectorFunction, SelectorFunction } from "./types";
 
 // Shallow equality check function
 const shallowEqual = (a: any[], b: any[]): boolean => {

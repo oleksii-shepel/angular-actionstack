@@ -1,7 +1,7 @@
-import { Action } from "redux-replica";
 import { Lock } from "redux-sequential";
 import { filter, firstValueFrom, take } from "rxjs";
 import { ActionQueue } from "./structures";
+import { Action } from "./types";
 
 // Define your higher-order function
 export const createBufferize = (lock: Lock) => {
