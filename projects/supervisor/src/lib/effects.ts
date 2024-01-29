@@ -1,4 +1,4 @@
-import { Observable, OperatorFunction, concatMap, filter, from, ignoreElements, merge, mergeMap, toArray, withLatestFrom } from 'rxjs';
+import { Observable, OperatorFunction, concat, concatMap, filter, from, ignoreElements, mergeMap, toArray, withLatestFrom } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 
@@ -34,7 +34,7 @@ export function ofType(...types: [string, ...string[]]): OperatorFunction<Action
 
 
 export function combine(...effects: SideEffect[]): SideEffect {
-  const merger: SideEffect = (...args) => merge(...effects.map((effect) => {
+  const merger: SideEffect = (...args) => concat(...effects.map((effect) => {
     const output$ = effect(...args);
     if (!output$) throw new TypeError(`combine: one of the provided effects "${effect.name || '<anonymous>'}" does not return a stream. Double check you're not missing a return statement!`);
     return output$;
