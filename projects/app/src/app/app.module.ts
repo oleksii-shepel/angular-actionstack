@@ -7,9 +7,8 @@ import { AppComponent } from './app.component';
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import logger from 'redux-logger';
 import { ofType } from 'redux-observable';
-import { thunk } from 'redux-thunk';
 import { Observable, ignoreElements, map, tap, withLatestFrom } from 'rxjs';
-import { Action, StoreModule, bufferize } from 'supervisor';
+import { Action, StoreModule } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeroDetailModule } from './hero-detail/hero-detail.module';
@@ -53,7 +52,8 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
   ],
   imports: [
     StoreModule.forRoot({
-      middlewares: [bufferize, thunk, logger],
+      preloadedState: {},
+      middlewares: [logger],
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [pingEpic, pingEpic2, pingEpic3],
       dependencies: {}

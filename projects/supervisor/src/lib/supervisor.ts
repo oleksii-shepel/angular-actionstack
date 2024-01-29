@@ -35,7 +35,7 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer): E
 
   let reducers = { 'main': mainModule.reducer } as Record<string, Reducer>;
   let currentReducer = combineReducers(reducers);
-  let currentState = new BehaviorSubject<any>({});
+  let currentState = new BehaviorSubject<any>(mainModule.preloadedState);
 
   let store = { dispatch, getState, subscribe, addReducer, currentState } as EnhancedStore;
   store = init(store)(mainModule);
@@ -337,7 +337,7 @@ export function applyMiddleware(...middlewares: Middleware[]) {
       isProcessing: store.isProcessing
     };
 
-    const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));
+    const chain = store.pipeline.middlewares.map(middleware => middleware(middlewareAPI));
     dispatch = compose(...chain)(store.dispatch);
 
     return {

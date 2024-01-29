@@ -67,6 +67,7 @@ export interface FeatureModule {
 }
 
 export interface MainModule {
+  preloadedState: any;
   middlewares: Middleware[];
   reducer: Reducer;
   effects: SideEffect[];
