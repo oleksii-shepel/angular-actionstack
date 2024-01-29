@@ -32,6 +32,10 @@ export class ActionQueue {
   private inbox: ActionStack = new ActionStack();
   private outbox: ActionStack = new ActionStack();
 
+  get length(): number {
+    return this.inbox.length + this.outbox.length;
+  }
+
   enqueue(action: Action<any>): void {
     this.inbox.push(action);
   }
