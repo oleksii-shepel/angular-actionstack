@@ -12,6 +12,7 @@ import { HeroDetailComponent } from "./hero-detail.component";
     slice: 'hero-detail',
     reducer: (state: any = {}, action: Action<any>) => state,
     effects: [],
+    dependencies: {}
   })],
   declarations: [
     HeroDetailComponent,

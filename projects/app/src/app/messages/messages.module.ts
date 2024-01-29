@@ -12,6 +12,7 @@ import { MessagesComponent } from "./messages.component";
     slice: 'messages',
     reducer: (state: any = {}, action: Action<any>) => state,
     effects: [],
+    dependencies: {}
   })],
   declarations: [
     MessagesComponent,

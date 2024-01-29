@@ -12,6 +12,7 @@ import { HeroesComponent } from "./heroes.component";
     slice: 'heroes',
     reducer: (state: any = {}, action: Action<any>) => state,
     effects: [],
+    dependencies: {}
   })],
   declarations: [
     HeroesComponent,

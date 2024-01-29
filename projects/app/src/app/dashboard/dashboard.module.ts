@@ -12,6 +12,7 @@ import { DashboardComponent } from "./dashboard.component";
     slice: 'dashboard',
     reducer: (state: any = {}, action: Action<any>) => state,
     effects: [],
+    dependencies: {}
   })],
   declarations: [
     DashboardComponent,

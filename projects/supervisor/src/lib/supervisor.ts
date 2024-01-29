@@ -1,7 +1,9 @@
 import { Action, AsyncAction, Reducer, StoreCreator, StoreEnhancer, compose } from "redux-replica";
 import { BehaviorSubject, EMPTY, Observable, OperatorFunction, Subject, concatMap, finalize, from, ignoreElements, map, of, tap } from "rxjs";
-import { ActionStack, runSideEffectsSequentially } from "./effects";
+import { runSideEffectsSequentially } from "./effects";
+import { ActionStack } from './stack';
 import { EnhancedStore, FeatureModule, MainModule, Store } from "./types";
+
 
 const actions = {
   INIT_STORE: 'INIT_STORE',

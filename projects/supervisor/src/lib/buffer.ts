@@ -1,22 +1,23 @@
 import { Action } from "redux-replica";
 import { Lock } from "redux-sequential";
 import { filter, firstValueFrom, take } from "rxjs";
+import { ActionQueue } from "./stack";
 
 // Define your higher-order function
 export const createBufferize = (lock: Lock) => {
-  const actionQueue: Action<any>[] = [];
+  const actionQueue = new ActionQueue();
   const bufferize = ({ dispatch, getState, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
 
     if(isProcessing) {
       // If it's a child action, process it immediately
       next(action);
     } else {
-      actionQueue.unshift(action);
+      actionQueue.enqueue(action);
 
       // If it's a parent action, acquire the lock
       await lock.acquire();
 
-      action = actionQueue.pop()!;
+      action = actionQueue.dequeue()!;
 
       try {
         // Wait until isProcessing is false
