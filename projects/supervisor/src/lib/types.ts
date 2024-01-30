@@ -78,6 +78,7 @@ export interface Store {
   dispatch: (action: any) => any;
   getState: () => any;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
+  select: (selector: MemoizedSelector) => Observable<any>;
 }
 
 
@@ -85,6 +86,7 @@ export interface EnhancedStore extends Store {
   dispatch: (action: any) => any;
   getState: () => any;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
+  select: (selector: MemoizedSelector) => Observable<any>;
 
   loadModule: (module: FeatureModule) => EnhancedStore;
   unloadModule: (module: FeatureModule) => EnhancedStore;

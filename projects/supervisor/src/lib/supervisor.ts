@@ -2,7 +2,7 @@ import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject
 import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsSequentially } from "./effects";
-import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 
 const actions = {
@@ -107,6 +107,7 @@ function initStore(mainModule: MainModule): EnhancedStore {
     dispatch: (action: Action<any>) => dispatch(enhancedStore, action),
     getState: () => enhancedStore.currentState.value,
     subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => subscribe(enhancedStore, next, error, complete),
+    select: (selector: MemoizedSelector) => select(enhancedStore, selector),
 
     loadModule: (module: FeatureModule) => loadModule(enhancedStore, module),
     unloadModule: (module: FeatureModule) => unloadModule(enhancedStore, module),
@@ -153,6 +154,16 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
 
   // Return a new store with the updated properties
   return { ...store };
+}
+
+function select(store: EnhancedStore, selector: MemoizedSelector): Observable<any> {
+
+  return new Observable(observer => {
+    const unsubscribe = store.subscribe(() => {
+      observer.next(selector(store.getState()));
+    });
+    return unsubscribe;
+  });
 }
 
 function injectDependencies(store: EnhancedStore): EnhancedStore {
