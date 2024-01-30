@@ -2,7 +2,7 @@ import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject
 import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsSequentially } from "./effects";
-import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MetaReducer, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 
 const actions = {
@@ -106,7 +106,6 @@ function initStore(mainModule: MainModule): EnhancedStore {
     ...enhancedStore,
     dispatch: (action: Action<any>) => dispatch(enhancedStore, action),
     getState: () => enhancedStore.currentState.value,
-    addReducer: (featureKey: string, reducer: Reducer) => addReducer(enhancedStore, featureKey, reducer),
     subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => subscribe(enhancedStore, next, error, complete),
 
     loadModule: (module: FeatureModule) => loadModule(enhancedStore, module),
@@ -307,33 +306,6 @@ function combineReducers(reducers: Record<string, Reducer>): Reducer {
 
     return nextState;
   };
-}
-
-function replaceReducer(store: EnhancedStore, nextReducer: Reducer): void {
-  if (typeof nextReducer !== "function") {
-    throw new Error(`Expected the nextReducer to be a function. Instead, received: '${kindOf(nextReducer)}`);
-  }
-  store.pipeline.reducer = nextReducer;
-}
-
-function addReducer(store: EnhancedStore, featureKey: string, reducer: Reducer) {
-  let reducers = {} as Record<string, any>;
-  for (let module of store.modules) {
-    const featureReducer = module.reducer;
-    reducers[module.slice] = featureReducer;
-  }
-
-  reducers[featureKey] = reducer;
-  let combination = combineReducers(reducers);
-
-  let mainReducer: MetaReducer = (reducer: Reducer) => (state: any, action: Action<any>) => {
-    return (state: any, action: Action<any>) => {
-      const newState = store.mainModule.reducer(state, action);
-      return reducer(newState, action);
-    }
-  }
-
-  replaceReducer(store, mainReducer(combination));
 }
 
 function compose(...funcs: AnyFn[]): AnyFn {

@@ -77,7 +77,6 @@ export interface MainModule {
 export interface Store {
   dispatch: (action: any) => any;
   getState: () => any;
-  addReducer: (featureKey: string, reducer: Reducer) => void;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
 }
 
@@ -85,7 +84,6 @@ export interface Store {
 export interface EnhancedStore extends Store {
   dispatch: (action: any) => any;
   getState: () => any;
-  addReducer: (featureKey: string, reducer: Reducer) => void;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
 
   loadModule: (module: FeatureModule) => EnhancedStore;
