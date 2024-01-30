@@ -38,6 +38,7 @@ export function createStore(mainModule: MainModule) {
 
   let store = initStore(mainModule);
   store = applyMiddleware(store);
+  store = injectDependencies(store);
   store = registerEffects(store);
 
   let action$ = store.actionStream.asObservable();
@@ -110,7 +111,11 @@ function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore 
     return store;
   }
 
+  // Setup the reducers
   store = setupReducer(store);
+
+  // Inject dependencies
+  store = injectDependencies(store);
 
   // Create a new array with the module added to the store's modules
   const newModules = [...store.modules, module];
@@ -129,6 +134,9 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
   // Setup the reducers
   store = setupReducer(store);
 
+  // Eject dependencies
+  store = ejectDependencies(store, module);
+
   // Unregister the module's effects
   store = unregisterEffects(store, module);
 
@@ -136,7 +144,29 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
   return { ...store };
 }
 
-function registerEffects(store: EnhancedStore): EnhancedStore  {
+function injectDependencies(store: EnhancedStore): EnhancedStore {
+  let dependencies = store.mainModule.dependencies ? {...store.mainModule.dependencies} : {};
+  for (const module of store.modules) {
+    for (const key in module.dependencies) {
+      if (dependencies.hasOwnProperty(key)) {
+        throw new Error(`Dependency property ${key} in module ${module.slice} conflicts with an existing dependency.`);
+      }
+      dependencies[key] = module.dependencies[key];
+    }
+  }
+
+  return { ...store, pipeline: { ...store.pipeline, dependencies } };
+}
+
+function ejectDependencies(store: EnhancedStore, module: FeatureModule): EnhancedStore {
+
+  let dependencies = store.pipeline.dependencies;
+  delete dependencies[module.slice];
+
+  return { ...store, pipeline: { ...store.pipeline, dependencies } };
+}
+
+function registerEffects(store: EnhancedStore): EnhancedStore {
   // Iterate over each module and add its effects to the pipeline
   let effects = store.mainModule.effects ? [...store.mainModule.effects] : [];
   for (const module of store.modules) {
