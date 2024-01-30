@@ -1,5 +1,5 @@
 import { BehaviorSubject, Observable, Observer, Subject, Subscription } from "rxjs";
-import { ActionStack } from './structures';
+import { ActionStack } from './collections';
 
 export interface Action<T = any> {
   type: string;

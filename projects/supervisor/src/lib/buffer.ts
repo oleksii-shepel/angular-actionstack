@@ -11,6 +11,7 @@ export const createBufferize = (lock: Lock) => {
       return action(dispatch, getState, dependencies());
     }
 
+    actionStack.push(action);
     return next(action);
   };
 

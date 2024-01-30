@@ -1,6 +1,6 @@
 import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, of, tap } from "rxjs";
+import { ActionStack } from "./collections";
 import { runSideEffectsSequentially } from "./effects";
-import { ActionStack } from "./structures";
 import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Reducer, Store, StoreCreator, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 
@@ -291,7 +291,6 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
     actionStack.clear();
     return source.pipe(
       concatMap((action: Action<any>) => {
-        actionStack.push(action);
         let state = store.pipeline.reducer(store.currentState.value, action);
         store.currentState.next(state);
         return runSideEffectsSequentially(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
