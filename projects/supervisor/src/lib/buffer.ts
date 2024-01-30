@@ -30,7 +30,7 @@ export const createBufferize = (lock: Lock) => {
     return next(action);
   };
 
-  const sequential = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
+  const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
 
     if(isProcessing.value && actionStack.length || action instanceof Function && !actionStack.length) {
       // child action or async action
@@ -49,7 +49,7 @@ export const createBufferize = (lock: Lock) => {
     }
   };
 
-  const buffered = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
+  const sequential = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
 
     if(isProcessing.value && actionStack.length || action instanceof Function && !actionStack.length) {
       // child action or async action
@@ -76,8 +76,8 @@ export const createBufferize = (lock: Lock) => {
 
   // Map strategy names to functions
   const strategies: Record<string, any> = {
+    'exclusive': exclusive,
     'sequential': sequential,
-    'buffered': buffered,
     'concurrent': concurrent
   };
 

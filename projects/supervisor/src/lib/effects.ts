@@ -70,7 +70,7 @@ export function runSideEffectsInParallel(sideEffects: SideEffect[], dependencies
   return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
     action$.pipe(
       withLatestFrom(state$),
-      concatMap(([action, state]) =>
+      mergeMap(([action, state]) =>
         from(sideEffects).pipe(
           mergeMap((sideEffect: SideEffect) => sideEffect(action$, state$, dependencies))
         )

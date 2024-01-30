@@ -1,7 +1,7 @@
-import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
-import { runSideEffectsSequentially } from "./effects";
+import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 
@@ -74,7 +74,9 @@ function initStore(mainModule: MainModule): EnhancedStore {
   const MAIN_MODULE_DEFAULT = {
     middlewares: [],
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: []
+    effects: [],
+    dependencies: {},
+    strategy: "exclusive"
   };
 
   const MODULES_DEFAULT: FeatureModule[] = [];
@@ -82,7 +84,9 @@ function initStore(mainModule: MainModule): EnhancedStore {
   const PIPELINE_DEFAULT = {
     middlewares: [],
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: []
+    effects: [],
+    dependencies: {},
+    strategy: "exclusive"
   };
 
   const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
@@ -231,14 +235,17 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
 }
 
 export function processAction(store: EnhancedStore, actionStack: ActionStack): OperatorFunction<Action<any>, void> {
+  const runSideEffects = store.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
+  const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
+
   return (source: Observable<Action<any>>) => {
     actionStack.clear();
     return source.pipe(
-      concatMap((action: Action<any>) => {
+      mapMethod((action: Action<any>) => {
         let state = store.pipeline.reducer(store.currentState.value, action);
         store.currentState.next(state);
-        return runSideEffectsSequentially(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
-          concatMap((childActions: Action<any>[]) => {
+        return runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
+          mapMethod((childActions: Action<any>[]) => {
             if (childActions.length > 0) {
               return from(childActions).pipe(
                 tap((nextAction: Action<any>) => store.dispatch(nextAction))
@@ -300,7 +307,7 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
     isProcessing: store.isProcessing,
     actionStack: store.actionStack,
     dependencies: () => store.pipeline.dependencies,
-    strategy: () => store.mainModule.strategy
+    strategy: () => store.pipeline.strategy
   };
 
   const middlewares = [bufferize, ...store.mainModule.middlewares];
