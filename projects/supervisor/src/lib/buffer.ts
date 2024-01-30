@@ -4,79 +4,72 @@ import { Action, AsyncAction } from "./types";
 
 export const createBufferize = (lock: Lock) => {
   const actionQueue = new ActionQueue();
-  const thunk = ({dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
 
-    if (action instanceof Function) {
-      return action(dispatch, getState, dependencies());
-    }
+  const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+    if (isProcessing.value && actionStack.length) {
+      // Child action or async action
+      if (action instanceof Function) {
+        // If it's an async action (a function), enqueue it without acquiring the lock
+        actionQueue.enqueue(action as any);
+      } else {
+        // If it's a synchronous action, process it in sequence without acquiring the lock
+        actionStack.push(action);
+        await next(action);
+      }
+    } else {
+      // Regular action or the first action in the sequence
+      actionStack.push(action);
+      actionQueue.enqueue(action as any);
 
-    actionStack.push(action);
-    return next(action);
-  };
+      if (!isProcessing.value) {
+        // Acquire the lock only if not already processing
+        await lock.acquire();
 
-  const pooledthunk = ({dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
-
-    if (action instanceof Function) {
-      await lock.acquire();
-      try {
-        return action(dispatch, getState, dependencies());
-      } finally {
-        lock.release();
+        try {
+          // Process actions in sequence
+          while (actionQueue.length > 0) {
+            const currentAction = actionQueue.dequeue()!;
+            await processAction(currentAction);
+          }
+        } finally {
+          // Release the lock only if not processing anymore
+          lock.release();
+        }
       }
     }
 
-    actionStack.push(action);
-    return next(action);
-  };
-
-  const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
-
-    if(isProcessing.value && actionStack.length || action instanceof Function && !actionStack.length) {
-      // child action or async action
-      return pooledthunk({ dispatch, getState, dependencies, isProcessing, actionStack })(next)(action);
-    } else {
-      actionQueue.enqueue(action);
-      await lock.acquire();
-
-      try {
-        action = actionQueue.dequeue()!;
-        actionStack.push(action);
-        return next(action);
-      } finally {
-        lock.release();
-      }
-    }
-  };
-
-  const sequential = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
-
-    if(isProcessing.value && actionStack.length || action instanceof Function && !actionStack.length) {
-      // child action or async action
-      return thunk({ dispatch, getState, dependencies, isProcessing, actionStack })(next)(action);
-    } else {
-      actionQueue.enqueue(action);
-      await lock.acquire();
-
-      try {
-        action = actionQueue.dequeue()!;
-        actionStack.push(action);
-        return next(action);
-      } finally {
-        lock.release();
+    async function processAction(currentAction: Action<any> | AsyncAction<any>) {
+      if (currentAction instanceof Function) {
+        // If it's an async action (a function), process it within the same lock
+        actionStack.push(currentAction);
+        await currentAction(dispatch, getState, dependencies());
+      } else {
+        // If it's a synchronous action, process it in sequence without acquiring the lock
+        await next(currentAction);
       }
     }
   };
 
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
     actionStack.push(action);
-    return thunk({ dispatch, getState, dependencies, isProcessing, actionStack })(next)(action);
+    return await processAction(action);
+
+    async function processAction(currentAction: Action<any> | AsyncAction<any>) {
+      if (currentAction instanceof Function) {
+        // If it's an async action (a function), process it within the same lock
+        actionStack.push(currentAction);
+        await currentAction(dispatch, getState, dependencies());
+      } else {
+        // If it's a synchronous action, process it in sequence without acquiring the lock
+        await next(currentAction);
+      }
+    }
   };
 
 
   // Map strategy names to functions
   const strategies: Record<string, any> = {
     'exclusive': exclusive,
-    'sequential': sequential,
     'concurrent': concurrent
   };
 

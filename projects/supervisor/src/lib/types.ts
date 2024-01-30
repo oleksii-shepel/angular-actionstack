@@ -72,7 +72,7 @@ export interface MainModule {
   reducer: Reducer;
   effects: SideEffect[];
   dependencies: Record<string, any>;
-  strategy: "exclusive" | "sequential"  | "concurrent";
+  strategy: "exclusive" | "concurrent";
 }
 
 export interface Store {
