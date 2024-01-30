@@ -91,7 +91,6 @@ export const createBufferize = (lock: Lock) => {
 
   // Return the bufferize middleware
   return selectStrategy;
-
 };
 
 // Create a new lock
