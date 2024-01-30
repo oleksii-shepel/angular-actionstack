@@ -11,4 +11,6 @@ export * from './lib/performance';
 export * from './lib/selectors';
 export * from './lib/supervisor';
 export * from './lib/types';
+export * from './lib/lock';
+
 

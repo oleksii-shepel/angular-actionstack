@@ -1,5 +1,5 @@
-import { Lock } from "redux-sequential";
 import { ActionQueue } from "./collections";
+import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
 
 export const createBufferize = (lock: Lock) => {
