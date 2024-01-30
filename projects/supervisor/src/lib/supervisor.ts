@@ -393,6 +393,7 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
     actionStack: store.actionStack,
     dependencies: () => store.pipeline.dependencies
   };
+
   const middlewares = [bufferize, ...store.mainModule.middlewares];
   const chain = middlewares.map(middleware => middleware(middlewareAPI));
   dispatch = compose(...chain)(store.dispatch);
