@@ -1,5 +1,5 @@
 import { ModuleWithProviders, NgModule } from "@angular/core";
-import { createStore, supervisor } from "./supervisor";
+import { supervisor } from "./supervisor";
 import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
 @NgModule({})
@@ -15,7 +15,7 @@ export class StoreModule {
           provide: 'Store',
           useFactory: () => {
             if (!StoreModule.store) {
-              StoreModule.store = createStore(module.reducer, supervisor(module)) as EnhancedStore;
+              StoreModule.store = supervisor(module) as EnhancedStore;
               StoreModule.modulesFn.forEach(fn => fn());
             }
             return StoreModule.store;

@@ -88,7 +88,6 @@ export interface EnhancedStore extends Store {
   addReducer: (featureKey: string, reducer: Reducer) => void;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
 
-  initStore: (module: MainModule) => EnhancedStore;
   loadModule: (module: FeatureModule) => EnhancedStore;
   unloadModule: (module: FeatureModule) => EnhancedStore;
 
