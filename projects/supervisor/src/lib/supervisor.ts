@@ -34,7 +34,7 @@ const actionCreators = {
   unregisterEffects: (module: FeatureModule) => ({ type: actions.UNREGISTER_EFFECTS, payload: module }),
 };
 
-export function supervisor(mainModule: MainModule) {
+export function createStore(mainModule: MainModule) {
 
   let store = initStore(mainModule);
   store = applyMiddleware(store);
