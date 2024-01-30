@@ -276,49 +276,6 @@ function subscribe(store: EnhancedStore, next?: AnyFn | Observer<any>, error?: A
   }
 }
 
-function combineReducers(reducers: Record<string, Reducer>): Reducer {
-  const reducerKeys = Object.keys(reducers);
-  const finalReducers: any = {};
-
-  for (const key of reducerKeys) {
-    if (typeof reducers[key] === "function") {
-      finalReducers[key] = reducers[key];
-    }
-  }
-
-  const finalReducerKeys = Object.keys(finalReducers);
-
-  return function combination(state = {} as any, action: Action<any>): any {
-
-    const nextState: any = {};
-    let hasChanged = false;
-
-    for (const key of finalReducerKeys) {
-      const reducer = finalReducers[key];
-      const previousStateForKey = state[key];
-      const nextStateForKey = reducer(previousStateForKey, action);
-
-      if (typeof nextStateForKey === "undefined") {
-        const actionType = action && action.type;
-        throw new Error(`When called with an action of type ${actionType ? `"${String(actionType)}"` : "(unknown type)"}, the slice reducer for key "${key}" returned undefined. To ignore an action, you must explicitly return the previous state. If you want this reducer to hold no value, you can return null instead of undefined.`);
-      }
-
-      nextState[key] = nextStateForKey;
-      hasChanged = hasChanged || nextStateForKey !== previousStateForKey;
-
-      if (hasChanged) {
-        break;
-      }
-    }
-
-    if (!hasChanged && finalReducerKeys.length === Object.keys(state).length) {
-      return state;
-    }
-
-    return nextState;
-  };
-}
-
 function compose(...funcs: AnyFn[]): AnyFn {
   if (funcs.length === 0) {
     return (arg: any): any => arg;
@@ -342,7 +299,8 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
     dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
     isProcessing: store.isProcessing,
     actionStack: store.actionStack,
-    dependencies: () => store.pipeline.dependencies
+    dependencies: () => store.pipeline.dependencies,
+    strategy: () => store.mainModule.strategy
   };
 
   const middlewares = [bufferize, ...store.mainModule.middlewares];
