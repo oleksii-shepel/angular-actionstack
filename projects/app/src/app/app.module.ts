@@ -5,9 +5,8 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
 
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
-import logger from 'redux-logger';
 import { of } from 'rxjs';
-import { Action, StoreModule, createEffect } from 'supervisor';
+import { Action, StoreModule, createEffect, performance } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeroDetailModule } from './hero-detail/hero-detail.module';
@@ -56,11 +55,11 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
   imports: [
     StoreModule.forRoot({
       preloadedState: {},
-      middlewares: [logger],
+      middlewares: [performance],
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [pingEpic, pingEpic2, pingEpic3],
       dependencies: {},
-      strategy: "concurrent"
+      strategy: "exclusive"
     }),
     BrowserModule,
     FormsModule,
