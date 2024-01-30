@@ -1,4 +1,5 @@
 import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, of, tap } from "rxjs";
+import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsSequentially } from "./effects";
 import { Action, AnyFn, AsyncAction, EnhancedStore, FeatureModule, MainModule, Reducer, Store, StoreCreator, StoreEnhancer, isPlainObject, kindOf } from "./types";
@@ -392,8 +393,8 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
     actionStack: store.actionStack,
     dependencies: () => store.pipeline.dependencies
   };
-
-  const chain = store.mainModule.middlewares.map(middleware => middleware(middlewareAPI));
+  const middlewares = [bufferize, ...store.mainModule.middlewares];
+  const chain = middlewares.map(middleware => middleware(middlewareAPI));
   dispatch = compose(...chain)(store.dispatch);
 
   return {
