@@ -6,8 +6,14 @@ import { Action, AsyncAction } from "./types";
 export const createBufferize = (lock: Lock) => {
   const actionQueue = new ActionQueue();
   const thunk = ({dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+
     if (action instanceof Function) {
-      return action(dispatch, getState, dependencies());
+      await lock.acquire();
+      try {
+        return action(dispatch, getState, dependencies());
+      } finally {
+        lock.release();
+      }
     }
 
     actionStack.push(action);
@@ -15,7 +21,22 @@ export const createBufferize = (lock: Lock) => {
   };
 
   const bufferize = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
-    return thunk({ dispatch, getState, dependencies, isProcessing, actionStack })(next)(action);
+
+    if(isProcessing.value && actionStack.length || action instanceof Function && !actionStack.length) {
+      // child action or async action
+      return thunk({ dispatch, getState, dependencies, isProcessing, actionStack })(next)(action);
+    } else {
+      actionQueue.enqueue(action);
+      await lock.acquire();
+
+      try {
+        action = actionQueue.dequeue()!;
+        actionStack.push(action);
+        return next(action);
+      } finally {
+        lock.release();
+      }
+    }
   };
 
   // Return the bufferize middleware
