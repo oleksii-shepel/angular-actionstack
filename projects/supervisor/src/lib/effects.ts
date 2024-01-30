@@ -1,26 +1,30 @@
-import { Observable, OperatorFunction, concat, concatMap, filter, from, ignoreElements, mergeMap, toArray, withLatestFrom } from 'rxjs';
+import { Observable, OperatorFunction, concat, concatMap, filter, from, ignoreElements, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 
 export function createEffect(
-  actionType: string, // The action type to listen for
-  effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Observable<Action<any>> // The function that performs the side effect and returns an action observable
+  actionType: string,
+  effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Observable<Action<any>>
 ): SideEffect {
   return (action$: Observable<Action<any>>, state$: Observable<any>, dependencies: Record<string, any>) =>
     action$.pipe(
-      filter((action) => action.type === actionType), // Filter the actions by the given type
-      withLatestFrom(state$), // Combine the action with the latest state
+      filter((action) => action.type === actionType),
+      withLatestFrom(state$),
       concatMap(([action, state]) => {
-        // Call the effect function and switch to the result
         const result$ = effectFn(action, state, dependencies);
-        // Check if the result is equal to the action
         return result$.pipe(
-          filter((result) => result !== action), // Filter out the result if it is equal to the action
-          ignoreElements() // Ignore the elements if the result is empty
+          concatMap((result) => {
+            if (result === action) {
+              return of(result).pipe(ignoreElements());
+            } else {
+              return of(result);
+            }
+          })
         );
       })
     );
 }
+
 
 
 export function ofType(...types: [string, ...string[]]): OperatorFunction<Action<any>, Action<any>> {
