@@ -1,4 +1,4 @@
-import { Lock } from "redux-sequential";
+import { Lock } from "./lock";
 import { Action } from "./types";
 
 export const createPerformance = (lock: Lock) => {
