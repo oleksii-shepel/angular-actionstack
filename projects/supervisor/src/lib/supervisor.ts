@@ -2,7 +2,7 @@ import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject
 import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsSequentially } from "./effects";
-import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MetaReducer, Reducer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MetaReducer, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 
 const actions = {
@@ -34,27 +34,39 @@ const actionCreators = {
   unregisterEffects: (module: FeatureModule) => ({ type: actions.UNREGISTER_EFFECTS, payload: module }),
 };
 
-export function createStore(mainModule: MainModule) {
+export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
 
-  let store = initStore(mainModule);
-  store = applyMiddleware(store);
-  store = injectDependencies(store);
-  store = registerEffects(store);
+  let storeCreator = (mainModule: MainModule) => {
+    let store = initStore(mainModule);
+    store = applyMiddleware(store);
+    store = injectDependencies(store);
+    store = registerEffects(store);
 
-  let action$ = store.actionStream.asObservable();
+    let action$ = store.actionStream.asObservable();
 
-  let subscription = action$.pipe(
-    tap(() => store.isProcessing.next(true)),
-    processAction(store, store.actionStack),
-    tap(() => store.isProcessing.next(false))
-  ).subscribe();
+    let subscription = action$.pipe(
+      tap(() => store.isProcessing.next(true)),
+      processAction(store, store.actionStack),
+      tap(() => store.isProcessing.next(false))
+    ).subscribe();
 
-  store.dispatch(actionCreators.initStore());
+    store.dispatch(actionCreators.initStore());
 
-  return {
-    ...store,
-    subscription
-  };
+    return {
+      ...store,
+      subscription
+    };
+  }
+
+  if (typeof enhancer !== "undefined") {
+    if (typeof enhancer !== "function") {
+      throw new Error(`Expected the enhancer to be a function. Instead, received: '${kindOf(enhancer)}'`);
+    }
+    // Apply the enhancer to the store
+    return enhancer(storeCreator)(mainModule);
+  }
+
+  return storeCreator(mainModule);
 }
 
 function initStore(mainModule: MainModule): EnhancedStore {

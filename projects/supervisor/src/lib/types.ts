@@ -109,7 +109,7 @@ export interface EnhancedStore extends Store {
 }
 
 
-export type StoreCreator = (reducer: Reducer, preloadedState: any, enhancer?: StoreEnhancer) => Store;
+export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => EnhancedStore;
 export type StoreEnhancer = (next: StoreCreator) => StoreCreator;
 
 
