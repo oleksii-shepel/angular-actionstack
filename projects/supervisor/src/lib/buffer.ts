@@ -1,5 +1,5 @@
 import { Lock } from "redux-sequential";
-import { ActionQueue } from "./structures";
+import { ActionQueue } from "./collections";
 import { Action } from "./types";
 
 // Define your higher-order function

@@ -59,7 +59,9 @@ export class ActionQueue {
   }
 
   toArray(): Action<any>[] {
-    const reversedInbox = this.inbox.toArray().reverse();
-    return [...this.outbox.toArray(), ...reversedInbox];
+    while (this.inbox.length > 0) {
+      this.outbox.push(this.inbox.pop() as Action<any>);
+    }
+    return this.outbox.toArray();
   }
 }
