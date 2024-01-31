@@ -5,7 +5,6 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
 
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
-import { of } from 'rxjs';
 import { Action, StoreModule, createEffect, performance } from 'supervisor';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -14,9 +13,9 @@ import { HeroesModule } from './heroes/heroes.module';
 import { MessagesModule } from './messages/messages.module';
 
 
-const pingEpic = createEffect('PING', (action, state, dependencies) => of({ type: 'PONG' }));
-const pingEpic2 = createEffect('PING', action => of(action));
-const pingEpic3 = createEffect('PING', action => of({ type: 'PONG3' }));
+const pingEpic = createEffect('PING', (action, state, dependencies) => ({ type: 'PONG' }));
+const pingEpic2 = createEffect('PING', action => action);
+const pingEpic3 = createEffect('PING', action => ({ type: 'PONG3' }));
 
 // const pingEpic = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
 //   ofType('PING'),
