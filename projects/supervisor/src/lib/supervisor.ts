@@ -14,16 +14,6 @@ const actions = {
   UNREGISTER_EFFECTS: 'UNREGISTER_EFFECTS'
 };
 
-const randomString = (): string => Math.random().toString(36).substring(7).split("").join(".");
-
-const ActionTypes = {
-  INIT: `@@redux/INIT${/* @__PURE__ */ randomString()}`,
-  REPLACE: `@@redux/REPLACE${/* @__PURE__ */ randomString()}`,
-  PROBE_UNKNOWN_ACTION: (): string => `@@redux/PROBE_UNKNOWN_ACTION${randomString()}`
-};
-
-const actionTypes_default = ActionTypes;
-
 // Define the action creators
 const actionCreators = {
   initStore: () => ({ type: actions.INIT_STORE }),
@@ -137,7 +127,7 @@ function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore 
   const newModules = [...store.modules, module];
 
   // Register the module's effects
-  const newEffects = [...store.pipeline.effects, ...module.effects];
+  const newEffects = [...store.pipeline.effects, ...(module.effects || [])];
 
   // Return a new store with the updated properties
   return { ...store, modules: newModules, pipeline: {...store.pipeline, effects: newEffects }};
@@ -196,7 +186,7 @@ function registerEffects(store: EnhancedStore): EnhancedStore {
   // Iterate over each module and add its effects to the pipeline
   let effects = store.mainModule.effects ? [...store.mainModule.effects] : [];
   for (const module of store.modules) {
-    effects.push(...module.effects);
+    effects.push(...(module.effects || []));
   }
 
   return { ...store, pipeline: { ...store.pipeline, effects } };
@@ -204,7 +194,7 @@ function registerEffects(store: EnhancedStore): EnhancedStore {
 
 function unregisterEffects(store: EnhancedStore, module: FeatureModule): EnhancedStore {
   // Create a new array excluding the effects of the module to be unloaded
-  const remainingEffects = store.pipeline.effects.filter(effect => !module.effects.includes(effect));
+  const remainingEffects = module.effects ? store.pipeline.effects.filter(effect => !module.effects!.includes(effect)) : store.pipeline.effects;
 
   // Return the array of remaining effects
   return { ...store, pipeline: { ...store.pipeline, effects: remainingEffects } };
@@ -310,7 +300,7 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
     strategy: () => store.pipeline.strategy
   };
 
-  const middlewares = [bufferize, ...store.mainModule.middlewares];
+  const middlewares = [bufferize, ...store.pipeline.middlewares];
   const chain = middlewares.map(middleware => middleware(middlewareAPI));
   dispatch = compose(...chain)(store.dispatch);
 

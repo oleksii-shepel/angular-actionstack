@@ -62,17 +62,17 @@ export type SideEffect = (action: Observable<Action<any>>, state: Observable<any
 export interface FeatureModule {
   slice: string;
   reducer: Reducer;
-  effects: SideEffect[];
-  dependencies: Record<string, any>;
+  effects?: SideEffect[];
+  dependencies?: Record<string, any>;
 }
 
 export interface MainModule {
-  preloadedState: any;
-  middlewares: Middleware[];
+  preloadedState?: any;
+  middlewares?: Middleware[];
   reducer: Reducer;
-  effects: SideEffect[];
-  dependencies: Record<string, any>;
-  strategy: "exclusive" | "concurrent";
+  effects?: SideEffect[];
+  dependencies?: Record<string, any>;
+  strategy?: "exclusive" | "concurrent";
 }
 
 export interface Store {
