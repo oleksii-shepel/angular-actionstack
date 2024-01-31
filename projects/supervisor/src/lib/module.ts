@@ -1,5 +1,5 @@
 import { ModuleWithProviders, NgModule } from "@angular/core";
-import { createStore } from "./supervisor";
+import { createStore } from "./store";
 import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
 @NgModule({})
