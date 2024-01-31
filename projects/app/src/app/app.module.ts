@@ -5,7 +5,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
 
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
-import { Action, StoreModule, createEffect, performance } from 'supervisor';
+import { Action, StoreModule, createEffect, performance } from 'actionstack';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeroDetailModule } from './hero-detail/hero-detail.module';

@@ -2,7 +2,7 @@ import { CommonModule } from "@angular/common";
 import { NgModule } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterModule } from "@angular/router";
-import { Action, StoreModule } from "supervisor";
+import { Action, StoreModule } from "actionstack";
 import { HeroDetailComponent } from "./hero-detail.component";
 
 

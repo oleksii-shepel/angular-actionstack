@@ -1,5 +1,5 @@
 import { Component, Inject } from "@angular/core";
-import { Store, createAction } from "supervisor";
+import { Store, createAction } from "actionstack";
 
 @Component({
   selector: 'app-root',

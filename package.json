@@ -1,6 +1,6 @@
 {
-  "name": "redux-supervisor",
-  "version": "0.0.0",
+  "name": "actionstack",
+  "version": "1.0.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

@@ -1,5 +1,5 @@
 /*
- * Public API Surface of supervisor
+ * Public API Surface of actionstack
  */
 
 export * from "./lib/actions";
