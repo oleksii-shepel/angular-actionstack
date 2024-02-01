@@ -229,7 +229,6 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
   const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
   return (source: Observable<Action<any>>) => {
-    actionStack.clear();
     return source.pipe(
       mapMethod((action: Action<any>) => {
         let state = store.pipeline.reducer(store.currentState.value, action);
@@ -244,12 +243,14 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
 
             return EMPTY;
           }),
+          ignoreElements(),
           finalize(() => actionStack.pop())
         )}),
-      ignoreElements()
+      finalize(() => actionStack.pop())
     );
   }
 }
+
 
 function dispatch(store: EnhancedStore, action: Action<any>): any {
   if (!isPlainObject(action)) {
