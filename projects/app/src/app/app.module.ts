@@ -5,7 +5,8 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
 
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
-import { Action, StoreModule, createEffect, performance } from 'actionstack';
+import { Action, StoreModule, createEffect } from 'actionstack';
+import logger from 'redux-logger';
 import { AppRoutingModule } from './app-routing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeroDetailModule } from './hero-detail/hero-detail.module';
@@ -16,6 +17,7 @@ import { MessagesModule } from './messages/messages.module';
 const pingEpic = createEffect('PING', (action, state, dependencies) => ({ type: 'PONG' }));
 const pingEpic2 = createEffect('PING', action => action);
 const pingEpic3 = createEffect('PING', action => ({ type: 'PONG3' }));
+const pingEpic4 = createEffect('PONG3', action => ({ type: 'PONG4' }));
 
 // const pingEpic = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
 //   ofType('PING'),
@@ -54,9 +56,9 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
   imports: [
     StoreModule.forRoot({
       preloadedState: {},
-      middlewares: [performance],
+      middlewares: [logger],
       reducer: (state: any = {}, action: Action<any>) => state,
-      effects: [pingEpic, pingEpic2, pingEpic3],
+      effects: [pingEpic, pingEpic2, pingEpic3, pingEpic4],
       dependencies: {},
       strategy: "exclusive"
     }),
