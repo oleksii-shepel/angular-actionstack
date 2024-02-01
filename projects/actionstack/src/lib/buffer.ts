@@ -5,17 +5,35 @@ import { Action, AsyncAction } from "./types";
 export const createBufferize = () => {
   const actionQueue = new ActionQueue();
   const dispatchLock = new Lock();
-  const childLockQueue: Lock[] = [];
 
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+    let childLockQueue: Lock[] = [];
+
+    const processAction = async (currentAction: Action<any> | AsyncAction<any>, lock: Lock) => {
+      await lock.acquire();
+      try {
+        if (currentAction instanceof Function) {
+          // If it's an async action (a function), process it within the same lock
+          actionStack.push(currentAction);
+          childLockQueue.push(new Lock());
+          await currentAction(dispatch, getState, dependencies());
+        } else {
+          // If it's a synchronous action, process it in sequence without acquiring the lock
+          await next(currentAction);
+        }
+      } finally {
+        lock.release();
+      }
+    };
+
     if (isProcessing.value && actionStack.length) {
-        // If it's a synchronous action, process it in sequence without acquiring the lock
-        actionStack.push(action);
-        childLockQueue.push(new Lock());
-        await processAction(action as any, childLockQueue[childLockQueue.length - 1]);
+      // If it's a synchronous action, process it in sequence without acquiring the lock
+      actionStack.push(action);
+      childLockQueue.push(new Lock());
+      await processAction(action as any, childLockQueue[childLockQueue.length - 1]);
     } else {
       // Regular action or the first action in the sequence
-      childLockQueue.splice(0, childLockQueue.length);
+      childLockQueue = [];
 
       actionStack.push(action);
       childLockQueue.push(new Lock());
@@ -37,24 +55,8 @@ export const createBufferize = () => {
         }
       }
     }
-
-    async function processAction(currentAction: Action<any> | AsyncAction<any>, lock: Lock) {
-      await lock.acquire();
-      try {
-        if (currentAction instanceof Function) {
-        // If it's an async action (a function), process it within the same lock
-          actionStack.push(currentAction);
-          childLockQueue.push(new Lock());
-          await currentAction(dispatch, getState, dependencies());
-        } else {
-          // If it's a synchronous action, process it in sequence without acquiring the lock
-          await next(currentAction);
-        }
-      } finally {
-        lock.release();
-      }
-    }
   };
+
 
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
     actionStack.push(action);
