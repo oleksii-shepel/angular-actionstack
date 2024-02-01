@@ -61,16 +61,15 @@ export const createBufferize = () => {
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
     async function processAction(currentAction: Action<any> | AsyncAction<any>) {
       if (currentAction instanceof Function) {
-        // If it's an async action (a function), process it within the same lock
-        actionStack.push(currentAction);
+        // If it's an async action (a function), process it
         await currentAction(dispatch, getState, dependencies());
       } else {
-        // If it's a synchronous action, process it in sequence without acquiring the lock
+        // If it's a synchronous action, process it
+        actionStack.push(action);
         await next(currentAction);
       }
     }
 
-    actionStack.push(action);
     return await processAction(action);
   };
 
