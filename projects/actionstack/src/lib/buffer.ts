@@ -14,11 +14,10 @@ export const createBufferize = () => {
       try {
         if (currentAction instanceof Function) {
           // If it's an async action (a function), process it within the same lock
-          actionStack.push(currentAction);
-          childLockQueue.push(new Lock());
           await currentAction(dispatch, getState, dependencies());
         } else {
           // If it's a synchronous action, process it in sequence without acquiring the lock
+          actionStack.push(currentAction);
           await next(currentAction);
         }
       } finally {
@@ -28,15 +27,20 @@ export const createBufferize = () => {
 
     if (isProcessing.value && actionStack.length) {
       // If it's a synchronous action, process it in sequence without acquiring the lock
-      actionStack.push(action);
+      if (!(action instanceof Function)) {
+        actionStack.push(action);
+      }
+
       childLockQueue.push(new Lock());
       await processAction(action as any, childLockQueue[childLockQueue.length - 1]);
     } else {
       // Regular action or the first action in the sequence
       childLockQueue = [];
 
-      actionStack.push(action);
-      childLockQueue.push(new Lock());
+      if (!(action instanceof Function)) {
+        actionStack.push(action);
+      }
+
       actionQueue.enqueue(action as any);
 
       if (!isProcessing.value) {
@@ -44,6 +48,7 @@ export const createBufferize = () => {
         await dispatchLock.acquire();
 
         try {
+          childLockQueue.push(new Lock());
           // Process actions in sequence
           while (actionQueue.length > 0) {
             const currentAction = actionQueue.dequeue()!;
