@@ -19,8 +19,9 @@ export const createPerformanceLogger = () => {
     // Log the durations in order when all actions have been dispatched
     if (actionStack.length === 0) {
       if(actionDurations.length > 0) {
+        const parent = actionDurations[0];
         console.groupCollapsed(
-          `%caction %c${actionDurations[0].label}%c @ ${actionDurations[0].date.toISOString()} (duration: ${actionDurations[0].duration.toFixed(5)} ms)`,
+          `%caction %c${parent.label}%c @ ${parent.date.toISOString()} (duration: ${parent.duration.toFixed(5)} ms)`,
           'color: gray; font-weight: lighter;', // styles for 'action'
           'color: black; font-weight: bold;', // styles for action label
           'color: gray; font-weight: lighter;' // styles for the rest of the string
