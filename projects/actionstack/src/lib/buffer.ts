@@ -54,7 +54,15 @@ export const createBufferize = () => {
         await currentAction(dispatch, getState, dependencies());
       } else {
         // If it's a synchronous action, process it
-        actionStack.push(action);
+        if(!actionQueue.length && !actionStack.length || actionStack.peek() !== currentAction) {
+          actionQueue.enqueue(action as any);
+        }
+
+        if(!actionStack.length) {
+          currentAction = actionQueue.dequeue()!;
+          actionStack.push(currentAction);
+        }
+
         await next(currentAction);
       }
     }
