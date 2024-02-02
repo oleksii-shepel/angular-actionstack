@@ -16,5 +16,9 @@ export class AppComponent {
 
     let action = createAction('PONG', (...args: any[]) => async (dispatch, getState) => 1);
     store.dispatch(action());
+
+    let action2 = createAction('PONG2', (...args: any[]) => async (dispatch, getState) => 1);
+    store.dispatch(action2());
+
   }
 }

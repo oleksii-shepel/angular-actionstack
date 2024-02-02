@@ -1,4 +1,4 @@
-import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, mergeMap, of, tap, map } from "rxjs";
 import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -35,9 +35,7 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
     let action$ = store.actionStream.asObservable();
 
     let subscription = action$.pipe(
-      tap(() => store.isProcessing.next(true)),
       processAction(store, store.actionStack),
-      tap(() => store.isProcessing.next(false))
     ).subscribe();
 
     store.dispatch(actionCreators.initStore());
@@ -237,19 +235,23 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
           mapMethod((childActions: Action<any>[]) => {
             if (childActions.length > 0) {
               return from(childActions).pipe(
-                tap((nextAction: Action<any>) => store.dispatch(nextAction))
+                tap((nextAction: Action<any>) => {
+                  actionStack.push(nextAction);
+                  store.dispatch(nextAction);
+                }),
               );
             }
-
             return EMPTY;
           }),
           ignoreElements(),
-          finalize(() => actionStack.pop())
-        )}),
-      finalize(() => actionStack.pop())
+          finalize(() => actionStack.clear()) // Pop parent action from the stack
+        );
+      }),
     );
-  }
+  };
 }
+
+
 
 
 function dispatch(store: EnhancedStore, action: Action<any>): any {
