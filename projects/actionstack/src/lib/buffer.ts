@@ -38,8 +38,6 @@ export const createBufferize = () => {
       if (isProcessing.value) {
         await firstValueFrom(isProcessing.pipe(filter((value: boolean) => value === false), take(1)));
         isProcessing.next(true);
-      } else {
-        isProcessing.next(false);
       }
 
       let currentAction = actionQueue.dequeue()!;
