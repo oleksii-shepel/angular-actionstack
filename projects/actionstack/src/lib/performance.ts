@@ -1,25 +1,41 @@
-import { Lock } from "./lock";
 import { Action } from "./types";
 
-export const createPerformance = (lock: Lock) => {
-  const performance = (store: any) => (next: Function) => async (action: Action<any>) => {
-    const actionLabel = `action-processing-duration-${action.type.toLowerCase()}`;
-    await lock.acquire();
+export const createPerformanceLogger = () => {
+  let actionDurations: { action: Action<any>, label: string, duration: number, date: Date }[] = [];
 
-    console.time(actionLabel);
-    try {
-      return next(action);
-    } finally {
-      console.timeEnd(actionLabel);
-      await lock.release();
+  const measurePerformance = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => (action: Action<any>) => {
+    const startTime = performance.now();
+
+    actionDurations.push({ action, label: `${action.type}`, duration: 0, date: new Date()});
+
+    const result = next(action);
+    const endTime = performance.now();
+    const duration = Math.round((endTime - startTime) * 100000) / 100000;
+
+    if(actionDurations.length > 0) {
+      actionDurations.find(ad => ad.action === action)!.duration = duration;
     }
+
+    // Log the durations in order when all actions have been dispatched
+    if (actionStack.length === 0) {
+      if(actionDurations.length > 0) {
+        console.groupCollapsed(
+          `%caction %c${actionDurations[0].label}%c @ ${actionDurations[0].date.toISOString()} (duration: ${actionDurations[0].duration.toFixed(5)} ms)`,
+          'color: gray; font-weight: lighter;', // styles for 'action'
+          'color: black; font-weight: bold;', // styles for action label
+          'color: gray; font-weight: lighter;' // styles for the rest of the string
+        );
+        actionDurations.forEach(ad => console.log(`%caction ${ad.label} @ ${ad.date.toISOString()} (${ad.duration.toFixed(5)} ms)`, 'color: gray; font-weight: bold;'));
+        console.groupEnd();
+      }
+      actionDurations = [];
+    }
+
+    return result;
   }
 
-  return performance;
+  return measurePerformance;
 };
 
-// Create a new lock
-const lock = new Lock();
-
 // Create the performance middleware with the lock
-export const performance = createPerformance(lock);
+export const measure = createPerformanceLogger();

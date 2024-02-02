@@ -1,4 +1,4 @@
-import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, mergeMap, of, tap, map } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -228,7 +228,7 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
 
   return (source: Observable<Action<any>>) => {
     return source.pipe(
-      mapMethod((action: Action<any>) => {
+      concatMap((action: Action<any>) => {
         let state = store.pipeline.reducer(store.currentState.value, action);
         store.currentState.next(state);
         return runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
