@@ -1,51 +1,48 @@
-import { take, filter } from 'rxjs';
-import { firstValueFrom } from 'rxjs';
 import { ActionQueue } from "./collections";
 import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
 
 export const createBufferize = () => {
   const actionQueue = new ActionQueue();
-  let dispatchLock = new Lock();
+  let isAsync = false;
   let asyncLock = new Lock();
+  let syncLock = new Lock();
 
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
-    async function processAction(currentAction: Action<any> | AsyncAction<any>) {
-      if (currentAction instanceof Function) {
-        // If it's an async action (a function), process it
-        await asyncLock.acquire();
-        try {
-          await currentAction(dispatch, getState, dependencies());
-        } finally {
+    if (typeof action === 'function') {
+      // If it's an async action (a function), process it
+      await asyncLock.acquire();
+      isAsync = true;
+
+      try {
+        return await action(dispatch, getState, dependencies);
+      } finally {
+        if (isAsync && asyncLock.isLocked) {
           asyncLock.release();
         }
-      } else {
-        if(!actionStack.length) {
-          actionStack.push(currentAction);
-        }
-
-        await next(currentAction);
+        isAsync = false;
       }
-    }
-
-    if(!actionQueue.length && !actionStack.length || actionStack.peek() !== action) {
-      actionQueue.enqueue(action as any);
     } else {
-      await processAction(action);
-    }
-
-    while(actionQueue.length > 0) {
-      if (isProcessing.value) {
-        await firstValueFrom(isProcessing.pipe(filter((value: boolean) => value === false), take(1)));
-        isProcessing.next(true);
+      if(!isAsync && asyncLock.isLocked) {
+        await asyncLock.acquire();
       }
+      await syncLock.acquire();
+      try {
+        if(!actionStack.length) {
+          actionStack.push(action);
+          isProcessing.next(true);
+        }
+        const result = await next(action);
+        return result;
 
-      let currentAction = actionQueue.dequeue()!;
-      await processAction(currentAction);
+      } finally {
+        syncLock.release();
+        if (!isAsync && asyncLock.isLocked) {
+          asyncLock.release();
+        }
+      }
     }
   };
-
-
 
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
     async function processAction(currentAction: Action<any> | AsyncAction<any>) {
@@ -53,17 +50,11 @@ export const createBufferize = () => {
         // If it's an async action (a function), process it
         await currentAction(dispatch, getState, dependencies());
       } else {
-        // If it's a synchronous action, process it
-        if(!actionQueue.length && !actionStack.length || actionStack.peek() !== currentAction) {
-          actionQueue.enqueue(action as any);
-        }
-
         if(!actionStack.length) {
-          currentAction = actionQueue.dequeue()!;
-          actionStack.push(currentAction);
+          actionStack.push(action);
+          isProcessing.next(true);
         }
-
-        await next(currentAction);
+        return await next(action);
       }
     }
 

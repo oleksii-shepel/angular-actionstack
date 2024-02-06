@@ -4,7 +4,6 @@ import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
-
 const actions = {
   INIT_STORE: 'INIT_STORE',
   LOAD_MODULE: 'LOAD_MODULE',
@@ -222,6 +221,7 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
   return { ...store, pipeline: { ...store.pipeline, reducer: combinedReducer }};
 }
 
+
 export function processAction(store: EnhancedStore, actionStack: ActionStack): OperatorFunction<Action<any>, void> {
   const runSideEffects = store.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
   const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
@@ -243,16 +243,19 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
             }
             return EMPTY;
           }),
-          ignoreElements(),
-          finalize(() => actionStack.clear()) // Pop parent action from the stack
+          finalize(() => {
+            if (actionStack.length > 0) {
+              actionStack.pop();
+            } else {
+              store.isProcessing.next(false);
+            }
+          }),
         );
       }),
+      ignoreElements()
     );
   };
 }
-
-
-
 
 function dispatch(store: EnhancedStore, action: Action<any>): any {
   if (!isPlainObject(action)) {
@@ -290,13 +293,13 @@ function compose(...funcs: AnyFn[]): AnyFn {
 
 function applyMiddleware(store: EnhancedStore): EnhancedStore {
 
-  let dispatch = (action: any, ...args: any[]) => {
+  let dispatch = (action: any) => {
     throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
   }
 
   const middlewareAPI = {
     getState: store.getState,
-    dispatch: (action: any, ...args: any[]) => dispatch(action, ...args),
+    dispatch: (action: any) => dispatch(action),
     isProcessing: store.isProcessing,
     actionStack: store.actionStack,
     dependencies: () => store.pipeline.dependencies,

@@ -1,5 +1,5 @@
 export class Lock {
-  private isLocked: boolean = false;
+  public isLocked: boolean = false;
   private queue: Array<() => void> = [];
 
   constructor() {}
