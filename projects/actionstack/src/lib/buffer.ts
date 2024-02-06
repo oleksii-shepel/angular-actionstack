@@ -6,7 +6,6 @@ export const createBufferize = () => {
   const actionQueue = new ActionQueue();
   let isAsync = false;
   let asyncLock = new Lock();
-  let syncLock = new Lock();
 
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     if (typeof action === 'function') {
@@ -26,17 +25,17 @@ export const createBufferize = () => {
       if(!isAsync && asyncLock.isLocked) {
         await asyncLock.acquire();
       }
-      await syncLock.acquire();
+
       try {
         if(!actionStack.length) {
           actionStack.push(action);
           isProcessing.next(true);
         }
+
         const result = await next(action);
         return result;
 
       } finally {
-        syncLock.release();
         if (!isAsync && asyncLock.isLocked) {
           asyncLock.release();
         }

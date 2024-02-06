@@ -11,19 +11,14 @@ export class AppComponent {
 
   constructor(@Inject('Store') store: Store) {
     store.subscribe((state) => console.log(state));
-    store.dispatch({type: 'PING1'});
-    store.dispatch({type: 'PING2'});
+    store.dispatch({type: 'PING'});
+    store.dispatch({type: 'PING'});
 
-    let action = createAction('PONG1', (...args: any[]) => async (dispatch, getState) => 1);
+    let action = createAction('PONG', (...args: any[]) => async (dispatch, getState) => 1);
     store.dispatch(action());
-
-    store.dispatch({type: 'PING3'});
-    store.dispatch({type: 'PING4'});
 
     let action2 = createAction('PONG2', (...args: any[]) => async (dispatch, getState) => 1);
     store.dispatch(action2());
 
-    store.dispatch({type: 'PING5'});
-    store.dispatch({type: 'PING6'});
   }
 }
