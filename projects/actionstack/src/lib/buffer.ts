@@ -8,15 +8,15 @@ export const createBufferize = () => {
 
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
-      if(!actionStack.length) {
-        actionStack.push(action);
-        isProcessing.next(true);
-      }
 
       if (typeof action === 'function') {
         // If it's an async action (a function), process it
         return await action(dispatch, getState, dependencies);
       } else {
+        if(!actionStack.length) {
+          actionStack.push(action);
+          isProcessing.next(true);
+        }
         // If it's a regular action, pass it to the next middleware
         return await next(action);
       }
@@ -49,21 +49,43 @@ export const createBufferize = () => {
 
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
-      if(!actionStack.length) {
-        actionStack.push(action);
-        isProcessing.next(true);
-      }
 
       if (typeof action === 'function') {
         // If it's an async action (a function), process it
         return await action(dispatch, getState, dependencies);
       } else {
+        if(!actionStack.length) {
+          actionStack.push(action);
+          isProcessing.next(true);
+        }
         // If it's a regular action, pass it to the next middleware
         return await next(action);
       }
     }
 
-    return await processAction(action);
+    // If there's an action being processed, enqueue the new action and return
+    if (asyncLock.isLocked && actionStack.length) {
+      actionQueue.enqueue(action as any);
+      return;
+    }
+
+    try {
+      // Lock the asyncLock and process the action
+      await asyncLock.acquire();
+
+      await processAction(action);
+
+      // Process all enqueued actions
+      while (actionQueue.length > 0) {
+        const nextAction = actionQueue.dequeue()!;
+        await processAction(nextAction);
+      }
+    } finally {
+      // Release the lock
+      if (asyncLock.isLocked) {
+        asyncLock.release();
+      }
+    }
   };
 
 

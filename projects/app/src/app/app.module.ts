@@ -59,7 +59,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [pingEpic, pingEpic2, pingEpic3, pingEpic4],
       dependencies: {},
-      strategy: "exclusive"
+      strategy: "concurrent"
     }),
     BrowserModule,
     FormsModule,
