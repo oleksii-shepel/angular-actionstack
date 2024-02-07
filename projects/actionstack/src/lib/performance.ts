@@ -7,66 +7,6 @@ export const createPerformanceLogger = () => {
   let asyncLock = new Lock();
   const actionQueue = new ActionQueue();
 
-  const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any>) => {
-    async function processAction(action: Action<any>) {
-      const startTime = performance.now(); // Capture the start time
-
-      actionGroup.push({ action: action, label: `${action.type}`, duration: 0, date: new Date()});
-
-      // If it's a regular action, pass it to the next middleware
-      const result = await next(action);
-
-      const endTime = performance.now(); // Capture the end time
-      const duration = Math.round((endTime - startTime) * 100000) / 100000;
-
-      const actionDuration = actionGroup.find(ad => ad.action === action);
-      if (actionDuration) {
-        actionDuration.duration = duration;
-      }
-
-      if(actionStack.length === 0) {
-        if(actionGroup.length > 0) {
-          const totalDuration = actionGroup.reduce((total, ad) => total + ad.duration, 0);
-
-          console.groupCollapsed(
-            `%caction %c${actionGroup[0].label}%c @ ${actionGroup[0].date.toISOString()} (duration: ${totalDuration.toFixed(5)} ms)`,
-            'color: gray; font-weight: lighter;', // styles for 'action'
-            'color: black; font-weight: bold;', // styles for action label
-            'color: gray; font-weight: lighter;' // styles for the rest of the string
-          );
-          actionGroup.forEach(ad => console.log(`%caction ${ad.label} @ ${ad.date.toISOString()} (${ad.duration.toFixed(5)} ms)`, 'color: gray; font-weight: bold;'));
-          console.groupEnd();
-          actionGroup = [];
-        }
-        return result;
-      }
-    }
-
-    // If there's an action being processed, enqueue the new action and return
-    if (asyncLock.isLocked && actionStack.length) {
-      actionQueue.enqueue(action as any);
-      return;
-    }
-
-    try {
-      // Lock the asyncLock and process the action
-      await asyncLock.acquire();
-
-      await processAction(action);
-
-      // Process all enqueued actions
-      while (actionQueue.length > 0) {
-        const nextAction = actionQueue.dequeue()!;
-        await processAction(nextAction);
-      }
-    } finally {
-      // Release the lock
-      if (asyncLock.isLocked) {
-        asyncLock.release();
-      }
-    }
-  };
-
   const measurePerformance = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any>) => {
     async function processAction(action: Action<any>) {
       const startTime = performance.now(); // Capture the start time
@@ -127,7 +67,7 @@ export const createPerformanceLogger = () => {
     }
   };
 
-  return exclusive;
+  return measurePerformance;
 };
 
 // Create the performance middleware with the lock
