@@ -14,7 +14,7 @@ export class AppComponent {
     store.dispatch({type: 'PING'});
     store.dispatch({type: 'PING'});
 
-    let action = createAction('PONG', (...args: any[]) => async (dispatch, getState) => 1);
+    let action = createAction('PONG', (...args: any[]) => async (dispatch, getState) => new Promise(resolve => setTimeout(() => resolve(1), 2000)));
     store.dispatch(action());
 
     let action2 = createAction('PONG2', (...args: any[]) => async (dispatch, getState) => 1);

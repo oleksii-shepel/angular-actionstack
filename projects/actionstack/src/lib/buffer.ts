@@ -47,19 +47,19 @@ export const createBufferize = () => {
     }
   };
 
-  const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
+  const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
 
       if (typeof action === 'function') {
-        // If it's an async action (a function), process it
-        return await action(dispatch, getState, dependencies());
+        // If it's an async action (a function), process it asynchronously
+        action(dispatch, getState, dependencies());
       } else {
         if(!actionStack.length) {
           actionStack.push(action);
           isProcessing.next(true);
         }
         // If it's a regular action, pass it to the next middleware
-        return await next(action);
+        await next(action);
       }
     }
 
@@ -87,7 +87,6 @@ export const createBufferize = () => {
       }
     }
   };
-
 
   // Map strategy names to functions
   const strategies: Record<string, any> = {
