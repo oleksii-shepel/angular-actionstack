@@ -4,55 +4,61 @@ import { Action, AsyncAction } from "./types";
 
 export const createBufferize = () => {
   const actionQueue = new ActionQueue();
-  let isAsync = false;
   let asyncLock = new Lock();
-  let syncLock = new Lock();
 
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
-    if (typeof action === 'function') {
-      // If it's an async action (a function), process it
-      await asyncLock.acquire();
-      isAsync = true;
+    async function processAction(action: Action<any> | AsyncAction<any>) {
+      if(!actionStack.length) {
+        actionStack.push(action);
+        isProcessing.next(true);
+      }
 
-      try {
+      if (typeof action === 'function') {
+        // If it's an async action (a function), process it
         return await action(dispatch, getState, dependencies);
-      } finally {
-        if (isAsync && asyncLock.isLocked) {
-          asyncLock.release();
-        }
-        isAsync = false;
+      } else {
+        // If it's a regular action, pass it to the next middleware
+        return await next(action);
       }
-    } else {
-      if(!isAsync && asyncLock.isLocked) {
-        await asyncLock.acquire();
+    }
+
+    // If there's an action being processed, enqueue the new action and return
+    if (asyncLock.isLocked && actionStack.length) {
+      actionQueue.enqueue(action as any);
+      return;
+    }
+
+    try {
+      // Lock the asyncLock and process the action
+      await asyncLock.acquire();
+
+      await processAction(action);
+
+      // Process all enqueued actions
+      while (actionQueue.length > 0) {
+        const nextAction = actionQueue.dequeue()!;
+        await processAction(nextAction);
       }
-
-      try {
-        if(!actionStack.length) {
-          actionStack.push(action);
-          isProcessing.next(true);
-        }
-
-        await next(action);
-
-      } finally {
-        if (!isAsync && asyncLock.isLocked) {
-          asyncLock.release();
-        }
+    } finally {
+      // Release the lock
+      if (asyncLock.isLocked) {
+        asyncLock.release();
       }
     }
   };
 
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack } : any) => (next: Function) => async (action: Action<any>) => {
-    async function processAction(currentAction: Action<any> | AsyncAction<any>) {
-      if (currentAction instanceof Function) {
+    async function processAction(action: Action<any> | AsyncAction<any>) {
+      if(!actionStack.length) {
+        actionStack.push(action);
+        isProcessing.next(true);
+      }
+
+      if (typeof action === 'function') {
         // If it's an async action (a function), process it
-        await currentAction(dispatch, getState, dependencies());
+        return await action(dispatch, getState, dependencies);
       } else {
-        if(!actionStack.length) {
-          actionStack.push(action);
-          isProcessing.next(true);
-        }
+        // If it's a regular action, pass it to the next middleware
         return await next(action);
       }
     }

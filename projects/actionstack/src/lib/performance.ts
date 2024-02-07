@@ -1,49 +1,41 @@
-import { Lock } from "./lock";
 import { Action } from "./types";
 
 export const createPerformanceLogger = () => {
-  let actionDurations: { action: Action<any>, label: string, duration: number, date: Date }[] = [];
-  let lock = new Lock();
-
-
+  let actionGroup: { action: Action<any>, label: string, duration: number, date: Date }[] = [];
 
   const measurePerformance = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any>) => {
-    await lock.acquire();
-    try {
+    const startTime = performance.now(); // Capture the start time
 
-      const startTime = performance.now();
+    actionGroup.push({ action: action, label: `${action.type}`, duration: 0, date: new Date()});
 
-      actionDurations.push({ action, label: `${action.type}`, duration: 0, date: new Date()});
+    // If it's a regular action, pass it to the next middleware
+    const result = await next(action);
 
-      const result = await next(action);
-      const endTime = performance.now();
-      const duration = Math.round((endTime - startTime) * 100000) / 100000;
+    const endTime = performance.now(); // Capture the end time
+    const duration = Math.round((endTime - startTime) * 100000) / 100000;
 
-      if(actionDurations.length > 0) {
-        actionDurations.find(ad => ad.action === action)!.duration = duration;
-      }
-
-      // Log the durations in order when all actions have been dispatched
-      if (actionStack.length === 0) {
-        if(actionDurations.length > 0) {
-          const parent = actionDurations[0];
-          console.groupCollapsed(
-            `%caction %c${parent.label}%c @ ${parent.date.toISOString()} (duration: ${parent.duration.toFixed(5)} ms)`,
-            'color: gray; font-weight: lighter;', // styles for 'action'
-            'color: black; font-weight: bold;', // styles for action label
-            'color: gray; font-weight: lighter;' // styles for the rest of the string
-          );
-          actionDurations.forEach(ad => console.log(`%caction ${ad.label} @ ${ad.date.toISOString()} (${ad.duration.toFixed(5)} ms)`, 'color: gray; font-weight: bold;'));
-          console.groupEnd();
-        }
-        actionDurations = [];
-      }
-
-      return result;
-    } finally {
-      lock.release();
+    const actionDuration = actionGroup.find(ad => ad.action === action);
+    if (actionDuration) {
+      actionDuration.duration = duration;
     }
-  }
+
+    if(actionStack.length === 0) {
+      if(actionGroup.length > 0) {
+        const totalDuration = actionGroup.reduce((total, ad) => total + ad.duration, 0);
+
+        console.groupCollapsed(
+          `%caction %c${actionGroup[0].label}%c @ ${actionGroup[0].date.toISOString()} (duration: ${totalDuration.toFixed(5)} ms)`,
+          'color: gray; font-weight: lighter;', // styles for 'action'
+          'color: black; font-weight: bold;', // styles for action label
+          'color: gray; font-weight: lighter;' // styles for the rest of the string
+        );
+        actionGroup.forEach(ad => console.log(`%caction ${ad.label} @ ${ad.date.toISOString()} (${ad.duration.toFixed(5)} ms)`, 'color: gray; font-weight: bold;'));
+        console.groupEnd();
+        actionGroup = [];
+      }
+      return result;
+    }
+  };
 
   return measurePerformance;
 };
