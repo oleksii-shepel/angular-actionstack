@@ -52,7 +52,7 @@ export const createBufferize = () => {
 
       if (typeof action === 'function') {
         // If it's an async action (a function), process it asynchronously
-        action(dispatch, getState, dependencies());
+        (async () => { await action(dispatch, getState, dependencies()); })();
       } else {
         if(!actionStack.length) {
           actionStack.push(action);
