@@ -47,12 +47,19 @@ export const createBufferize = () => {
     }
   };
 
+  let asyncActions: Promise<any>[] = [];
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
 
       if (typeof action === 'function') {
         // If it's an async action (a function), process it asynchronously
-        (async () => { await action(dispatch, getState, dependencies()); })();
+        const asyncFunc = (async () => {
+          await action(dispatch, getState, dependencies());
+          // Remove the function from the array when it's done
+          asyncActions = asyncActions.filter(func => func !== asyncFunc);
+        })();
+        // Add the function to the array
+        asyncActions.push(asyncFunc);
       } else {
         if(!actionStack.length) {
           actionStack.push(action);
