@@ -1,10 +1,10 @@
-import { Observable, OperatorFunction, concat, concatMap, filter, from, ignoreElements, merge, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
+import { Observable, OperatorFunction, concat, concatMap, filter, from, ignoreElements, isObservable, merge, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 
 export function createEffect(
   actionType: string,
-  effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any>
+  effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | Observable<Action<any>>
 ): SideEffect {
   return (action$: Observable<Action<any>>, state$: Observable<any>, dependencies: Record<string, any>) =>
     action$.pipe(
@@ -12,10 +12,17 @@ export function createEffect(
       withLatestFrom(state$),
       concatMap(([action, state]) => {
         const result = effectFn(action, state, dependencies);
-        if (result === action) {
-          return of(result).pipe(ignoreElements());
+        if(result === null || result === undefined) {
+          throw new Error("Effect has to return a value.");
+        }
+        else if (!isObservable(result)) {
+          if (result === action) {
+            return of(result).pipe(ignoreElements());
+          } else {
+            return of(result);
+        }
         } else {
-          return of(result);
+          return result;
         }
       })
     );

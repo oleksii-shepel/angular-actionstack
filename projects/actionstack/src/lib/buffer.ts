@@ -5,6 +5,7 @@ import { Action, AsyncAction } from "./types";
 export const createBufferize = () => {
   const actionQueue = new ActionQueue();
   let asyncLock = new Lock();
+  let asyncActions: Promise<any>[] = [];
 
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
@@ -47,7 +48,6 @@ export const createBufferize = () => {
     }
   };
 
-  let asyncActions: Promise<any>[] = [];
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
 
@@ -110,7 +110,7 @@ export const createBufferize = () => {
     return strategyFunc({ dispatch, getState, dependencies, isProcessing, actionStack })(next)(action);
   };
 
-  // Return the bufferize middleware
+  selectStrategy.internal = true;
   return selectStrategy;
 };
 

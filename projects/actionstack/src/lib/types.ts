@@ -20,6 +20,7 @@ export type MetaReducer = (reducer: Reducer) => Reducer;
 
 export interface Middleware {
   (store: any): (next: (action: any) => any) => Promise<(action: any) => any> | any;
+  internal?: boolean;
 }
 export interface Store {
   dispatch: (action: any) => any;

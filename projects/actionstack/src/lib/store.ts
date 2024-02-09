@@ -338,7 +338,7 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
     throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
   }
 
-  const middlewareAPI = {
+  const internalAPI = {
     getState: store.getState,
     dispatch: (action: any) => dispatch(action),
     isProcessing: store.isProcessing,
@@ -347,8 +347,13 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
     strategy: () => store.pipeline.strategy
   };
 
+  const middlewareAPI = {
+    getState: store.getState,
+    dispatch: (action: any) => dispatch(action),
+  };
+
   const middlewares = [bufferize, ...store.pipeline.middlewares];
-  const chain = middlewares.map(middleware => middleware(middlewareAPI));
+  const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
   dispatch = compose(...chain)(store.dispatch);
 
   return {

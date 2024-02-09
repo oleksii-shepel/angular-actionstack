@@ -67,6 +67,7 @@ export const createPerformanceLogger = () => {
     }
   };
 
+  measurePerformance.internal = true;
   return measurePerformance;
 };
 
