@@ -13,7 +13,7 @@ export function createEffect(
       concatMap(([action, state]) => {
         const result = effectFn(action, state, dependencies);
         if(result === null || result === undefined) {
-          throw new Error("Effect has to return a value.");
+          throw new Error("Effect has to return an action or an observable. Instead it does not return anything.");
         }
         else if (!isObservable(result)) {
           if (result === action) {
