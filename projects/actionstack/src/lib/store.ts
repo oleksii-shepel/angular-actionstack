@@ -1,9 +1,9 @@
-import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, combineLatest, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { Lock } from "./lock";
-import { AsyncObserver } from "./subject";
+import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 const actions = {
@@ -81,7 +81,7 @@ function initStore(mainModule: MainModule): EnhancedStore {
   const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
   const ACTION_STACK_DEFAULT = new ActionStack();
 
-  const CURRENT_STATE_DEFAULT = new BehaviorSubject<any>({});
+  const CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>({});
 
   const DISPATCHING_DEFAULT = new BehaviorSubject(false);
 
@@ -272,27 +272,26 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
     return source.pipe(
       conditionalLock(actionStack, (action: Action<any>) => {
         let state = store.pipeline.reducer(store.currentState.value, action);
-        return from(store.currentState.next(state) ?? of(true)).pipe(
-          concatMap(() => runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
-            mapMethod((childActions: Action<any>[]) => {
-              if (childActions.length > 0) {
-                return from(childActions).pipe(
-                  tap((nextAction: Action<any>) => {
-                    actionStack.push(nextAction);
-                    store.dispatch(nextAction);
-                  }),
-                );
-              }
-              return EMPTY;
-            }),
-            finalize(() => {
-              if (actionStack.length > 0) {
-                actionStack.pop();
-              } else {
-                store.isProcessing.next(false);
-              }
-            }),
-        )))
+        return combineLatest([from(store.currentState.next(state)), runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
+          mapMethod((childActions: Action<any>[]) => {
+            if (childActions.length > 0) {
+              return from(childActions).pipe(
+                tap((nextAction: Action<any>) => {
+                  actionStack.push(nextAction);
+                  store.dispatch(nextAction);
+                }),
+              );
+            }
+            return EMPTY;
+          }),
+          finalize(() => {
+            if (actionStack.length > 0) {
+              actionStack.pop();
+            } else {
+              store.isProcessing.next(false);
+            }
+          }))
+        ])
       }),
       ignoreElements()
     );

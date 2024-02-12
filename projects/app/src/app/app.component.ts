@@ -10,7 +10,7 @@ export class AppComponent {
   title = 'Tour of Heroes';
 
   constructor(@Inject('Store') store: Store) {
-    store.subscribe((state, props) => console.log(state, props));
+    store.subscribe(async (state, props) => console.log(state, props));
     store.dispatch({type: 'PING'});
     store.dispatch({type: 'PING'});
 
