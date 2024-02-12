@@ -1,8 +1,8 @@
 import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, combineLatest, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
-import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { Lock } from "./lock";
+import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
@@ -352,7 +352,7 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
     dispatch: (action: any) => dispatch(action),
   };
 
-  const middlewares = [bufferize, ...store.pipeline.middlewares];
+  const middlewares = [starter, ...store.pipeline.middlewares];
   const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
   dispatch = compose(...chain)(store.dispatch);
 

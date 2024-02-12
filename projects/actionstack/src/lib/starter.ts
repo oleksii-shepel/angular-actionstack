@@ -2,7 +2,7 @@ import { ActionQueue } from "./collections";
 import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
 
-export const createBufferize = () => {
+export const createStarter = () => {
   const actionQueue = new ActionQueue();
   let asyncLock = new Lock();
   let asyncActions: Promise<any>[] = [];
@@ -115,4 +115,4 @@ export const createBufferize = () => {
 };
 
 // Create the bufferize middleware
-export const bufferize = createBufferize();
+export const starter = createStarter();
