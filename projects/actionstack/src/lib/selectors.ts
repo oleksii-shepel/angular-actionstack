@@ -81,9 +81,14 @@ export function createSelector(
   // The memoizedSelector function will return a function that executes the selectors and projector
   const memoizedSelector: MemoizedSelector = (state: any, props?: any) => {
     // Execute each selector with the state and props
-    const resolvedSelectors = memoizedSelectors.map(selector => selector(state, props));
-    // Apply the projector function to the resolved selector values
-    return memoizedProjector ? memoizedProjector(...resolvedSelectors) : resolvedSelectors[0];
+    const resolvedSelectors = memoizedSelectors
+      .map(selector => selector(state, props))
+      .map(result => result instanceof Promise || result?.then instanceof Function ? result : Promise.resolve(result));
+    // Wait for all the promises to resolve
+    return Promise.all(resolvedSelectors).then(values => {
+      // Apply the projector function to the resolved values
+      return memoizedProjector ? memoizedProjector(...values) : values[0];
+    });
   };
 
   // Optional: Implement a release method if your memoization functions require cleanup

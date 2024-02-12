@@ -1,5 +1,6 @@
 import { BehaviorSubject, Observable, Observer, Subject, Subscription } from "rxjs";
 import { ActionStack } from './collections';
+import { CustomAsyncSubject } from './subject';
 
 export interface Action<T = any> {
   type: string;
@@ -33,7 +34,7 @@ export interface Store {
 export type AnyFn = (...args: any[]) => any;
 
 export interface SelectorFunction {
-  (state: any, props: any): any;
+  (state: any, props: any): any | Promise<any>;
 }
 
 export interface ProjectorFunction {
@@ -107,7 +108,7 @@ export interface EnhancedStore extends Store {
   actionStream: Subject<Action<any>>;
   actionStack: ActionStack;
 
-  currentState: BehaviorSubject<any>;
+  currentState: CustomAsyncSubject<any>;
   isProcessing: BehaviorSubject<boolean>;
 }
 

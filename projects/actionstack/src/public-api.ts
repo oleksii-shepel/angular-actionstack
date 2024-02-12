@@ -11,6 +11,7 @@ export * from "./lib/module";
 export * from "./lib/performance";
 export * from "./lib/selectors";
 export * from "./lib/store";
+export * from "./lib/subject";
 export * from "./lib/types";
 
 

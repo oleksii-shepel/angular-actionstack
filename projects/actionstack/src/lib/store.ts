@@ -3,6 +3,7 @@ import { bufferize } from "./buffer";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { Lock } from "./lock";
+import { AsyncObserver } from "./subject";
 import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 const actions = {
@@ -271,27 +272,27 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
     return source.pipe(
       conditionalLock(actionStack, (action: Action<any>) => {
         let state = store.pipeline.reducer(store.currentState.value, action);
-        store.currentState.next(state);
-        return runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
-          mapMethod((childActions: Action<any>[]) => {
-            if (childActions.length > 0) {
-              return from(childActions).pipe(
-                tap((nextAction: Action<any>) => {
-                  actionStack.push(nextAction);
-                  store.dispatch(nextAction);
-                }),
-              );
-            }
-            return EMPTY;
-          }),
-          finalize(() => {
-            if (actionStack.length > 0) {
-              actionStack.pop();
-            } else {
-              store.isProcessing.next(false);
-            }
-          }),
-        );
+        return from(store.currentState.next(state) ?? of(true)).pipe(
+          concatMap(() => runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
+            mapMethod((childActions: Action<any>[]) => {
+              if (childActions.length > 0) {
+                return from(childActions).pipe(
+                  tap((nextAction: Action<any>) => {
+                    actionStack.push(nextAction);
+                    store.dispatch(nextAction);
+                  }),
+                );
+              }
+              return EMPTY;
+            }),
+            finalize(() => {
+              if (actionStack.length > 0) {
+                actionStack.pop();
+              } else {
+                store.isProcessing.next(false);
+              }
+            }),
+        )))
       }),
       ignoreElements()
     );
@@ -312,11 +313,11 @@ function dispatch(store: EnhancedStore, action: Action<any>): any {
   store.actionStream.next(action);
 }
 
-function subscribe(store: EnhancedStore, next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
+async function subscribe(store: EnhancedStore, next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Promise<Subscription> {
   if (typeof next === 'function') {
-    return store.currentState.subscribe({next, error, complete});
+    return await store.currentState.subscribe({next, error, complete});
   } else {
-    return store.currentState.subscribe(next as Partial<Observer<any>>);
+    return await store.currentState.subscribe(next as Partial<AsyncObserver<any>>);
   }
 }
 
