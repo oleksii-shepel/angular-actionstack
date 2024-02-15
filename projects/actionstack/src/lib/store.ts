@@ -312,11 +312,11 @@ function dispatch(store: EnhancedStore, action: Action<any>): any {
   store.actionStream.next(action);
 }
 
-async function subscribe(store: EnhancedStore, next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Promise<Subscription> {
+function subscribe(store: EnhancedStore, next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
   if (typeof next === 'function') {
-    return await store.currentState.subscribe({next, error, complete});
+    return store.currentState.subscribe({next, error, complete});
   } else {
-    return await store.currentState.subscribe(next as Partial<AsyncObserver<any>>);
+    return store.currentState.subscribe(next as Partial<AsyncObserver<any>>);
   }
 }
 

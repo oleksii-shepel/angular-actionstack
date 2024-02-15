@@ -30,7 +30,7 @@ export class AsyncObservable<T> {
 
   constructor() {}
 
-  async subscribe(observer: AsyncObserver<T>): Promise<Subscription> {
+  subscribe(observer: AsyncObserver<T>): Subscription {
     this.observers.push(observer);
     return {
       unsubscribe: () => {
@@ -63,13 +63,10 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
     this._value = initialValue;
   }
 
-  override async subscribe(observer: Partial<AsyncObserver<T>>): Promise<Subscription> {
-    // Emit the current value to the observer as soon as it subscribes
-    if (observer.next) {
-      await observer.next(this._value);
-    }
+  override subscribe(observer: Partial<AsyncObserver<T>>): Promise<Subscription> {
+
     // Convert the unsubscribe function to a Subscription object
-    return await super.subscribe(observer as AsyncObserver<T>);
+    return super.subscribe(observer as AsyncObserver<T>);
   }
 
   async next(value: T): Promise<void> {
