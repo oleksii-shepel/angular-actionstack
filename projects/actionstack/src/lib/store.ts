@@ -1,7 +1,6 @@
 import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, combineLatest, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
-import { Lock } from "./lock";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
@@ -228,41 +227,11 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
   const runSideEffects = store.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
   const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
-  function conditionalLock(actionStack: ActionStack, callback: (action: Action<any>) => Observable<any>) {
-    const locks: Lock[] = Array(actionStack.length).fill(null).map(() => new Lock());
-
+  function conditionalLock(callback: (action: Action<any>) => Observable<any>) {
     return (source: Observable<Action<any>>) => {
       return source.pipe(
         concatMap(action => {
-          while (locks.length < actionStack.length) {
-            locks.push(new Lock());
-          }
-
-          while (locks.length > actionStack.length) {
-            const lock = locks.pop()!;
-            if (lock.isLocked) {
-              lock.release();
-            }
-          }
-
-          const recursiveLock = (index: number): Observable<any> => {
-            if (index < locks.length) {
-              if (!locks[index].isLocked || index === locks.length - 1) {
-                locks[index].acquire();
-              }
-              return recursiveLock(index + 1).pipe(
-                finalize(() => {
-                  if (locks[index].isLocked) {
-                    locks[index].release();
-                  }
-                })
-              );
-            } else {
-              return callback(action);
-            }
-          };
-
-          return recursiveLock(0);
+          return callback(action);
         })
       );
     };
@@ -270,7 +239,7 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
 
   return (source: Observable<Action<any>>) => {
     return source.pipe(
-      conditionalLock(actionStack, (action: Action<any>) => {
+      conditionalLock((action: Action<any>) => {
         let state = store.pipeline.reducer(store.currentState.value, action);
         return combineLatest([from(store.currentState.next(state)), runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
           mapMethod((childActions: Action<any>[]) => {
