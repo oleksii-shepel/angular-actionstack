@@ -227,19 +227,9 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
   const runSideEffects = store.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
   const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
-  function conditionalLock(callback: (action: Action<any>) => Observable<any>) {
-    return (source: Observable<Action<any>>) => {
-      return source.pipe(
-        concatMap(action => {
-          return callback(action);
-        })
-      );
-    };
-  }
-
   return (source: Observable<Action<any>>) => {
     return source.pipe(
-      conditionalLock((action: Action<any>) => {
+      concatMap((action: Action<any>) => {
         let state = store.pipeline.reducer(store.currentState.value, action);
         return combineLatest([from(store.currentState.next(state)), runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
           mapMethod((childActions: Action<any>[]) => {
