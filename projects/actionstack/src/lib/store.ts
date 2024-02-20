@@ -124,7 +124,8 @@ function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore 
   const newModules = [...store.modules, module];
 
   // Return a new store with the updated properties
-  return { ...store, modules: newModules };
+  store.modules = newModules;
+  return store;
 }
 
 function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
@@ -138,7 +139,8 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
   store = ejectDependencies(store, module);
 
   // Return a new store with the updated properties
-  return { ...store };
+  store.modules = newModules;
+  return store;
 }
 
 function select(store: EnhancedStore, selector: MemoizedSelector): Observable<any> {
@@ -162,7 +164,8 @@ function injectDependencies(store: EnhancedStore): EnhancedStore {
     }
   }
 
-  return { ...store, pipeline: { ...store.pipeline, dependencies } };
+  store.pipeline.dependencies = dependencies;
+  return store;
 }
 
 function ejectDependencies(store: EnhancedStore, module: FeatureModule): EnhancedStore {
@@ -170,7 +173,8 @@ function ejectDependencies(store: EnhancedStore, module: FeatureModule): Enhance
   let dependencies = store.pipeline.dependencies;
   delete dependencies[module.slice];
 
-  return { ...store, pipeline: { ...store.pipeline, dependencies } };
+  store.pipeline.dependencies = dependencies;
+  return store;
 }
 
 function setupReducer(store: EnhancedStore): EnhancedStore {
@@ -188,13 +192,14 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
     let newState = mainReducer(state, action);
 
     Object.keys(featureReducers).forEach((key) => {
-      newState[key] = featureReducers[key];
+      newState[key] = featureReducers[key](newState[key], action);
     });
 
     return newState;
   };
 
-  return { ...store, pipeline: { ...store.pipeline, reducer: combinedReducer }};
+  store.pipeline.reducer = combinedReducer;
+  return store;
 }
 
 
@@ -290,10 +295,8 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
   const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
   dispatch = compose(...chain)(store.dispatch);
 
-  return {
-    ...store,
-    dispatch
-  };
+  store.dispatch = dispatch;
+  return store;
 }
 
 function enable(store: EnhancedStore, dependencies: any, ...effects: SideEffect[]): EnhancedStore {
@@ -303,7 +306,8 @@ function enable(store: EnhancedStore, dependencies: any, ...effects: SideEffect[
     newEffects.set(effect, dependencies);
   });
 
-  return { ...store, pipeline: { ...store.pipeline, effects: newEffects }};
+  store.pipeline.effects = newEffects;
+  return store;
 }
 
 function disable(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore {
@@ -313,5 +317,6 @@ function disable(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore 
     newEffects.delete(effect);
   });
 
-  return { ...store, pipeline: { ...store.pipeline, effects: newEffects }};
+  store.pipeline.effects = newEffects;
+  return store;
 }
