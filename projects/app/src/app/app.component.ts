@@ -13,8 +13,8 @@ export class AppComponent implements OnDestroy {
 
   constructor(@Inject('Store') private store: EnhancedStore) {
     store.enable({}, pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6);
-    let selector = createSelector(state => state);
-    store.select(selector).subscribe((value) => {
+    let selector = createSelector((state, props) => state, (state, props) => state);
+    store.select(selector({}, {})).subscribe((value) => {
       console.log(value);
     });
     //store.subscribe(async (state, props) => console.log(state, props));
