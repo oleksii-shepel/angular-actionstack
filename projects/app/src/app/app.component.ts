@@ -1,5 +1,5 @@
 import { Component, Inject, OnDestroy } from "@angular/core";
-import { EnhancedStore, createAction } from "actionstack";
+import { EnhancedStore, createAction, createSelector } from "actionstack";
 import { pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6 } from "./app.module";
 
 
@@ -13,7 +13,11 @@ export class AppComponent implements OnDestroy {
 
   constructor(@Inject('Store') private store: EnhancedStore) {
     store.enable({}, pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6);
-    store.subscribe(async (state, props) => console.log(state, props));
+    let selector = createSelector(state => state);
+    store.select(selector).subscribe((value) => {
+      console.log(value);
+    });
+    //store.subscribe(async (state, props) => console.log(state, props));
     store.dispatch({type: 'PING'});
     store.dispatch({type: 'PING'});
 

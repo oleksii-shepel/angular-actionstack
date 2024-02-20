@@ -60,7 +60,6 @@ function initStore(mainModule: MainModule): EnhancedStore {
   const MAIN_MODULE_DEFAULT = {
     middlewares: [],
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: [],
     dependencies: {},
     strategy: "exclusive"
   };

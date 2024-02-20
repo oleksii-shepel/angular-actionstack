@@ -37,7 +37,7 @@ export interface SelectorFunction {
   (state: any, props: any): any | Promise<any>;
 }
 
-export interface ProjectorFunction {
+export interface ProjectionFunction {
   (state: any | any[], props: any): any;
 }
 
@@ -50,7 +50,7 @@ export interface MemoizedSelectorFunction extends MemoizedFunction, SelectorFunc
 
 }
 
-export interface MemoizedProjectorFunction extends MemoizedFunction, ProjectorFunction {
+export interface MemoizedProjectionFunction extends MemoizedFunction, ProjectionFunction {
 
 }
 
