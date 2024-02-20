@@ -13,12 +13,12 @@ import { HeroesModule } from './heroes/heroes.module';
 import { MessagesModule } from './messages/messages.module';
 
 
-const pingEpic = createEffect('PING', (action, state, dependencies) => ({ type: 'PONG' }));
-const pingEpic2 = createEffect('PING', action => action);
-const pingEpic3 = createEffect('PING', action => ({ type: 'PONG3' }));
-const pingEpic4 = createEffect('PING', action => ({ type: 'PONG4' }));
-const pingEpic5 = createEffect('PONG3', action => ({ type: 'PONG4' }));
-const pingEpic6 = createEffect('PONG3', action => ({ type: 'PONG5' }));
+export const pingEpic = createEffect('PING', (action, state, dependencies) => ({ type: 'PONG' }));
+export const pingEpic2 = createEffect('PING', action => action);
+export const pingEpic3 = createEffect('PING', action => ({ type: 'PONG3' }));
+export const pingEpic4 = createEffect('PING', action => ({ type: 'PONG4' }));
+export const pingEpic5 = createEffect('PONG3', action => ({ type: 'PONG4' }));
+export const pingEpic6 = createEffect('PONG3', action => ({ type: 'PONG5' }));
 
 // const pingEpic = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
 //   ofType('PING'),
@@ -59,7 +59,6 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
       preloadedState: {},
       middlewares: [measure],
       reducer: (state: any = {}, action: Action<any>) => state,
-      effects: [pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6],
       dependencies: {},
       strategy: "concurrent"
     }),

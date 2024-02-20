@@ -64,7 +64,6 @@ export type SideEffect = (action: Observable<Action<any>>, state: Observable<any
 export interface FeatureModule {
   slice: string;
   reducer: Reducer;
-  effects?: SideEffect[];
   dependencies?: Record<string, any>;
 }
 
@@ -72,7 +71,6 @@ export interface MainModule {
   preloadedState?: any;
   middlewares?: Middleware[];
   reducer: Reducer;
-  effects?: SideEffect[];
   dependencies?: Record<string, any>;
   strategy?: "exclusive" | "concurrent";
 }
@@ -91,14 +89,17 @@ export interface EnhancedStore extends Store {
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
   select: (selector: MemoizedSelector) => Observable<any>;
 
-  loadModule: (module: FeatureModule) => EnhancedStore;
-  unloadModule: (module: FeatureModule) => EnhancedStore;
+  enable: (dependencies: any, ...effects: SideEffect[]) => void;
+  disable: (...effects: SideEffect[]) => void;
+
+  loadModule: (module: FeatureModule) => void;
+  unloadModule: (module: FeatureModule) => void;
 
   pipeline: {
     middlewares: Middleware[];
     reducer: Reducer;
-    effects: SideEffect[];
     dependencies: Record<string, any>;
+    effects: Map<SideEffect, any>;
     strategy: "sequential" | "buffered" | "concurrent";
   };
 

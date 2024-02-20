@@ -1,15 +1,18 @@
-import { Component, Inject } from "@angular/core";
-import { Store, createAction } from "actionstack";
+import { Component, Inject, OnDestroy } from "@angular/core";
+import { EnhancedStore, createAction } from "actionstack";
+import { pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6 } from "./app.module";
+
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
   title = 'Tour of Heroes';
 
-  constructor(@Inject('Store') store: Store) {
+  constructor(@Inject('Store') private store: EnhancedStore) {
+    store.enable({}, pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6);
     store.subscribe(async (state, props) => console.log(state, props));
     store.dispatch({type: 'PING'});
     store.dispatch({type: 'PING'});
@@ -19,6 +22,9 @@ export class AppComponent {
 
     let action2 = createAction('PONG2', (...args: any[]) => async (dispatch, getState) => 1);
     store.dispatch(action2());
+  }
 
+  ngOnDestroy(): void {
+    this.store.disable(pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6);
   }
 }

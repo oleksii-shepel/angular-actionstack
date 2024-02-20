@@ -38,13 +38,13 @@ export function ofType(...types: [string, ...string[]]): OperatorFunction<Action
 }
 
 
-export function runSideEffectsSequentially(sideEffects: SideEffect[], dependencies: Record<string, any>) {
+export function runSideEffectsSequentially(sideEffects: IterableIterator<[SideEffect, any]>) {
   return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
     action$.pipe(
       withLatestFrom(state$),
       concatMap(([action, state]) =>
         from(sideEffects).pipe(
-          concatMap((sideEffect: SideEffect) => sideEffect(action$, state$, dependencies))
+          concatMap(([sideEffect, dependencies]) => sideEffect(action$, state$, dependencies))
         )
       ),
       toArray()
@@ -52,13 +52,13 @@ export function runSideEffectsSequentially(sideEffects: SideEffect[], dependenci
 }
 
 
-export function runSideEffectsInParallel(sideEffects: SideEffect[], dependencies: Record<string, any>) {
+export function runSideEffectsInParallel(sideEffects: IterableIterator<[SideEffect, any]>) {
   return ([action$, state$]: [Observable<Action<any>>, Observable<any>]) =>
     action$.pipe(
       withLatestFrom(state$),
       mergeMap(([action, state]) =>
         from(sideEffects).pipe(
-          mergeMap((sideEffect: SideEffect) => sideEffect(action$, state$, dependencies))
+          mergeMap(([sideEffect, dependencies]) => sideEffect(action$, state$, dependencies))
         )
       ),
       toArray()

@@ -1,9 +1,9 @@
-import { BehaviorSubject, EMPTY, Observable, Observer, OperatorFunction, Subject, Subscription, combineLatest, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, combineLatest, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -29,13 +29,11 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
   let storeCreator = (mainModule: MainModule) => {
     let store = initStore(mainModule);
     store = applyMiddleware(store);
-    store = injectDependencies(store);
-    store = registerEffects(store);
 
     let action$ = store.actionStream.asObservable();
 
     let subscription = action$.pipe(
-      processAction(store, store.actionStack),
+      processAction(store)
     ).subscribe();
 
     store.dispatch(actionCreators.initStore());
@@ -96,13 +94,14 @@ function initStore(mainModule: MainModule): EnhancedStore {
 
   enhancedStore = {
     ...enhancedStore,
-    dispatch: (action: Action<any>) => dispatch(enhancedStore, action),
-    getState: () => enhancedStore.currentState.value,
-    subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => subscribe(enhancedStore, next, error, complete),
-    select: (selector: MemoizedSelector) => select(enhancedStore, selector),
-
-    loadModule: (module: FeatureModule) => loadModule(enhancedStore, module),
-    unloadModule: (module: FeatureModule) => unloadModule(enhancedStore, module),
+    dispatch: function (action: Action<any>)  { return dispatch(enhancedStore, action); },
+    getState: function () { return enhancedStore.currentState.value; },
+    subscribe: function (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) { return Object.assign(this, {...this, ...subscribe(enhancedStore, next, error, complete) }); },
+    select: function (selector: MemoizedSelector) { return Object.assign(this, {...this, ...select(enhancedStore, selector) }); },
+    enable: function (dependencies: any, ...effects: SideEffect[]) { return Object.assign(this, {...this, ...enable(this, dependencies, ...effects) }); },
+    disable: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...disable(this, ...effects) }); },
+    loadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...loadModule(this, module) }); },
+    unloadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...unloadModule(this, module) }); },
   } as EnhancedStore;
 
   return enhancedStore;
@@ -124,11 +123,8 @@ function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore 
   // Create a new array with the module added to the store's modules
   const newModules = [...store.modules, module];
 
-  // Register the module's effects
-  const newEffects = [...store.pipeline.effects, ...(module.effects || [])];
-
   // Return a new store with the updated properties
-  return { ...store, modules: newModules, pipeline: {...store.pipeline, effects: newEffects }};
+  return { ...store, modules: newModules };
 }
 
 function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
@@ -140,9 +136,6 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
 
   // Eject dependencies
   store = ejectDependencies(store, module);
-
-  // Unregister the module's effects
-  store = unregisterEffects(store, module);
 
   // Return a new store with the updated properties
   return { ...store };
@@ -180,24 +173,6 @@ function ejectDependencies(store: EnhancedStore, module: FeatureModule): Enhance
   return { ...store, pipeline: { ...store.pipeline, dependencies } };
 }
 
-function registerEffects(store: EnhancedStore): EnhancedStore {
-  // Iterate over each module and add its effects to the pipeline
-  let effects = store.mainModule.effects ? [...store.mainModule.effects] : [];
-  for (const module of store.modules) {
-    effects.push(...(module.effects || []));
-  }
-
-  return { ...store, pipeline: { ...store.pipeline, effects } };
-}
-
-function unregisterEffects(store: EnhancedStore, module: FeatureModule): EnhancedStore {
-  // Create a new array excluding the effects of the module to be unloaded
-  const remainingEffects = module.effects ? store.pipeline.effects.filter(effect => !module.effects!.includes(effect)) : store.pipeline.effects;
-
-  // Return the array of remaining effects
-  return { ...store, pipeline: { ...store.pipeline, effects: remainingEffects } };
-}
-
 function setupReducer(store: EnhancedStore): EnhancedStore {
   // Get the main module reducer
   const mainReducer = store.mainModule.reducer;
@@ -223,20 +198,19 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
 }
 
 
-export function processAction(store: EnhancedStore, actionStack: ActionStack): OperatorFunction<Action<any>, void> {
-  const runSideEffects = store.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
-  const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-
+export function processAction(store: EnhancedStore) {
   return (source: Observable<Action<any>>) => {
+    const runSideEffects = store.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
+    const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
     return source.pipe(
       concatMap((action: Action<any>) => {
         let state = store.pipeline.reducer(store.currentState.value, action);
-        return combineLatest([from(store.currentState.next(state)), runSideEffects(store.pipeline.effects, store.pipeline.dependencies)([of(action), of(state)]).pipe(
+        return combineLatest([from(store.currentState.next(state)), runSideEffects(store.pipeline.effects.entries())([of(action), of(state)]).pipe(
           mapMethod((childActions: Action<any>[]) => {
             if (childActions.length > 0) {
               return from(childActions).pipe(
                 tap((nextAction: Action<any>) => {
-                  actionStack.push(nextAction);
+                  store.actionStack.push(nextAction);
                   store.dispatch(nextAction);
                 }),
               );
@@ -244,8 +218,8 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
             return EMPTY;
           }),
           finalize(() => {
-            if (actionStack.length > 0) {
-              actionStack.pop();
+            if (store.actionStack.length > 0) {
+              store.actionStack.pop();
             } else {
               store.isProcessing.next(false);
             }
@@ -256,6 +230,7 @@ export function processAction(store: EnhancedStore, actionStack: ActionStack): O
     );
   };
 }
+
 
 function dispatch(store: EnhancedStore, action: Action<any>): any {
   if (!isPlainObject(action)) {
@@ -321,4 +296,22 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
   };
 }
 
+function enable(store: EnhancedStore, dependencies: any, ...effects: SideEffect[]): EnhancedStore {
+  let newEffects = new Map(store.pipeline.effects);
 
+  effects.forEach((effect) => {
+    newEffects.set(effect, dependencies);
+  });
+
+  return { ...store, pipeline: { ...store.pipeline, effects: newEffects }};
+}
+
+function disable(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore {
+  let newEffects = new Map(store.pipeline.effects);
+
+  effects.forEach((effect) => {
+    newEffects.delete(effect);
+  });
+
+  return { ...store, pipeline: { ...store.pipeline, effects: newEffects }};
+}

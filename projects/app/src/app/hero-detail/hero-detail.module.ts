@@ -10,7 +10,6 @@ import { HeroDetailComponent } from "./hero-detail.component";
   imports: [CommonModule, FormsModule, RouterModule, StoreModule.forFeature({
     slice: 'hero-detail',
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: [],
     dependencies: {}
   })],
   declarations: [

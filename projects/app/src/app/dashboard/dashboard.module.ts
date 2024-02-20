@@ -10,7 +10,6 @@ import { DashboardComponent } from "./dashboard.component";
   imports: [CommonModule, FormsModule, RouterModule, StoreModule.forFeature({
     slice: 'dashboard',
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: [],
     dependencies: {}
   })],
   declarations: [

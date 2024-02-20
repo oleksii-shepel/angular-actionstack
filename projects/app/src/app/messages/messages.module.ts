@@ -10,7 +10,6 @@ import { MessagesComponent } from "./messages.component";
   imports: [CommonModule, FormsModule, RouterModule, StoreModule.forFeature({
     slice: 'messages',
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: [],
     dependencies: {}
   })],
   declarations: [

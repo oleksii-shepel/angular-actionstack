@@ -10,7 +10,6 @@ import { HeroesComponent } from "./heroes.component";
   imports: [CommonModule, FormsModule, RouterModule, StoreModule.forFeature({
     slice: 'heroes',
     reducer: (state: any = {}, action: Action<any>) => state,
-    effects: [],
     dependencies: {}
   })],
   declarations: [
