@@ -1,4 +1,4 @@
-import { Observable, OperatorFunction, concat, concatMap, filter, from, ignoreElements, isObservable, merge, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
+import { Observable, OperatorFunction, concatMap, filter, from, ignoreElements, isObservable, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 
@@ -36,26 +36,6 @@ export function ofType(...types: [string, ...string[]]): OperatorFunction<Action
     return false;
   });
 }
-
-
-export function combine(strategy: 'exclusive' | 'concurrent', ...effects: SideEffect[]): SideEffect {
-  const merger: SideEffect = (...args) => {
-    const observables = effects.map((effect) => {
-      const output$ = effect(...args);
-      if (!output$) throw new TypeError(`combine: one of the provided effects "${effect.name || '<anonymous>'}" does not return a stream. Double check you're not missing a return statement!`);
-      return output$;
-    });
-
-    return strategy === 'concurrent' ? merge(...observables): concat(...observables);
-  };
-
-  try {
-    Object.defineProperty(merger, 'name', { value: `combine(${effects.map((effect) => effect.name || '<anonymous>').join(', ')})` });
-  } catch (e) {}
-
-  return merger;
-}
-
 
 
 export function runSideEffectsSequentially(sideEffects: SideEffect[], dependencies: Record<string, any>) {
