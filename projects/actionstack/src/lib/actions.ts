@@ -11,38 +11,23 @@ export function createAction(action: string | { type: string } & any, fn?: Funct
     return () => action;
   }
 
-  return (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => {
+  return (...args: any[]) => async (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => {
     dispatch({ ...action, type: `${action.type}_REQUEST` });
 
     try {
       const result = fn(...args);
+      const payload = typeof result === 'function' ? await result(dispatch, getState, dependencies) : await result;
 
-      if (typeof result === 'function') {
-        // fn is a SyncActionCreator or AsyncActionCreator
-        return result(dispatch, getState, dependencies);
-      } else if (result instanceof Promise) {
-        // fn is an async function
-        return result.then(
-          data => {
-            dispatch({ ...action, type: `${action.type}_SUCCESS`, payload: data });
-            return data;
-          },
-          error => {
-            dispatch({ ...action, type: `${action.type}_FAILURE`, payload: error, error: true });
-            throw error;
-          }
-        );
-      } else {
-        // fn is a sync function
-        dispatch({ ...action, type: `${action.type}_SUCCESS`, payload: result });
-        return result;
-      }
+      dispatch({ ...action, type: `${action.type}_SUCCESS`, payload });
+      return payload;
     } catch (error) {
       dispatch({ ...action, type: `${action.type}_FAILURE`, payload: error, error: true });
       throw error;
     }
   };
 }
+
+
 
 export function bindActionCreator(actionCreator: Function, dispatch: Function): Function {
   return function(this: any, ...args: any[]): any {
