@@ -97,8 +97,8 @@ function initStore(mainModule: MainModule): EnhancedStore {
     getState: function () { return enhancedStore.currentState.value; },
     subscribe: function (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) { return Object.assign(this, {...this, ...subscribe(enhancedStore, next, error, complete) }); },
     select: function (selector: MemoizedSelector) { return Object.assign(this, {...this, ...select(enhancedStore, selector) }); },
-    attach: function (...args: (SideEffect | any)[]) { return Object.assign(this, {...this, ...attach(this, ...args) }); },
-    detach: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...detach(this, ...effects) }); },
+    enable: function (...args: (SideEffect | any)[]) { return Object.assign(this, {...this, ...enable(this, ...args) }); },
+    disable: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...disable(this, ...effects) }); },
     loadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...loadModule(this, module) }); },
     unloadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...unloadModule(this, module) }); },
   } as EnhancedStore;
@@ -298,7 +298,7 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
   return store;
 }
 
-function attach(store: EnhancedStore, ...args: (SideEffect | any)[]): EnhancedStore {
+function enable(store: EnhancedStore, ...args: (SideEffect | any)[]): EnhancedStore {
   let dependencies = {};
   let effects: SideEffect[] = [];
 
@@ -320,7 +320,7 @@ function attach(store: EnhancedStore, ...args: (SideEffect | any)[]): EnhancedSt
 
 
 
-function detach(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore {
+function disable(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore {
   let newEffects = new Map(store.pipeline.effects);
 
   effects.forEach((effect) => {
