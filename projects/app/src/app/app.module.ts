@@ -20,26 +20,6 @@ export const pingEpic4 = createEffect('PING', action => ({ type: 'PONG4' }));
 export const pingEpic5 = createEffect('PONG3', action => ({ type: 'PONG4' }));
 export const pingEpic6 = createEffect('PONG3', action => ({ type: 'PONG5' }));
 
-// const pingEpic = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
-//   ofType('PING'),
-//   withLatestFrom(state$),
-//   tap(([action, state]) => {}),
-//   map(() => ({ type: 'PONG' }))
-// );
-
-// const pingEpic2 = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
-//   ofType('PING'),
-//   withLatestFrom(state$),
-//   tap(([action, state]) => {}),
-//   ignoreElements()
-// );
-
-// const pingEpic3 = (action$: Observable<Action<any>>, state$: Observable<any>) => action$.pipe(
-//   ofType('PING'),
-//   withLatestFrom(state$),
-//   tap(([action, state]) => {}),
-//   map(() => ({ type: 'PONG3' }))
-// );
 
 export function getBaseHref(platformLocation: PlatformLocation): string {
   return platformLocation.getBaseHrefFromDOM();

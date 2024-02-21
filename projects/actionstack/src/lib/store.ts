@@ -1,4 +1,5 @@
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, combineLatest, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { createAction } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
@@ -16,12 +17,12 @@ const actions = {
 
 // Define the action creators
 const actionCreators = {
-  initStore: () => ({ type: actions.INIT_STORE }),
-  applyMiddlewares: () => ({ type: actions.APPLY_MIDDLEWARES }),
-  registerEffects: () => ({ type: actions.REGISTER_EFFECTS }),
-  loadModule: (module: FeatureModule) => ({ type: actions.LOAD_MODULE, payload: module }),
-  unloadModule: (module: FeatureModule) => ({ type: actions.UNLOAD_MODULE, payload: module }),
-  unregisterEffects: (module: FeatureModule) => ({ type: actions.UNREGISTER_EFFECTS, payload: module }),
+  initStore: createAction(actions.INIT_STORE),
+  applyMiddlewares: createAction(actions.APPLY_MIDDLEWARES),
+  registerEffects: createAction(actions.REGISTER_EFFECTS),
+  loadModule: createAction(actions.LOAD_MODULE, (module: FeatureModule) => () => module),
+  unloadModule: createAction(actions.UNLOAD_MODULE, (module: FeatureModule) => () => module),
+  unregisterEffects: createAction(actions.UNREGISTER_EFFECTS, (module: FeatureModule) => () => module)
 };
 
 export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
