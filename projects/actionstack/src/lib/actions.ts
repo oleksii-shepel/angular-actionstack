@@ -1,6 +1,6 @@
 import { AsyncFunction, SyncFunction, kindOf } from "./types";
 
-export function createAction(action: any, fn?: SyncFunction<any> | AsyncFunction<any>) {
+export function createAction(action: string | { type: string } & any, fn?: SyncFunction<any> | AsyncFunction<any>) {
   if(typeof action === 'string') {
     action = {type: action};
   } else if (typeof action !== 'object' || action === null || !action.type) {
