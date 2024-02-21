@@ -20,9 +20,9 @@ const actionCreators = {
   initStore: createAction(actions.INIT_STORE),
   applyMiddlewares: createAction(actions.APPLY_MIDDLEWARES),
   registerEffects: createAction(actions.REGISTER_EFFECTS),
-  loadModule: createAction(actions.LOAD_MODULE, (module: FeatureModule) => () => module),
-  unloadModule: createAction(actions.UNLOAD_MODULE, (module: FeatureModule) => () => module),
-  unregisterEffects: createAction(actions.UNREGISTER_EFFECTS, (module: FeatureModule) => () => module)
+  loadModule: (module: MainModule) => createAction({type: actions.LOAD_MODULE, payload: module}),
+  unloadModule: (module: FeatureModule) => createAction({type: actions.UNLOAD_MODULE, payload: module}),
+  unregisterEffects: (module: FeatureModule) => createAction({type: actions.UNREGISTER_EFFECTS, payload: module})
 };
 
 export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
