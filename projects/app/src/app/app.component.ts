@@ -12,7 +12,7 @@ export class AppComponent implements OnDestroy {
   title = 'Tour of Heroes';
 
   constructor(@Inject('Store') private store: EnhancedStore) {
-    store.enable({}, pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6);
+    store.attach(pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6);
     let selector = createSelector((state, props) => state, (state, props) => state);
     store.select(selector({}, {})).subscribe((value) => {
       console.log(value);
@@ -29,6 +29,6 @@ export class AppComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.store.disable(pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6);
+    this.store.detach(pingEpic, pingEpic2, pingEpic3, pingEpic4, pingEpic5, pingEpic6);
   }
 }

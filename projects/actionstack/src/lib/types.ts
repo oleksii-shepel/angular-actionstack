@@ -89,8 +89,8 @@ export interface EnhancedStore extends Store {
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
   select: (selector: MemoizedSelector) => Observable<any>;
 
-  enable: (dependencies: any, ...effects: SideEffect[]) => void;
-  disable: (...effects: SideEffect[]) => void;
+  attach: (dependencies: any, ...effects: SideEffect[]) => void;
+  detach: (...effects: SideEffect[]) => void;
 
   loadModule: (module: FeatureModule) => void;
   unloadModule: (module: FeatureModule) => void;
@@ -190,6 +190,6 @@ function isDate(val: any): boolean {
 }
 
 export {
-  isAction, isPlainObject, kindOf
+    isAction, isPlainObject, kindOf
 };
 

@@ -97,8 +97,8 @@ function initStore(mainModule: MainModule): EnhancedStore {
     getState: function () { return enhancedStore.currentState.value; },
     subscribe: function (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) { return Object.assign(this, {...this, ...subscribe(enhancedStore, next, error, complete) }); },
     select: function (selector: MemoizedSelector) { return Object.assign(this, {...this, ...select(enhancedStore, selector) }); },
-    enable: function (dependencies: any, ...effects: SideEffect[]) { return Object.assign(this, {...this, ...enable(this, dependencies, ...effects) }); },
-    disable: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...disable(this, ...effects) }); },
+    attach: function (...args: (SideEffect | any)[]) { return Object.assign(this, {...this, ...attach(this, ...args) }); },
+    detach: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...detach(this, ...effects) }); },
     loadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...loadModule(this, module) }); },
     unloadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...unloadModule(this, module) }); },
   } as EnhancedStore;
@@ -298,7 +298,16 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
   return store;
 }
 
-function enable(store: EnhancedStore, dependencies: any, ...effects: SideEffect[]): EnhancedStore {
+function attach(store: EnhancedStore, ...args: (SideEffect | any)[]): EnhancedStore {
+  let dependencies = {};
+  let effects: SideEffect[] = [];
+
+  if (typeof args[args.length - 1] !== "function") {
+    dependencies = args.pop();
+  }
+
+  effects = args;
+
   let newEffects = new Map(store.pipeline.effects);
 
   effects.forEach((effect) => {
@@ -309,7 +318,9 @@ function enable(store: EnhancedStore, dependencies: any, ...effects: SideEffect[
   return store;
 }
 
-function disable(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore {
+
+
+function detach(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore {
   let newEffects = new Map(store.pipeline.effects);
 
   effects.forEach((effect) => {
