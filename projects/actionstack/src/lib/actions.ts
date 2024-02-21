@@ -1,17 +1,19 @@
 import { AsyncFunction, SyncFunction, kindOf } from "./types";
 
-export function createAction(action: string | { type: string } & any, fn?: SyncFunction<any> | AsyncFunction<any>) {
-  return (...args: any[]) => async (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => {
-    if(typeof action === 'string') {
-      action = {type: action};
-    }
+export function createAction(action: any, fn?: SyncFunction<any> | AsyncFunction<any>) {
+  if(typeof action === 'string') {
+    action = {type: action};
+  } else if (typeof action !== 'object' || action === null || !action.type) {
+    throw new Error('Action must be a string or an object with a type property');
+  }
 
-    if (!fn) {
+  if (!fn) {
+    return () => (dispatch: Function) => {
       dispatch(action);
-      return;
-    }
+    };
+  }
 
-
+  return (...args: any[]) => async (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => {
     dispatch({ ...action, type: `${action.type}_REQUEST` });
     try {
       const data = await fn(...args)(dispatch, getState, dependencies);
