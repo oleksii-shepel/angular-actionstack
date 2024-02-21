@@ -1,6 +1,6 @@
-import { AsyncFunction, SyncFunction, kindOf } from "./types";
+import { kindOf } from "./types";
 
-export function createAction(action: string | { type: string } & any, fn?: SyncFunction<any> | AsyncFunction<any>) {
+export function createAction(action: string | { type: string } & any, fn?: Function) {
   if(typeof action === 'string') {
     action = {type: action};
   } else if (typeof action !== 'object' || action === null || !action.type) {
@@ -8,17 +8,35 @@ export function createAction(action: string | { type: string } & any, fn?: SyncF
   }
 
   if (!fn) {
-    return () => (dispatch: Function) => {
-      dispatch(action);
-    };
+    return () => action;
   }
 
-  return (...args: any[]) => async (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => {
+  return (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => {
     dispatch({ ...action, type: `${action.type}_REQUEST` });
+
     try {
-      const data = await fn(...args)(dispatch, getState, dependencies);
-      dispatch({ ...action, type: `${action.type}_SUCCESS`, payload: data });
-      return data;
+      const result = fn(...args);
+
+      if (typeof result === 'function') {
+        // fn is a SyncActionCreator or AsyncActionCreator
+        return result(dispatch, getState, dependencies);
+      } else if (result instanceof Promise) {
+        // fn is an async function
+        return result.then(
+          data => {
+            dispatch({ ...action, type: `${action.type}_SUCCESS`, payload: data });
+            return data;
+          },
+          error => {
+            dispatch({ ...action, type: `${action.type}_FAILURE`, payload: error, error: true });
+            throw error;
+          }
+        );
+      } else {
+        // fn is a sync function
+        dispatch({ ...action, type: `${action.type}_SUCCESS`, payload: result });
+        return result;
+      }
     } catch (error) {
       dispatch({ ...action, type: `${action.type}_FAILURE`, payload: error, error: true });
       throw error;

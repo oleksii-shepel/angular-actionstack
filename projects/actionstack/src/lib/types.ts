@@ -13,8 +13,11 @@ export interface AsyncAction<T = any> {
   (...args: any[]): Promise<T>;
 }
 
-export type SyncFunction<T> = (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => T;
-export type AsyncFunction<T> = (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => Promise<T>;
+export type SyncFunction<T> = (...args: any[]) => T;
+export type AsyncFunction<T> = (...args: any[]) => Promise<T>;
+
+export type SyncActionCreator<T> = (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => T;
+export type AsyncActionCreator<T> = (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => Promise<T>;
 
 export type Reducer = (state: any, action: Action<any>) => any;
 export type MetaReducer = (reducer: Reducer) => Reducer;
@@ -190,6 +193,6 @@ function isDate(val: any): boolean {
 }
 
 export {
-    isAction, isPlainObject, kindOf
+  isAction, isPlainObject, kindOf
 };
 
