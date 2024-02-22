@@ -19,7 +19,11 @@ export class HeroesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.store.enable(loadHeroes$, { heroService: this.heroService });
-    this.subscription = this.store.select(selectHeroes).subscribe(value => this.heroes = value);
+
+    this.subscription = this.store.select(selectHeroes).subscribe(value => {
+      this.heroes = value;
+    });
+
     this.getHeroes();
   }
 

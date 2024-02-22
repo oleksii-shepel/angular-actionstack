@@ -18,11 +18,11 @@ export function createEffect(
         if (isObservable(result)) {
           return result.pipe(
             concatMap((resultAction) => {
-              return resultAction === action ? of(resultAction).pipe(ignoreElements()) : of(resultAction);
+              return resultAction.type === action.type ? of(resultAction).pipe(ignoreElements()) : of(resultAction);
             })
           );
         }
-        return result === action ? of(result).pipe(ignoreElements()) : of(result);
+        return result.type === action.type ? of(result).pipe(ignoreElements()) : of(result);
       })
     );
 }
