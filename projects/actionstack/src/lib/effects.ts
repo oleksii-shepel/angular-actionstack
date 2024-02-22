@@ -1,5 +1,5 @@
 import { Observable, OperatorFunction, concatMap, filter, from, ignoreElements, isObservable, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
-import { Action, SideEffect, isAction } from "./types";
+import { Action, SideEffect, isAction, shallowEqual } from "./types";
 
 
 export function createEffect(
@@ -18,6 +18,9 @@ export function createEffect(
         if (isObservable(result)) {
           return result.pipe(
             concatMap((resultAction) => {
+              if (action.type === resultAction.type && !shallowEqual(action, resultAction)) {
+                throw new Error("Effect may result in an infinite loop.");
+              }
               return resultAction.type === action.type ? of(resultAction).pipe(ignoreElements()) : of(resultAction);
             })
           );
