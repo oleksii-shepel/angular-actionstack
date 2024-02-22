@@ -1,33 +1,33 @@
-import { kindOf } from "./types";
+import { isAction, kindOf } from "./types";
 
-export function createAction(action: string | { type: string } & any, fn?: Function) {
-  if(typeof action === 'string') {
-    action = {type: action};
-  } else if (typeof action !== 'object' || action === null || !action.type) {
-    throw new Error('Action must be a string or an object with a type property');
-  }
+export function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
+  function actionCreator(...args: any[]) {
+    if (typeof typeOrThunk === 'function') {
+      return async (dispatch: Function, getState: Function, dependencies: any) => {
+        return await typeOrThunk(...args)(dispatch, getState, dependencies);
+      }
+    } else if (payloadCreator) {
+      let result = payloadCreator(...args);
+      if (!result) {
+        throw new Error('payloadCreator did not return an object');
+      }
 
-  if (!fn) {
-    return () => action;
-  }
-
-  return (...args: any[]) => async (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => {
-    dispatch({ ...action, type: `${action.type}_REQUEST` });
-
-    try {
-      const result = fn(...args);
-      const payload = typeof result === 'function' ? await result(dispatch, getState, dependencies) : await result;
-
-      dispatch({ ...action, type: `${action.type}_SUCCESS`, payload });
-      return payload;
-    } catch (error) {
-      dispatch({ ...action, type: `${action.type}_FAILURE`, payload: error, error: true });
-      throw error;
+      return {
+        type: typeOrThunk,
+        payload: result.payload,
+        ...('meta' in result && { meta: result.meta }),
+        ...('error' in result && { error: result.error }),
+      }
     }
-  };
+    return { type: typeOrThunk, payload: args[0] };
+  }
+
+  actionCreator.toString = () => `${typeOrThunk}`;
+  actionCreator.type = typeOrThunk;
+  actionCreator.match = (action: any) => isAction(action) && action.type === typeOrThunk;
+
+  return actionCreator;
 }
-
-
 
 export function bindActionCreator(actionCreator: Function, dispatch: Function): Function {
   return function(this: any, ...args: any[]): any {
