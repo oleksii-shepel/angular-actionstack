@@ -14,7 +14,7 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
 
       return {
         type: typeOrThunk,
-        payload: result.payload,
+        payload: result,
         ...('meta' in result && { meta: result.meta }),
         ...('error' in result && { error: result.error }),
       }

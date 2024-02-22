@@ -20,9 +20,9 @@ const actionCreators = {
   initStore: createAction(actions.INIT_STORE),
   applyMiddlewares: createAction(actions.APPLY_MIDDLEWARES),
   registerEffects: createAction(actions.REGISTER_EFFECTS),
-  loadModule: (module: MainModule) => createAction({type: actions.LOAD_MODULE, payload: module}),
-  unloadModule: (module: FeatureModule) => createAction({type: actions.UNLOAD_MODULE, payload: module}),
-  unregisterEffects: (module: FeatureModule) => createAction({type: actions.UNREGISTER_EFFECTS, payload: module})
+  loadModule: createAction(actions.LOAD_MODULE, (module: MainModule) => module),
+  unloadModule: createAction(actions.UNLOAD_MODULE, (module: FeatureModule) => module),
+  unregisterEffects: createAction(actions.UNREGISTER_EFFECTS, (module: FeatureModule) => module)
 };
 
 export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
@@ -94,10 +94,10 @@ function initStore(mainModule: MainModule): EnhancedStore {
 
   enhancedStore = {
     ...enhancedStore,
-    dispatch: function (action: Action<any>)  { return dispatch(enhancedStore, action); },
-    getState: function () { return enhancedStore.currentState.value; },
-    subscribe: function (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) { return Object.assign(this, {...this, ...subscribe(enhancedStore, next, error, complete) }); },
-    select: function (selector: MemoizedSelector) { return Object.assign(this, {...this, ...select(enhancedStore, selector) }); },
+    dispatch: function (action: Action<any>)  { return dispatch(this, action); },
+    getState: function () { return this.currentState.value; },
+    subscribe: function (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) { return subscribe(this, next, error, complete); },
+    select: function (selector: MemoizedSelector) { return select(this, selector); },
     enable: function (...args: (SideEffect | any)[]) { return Object.assign(this, {...this, ...enable(this, ...args) }); },
     disable: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...disable(this, ...effects) }); },
     loadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...loadModule(this, module) }); },
@@ -188,7 +188,7 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
   }, {} as Record<string, Reducer>);
 
   // Combine the main module reducer with the feature module reducers
-  const combinedReducer = (state: any, action: Action<any>) => {
+  const combinedReducer = (state: any = {}, action: Action<any>) => {
     let newState = mainReducer(state, action);
 
     Object.keys(featureReducers).forEach((key) => {
@@ -293,7 +293,7 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
 
   const middlewares = [starter, ...store.pipeline.middlewares];
   const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
-  dispatch = compose(...chain)(store.dispatch);
+  dispatch = compose(...chain)(store.dispatch.bind(store));
 
   store.dispatch = dispatch;
   return store;

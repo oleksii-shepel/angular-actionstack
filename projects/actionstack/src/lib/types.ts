@@ -92,7 +92,7 @@ export interface EnhancedStore extends Store {
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
   select: (selector: MemoizedSelector) => Observable<any>;
 
-  enable: (dependencies: any, ...effects: SideEffect[]) => void;
+  enable: (...effects: (SideEffect | any)[]) => void;
   disable: (...effects: SideEffect[]) => void;
 
   loadModule: (module: FeatureModule) => void;
@@ -103,7 +103,7 @@ export interface EnhancedStore extends Store {
     reducer: Reducer;
     dependencies: Record<string, any>;
     effects: Map<SideEffect, any>;
-    strategy: "sequential" | "buffered" | "concurrent";
+    strategy: "exclusive" | "concurrent";
   };
 
   mainModule: MainModule;
