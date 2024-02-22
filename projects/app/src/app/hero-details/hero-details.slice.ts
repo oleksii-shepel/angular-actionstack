@@ -2,7 +2,7 @@ import { Action, createAction, createSelector } from "actionstack";
 import { firstValueFrom } from "rxjs";
 import { Hero } from "../hero";
 
-export const slice = "hero-detail";
+export const slice = "hero-details";
 
 export const loadHeroRequest = createAction('LOAD_HERO_REQUEST');
 export const loadHeroSuccess = createAction('LOAD_HERO_SUCCESS', (hero: Hero) => ({ hero }));

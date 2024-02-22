@@ -2,15 +2,15 @@ import { CommonModule } from "@angular/common";
 import { NgModule } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterModule } from '@angular/router';
-import { Action, StoreModule } from "actionstack";
+import { StoreModule } from "actionstack";
 import { MessagesComponent } from "./messages.component";
+import { reducer, slice } from "./messages.slice";
 
 
 @NgModule({
   imports: [CommonModule, FormsModule, RouterModule, StoreModule.forFeature({
-    slice: 'messages',
-    reducer: (state: any = {}, action: Action<any>) => state,
-    dependencies: {}
+    slice: slice,
+    reducer: reducer
   })],
   declarations: [
     MessagesComponent,

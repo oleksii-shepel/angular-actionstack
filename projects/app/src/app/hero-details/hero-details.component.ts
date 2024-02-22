@@ -5,14 +5,14 @@ import { ActivatedRoute } from '@angular/router';
 import { EnhancedStore } from 'actionstack';
 import { Observable } from 'rxjs';
 import { Hero } from '../hero';
-import { heroSelector, loadHeroRequest } from './hero-detail.slice';
+import { heroSelector, loadHeroRequest } from './hero-details.slice';
 
 @Component({
   selector: 'app-hero-detail',
-  templateUrl: './hero-detail.component.html',
-  styleUrls: [ './hero-detail.component.css' ]
+  templateUrl: './hero-details.component.html',
+  styleUrls: [ './hero-details.component.css' ]
 })
-export class HeroDetailComponent implements OnInit {
+export class HeroDetailsComponent implements OnInit {
   hero$: Observable<Hero | undefined>;
 
   constructor(

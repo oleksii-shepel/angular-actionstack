@@ -3,9 +3,9 @@ import { NgModule } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterModule } from "@angular/router";
 import { StoreModule } from "actionstack";
-import { HeroService } from './../hero.service';
-import { HeroDetailComponent } from "./hero-detail.component";
-import { reducer, slice } from "./hero-detail.slice";
+import { HeroService } from '../hero.service';
+import { HeroDetailsComponent } from './hero-details.component';
+import { reducer, slice } from "./hero-details.slice";
 
 @NgModule({
   imports: [CommonModule, FormsModule, RouterModule, StoreModule.forFeature({
@@ -14,11 +14,11 @@ import { reducer, slice } from "./hero-detail.slice";
     dependencies: {heroService: HeroService}
   })],
   declarations: [
-    HeroDetailComponent,
+    HeroDetailsComponent,
   ],
   exports: [
-    HeroDetailComponent
+    HeroDetailsComponent
   ]
 })
-export class HeroDetailModule {}
+export class HeroDetailsModule {}
 
