@@ -24,7 +24,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   }
 
   getHeroes(): void {
-    this.store.dispatch(setHeroes());
+    this.store.dispatch(setHeroes(this.heroes));
   }
 
   ngOnDestroy(): void {
