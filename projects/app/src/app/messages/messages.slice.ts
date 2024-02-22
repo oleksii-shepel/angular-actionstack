@@ -3,7 +3,7 @@ import { Action, createAction, createSelector } from "actionstack";
 export const slice = "messages";
 
 // Define the actions using createAction
-export const addMessage = createAction("ADD_MESSAGE", (message: string) => ({ payload: { message } }));
+export const addMessage = createAction("ADD_MESSAGE", (message: string) => ({ message }));
 export const clearMessages = createAction('CLEAR_MESSAGES');
 
 // Define the initial state

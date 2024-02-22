@@ -8,7 +8,7 @@ import { Hero } from '../hero';
 import { heroSelector, loadHeroRequest } from './hero-details.slice';
 
 @Component({
-  selector: 'app-hero-detail',
+  selector: 'app-hero-details',
   templateUrl: './hero-details.component.html',
   styleUrls: [ './hero-details.component.css' ]
 })

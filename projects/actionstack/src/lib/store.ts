@@ -114,6 +114,11 @@ function loadModule(store: EnhancedStore, module: FeatureModule, injector: Injec
     // If the module already exists, return the store without changes
     return store;
   }
+  // Create a new array with the module added to the store's modules
+  const newModules = [...store.modules, module];
+
+  // Return a new store with the updated properties
+  store.modules = newModules;
 
   // Setup the reducers
   store = setupReducer(store);
@@ -121,11 +126,6 @@ function loadModule(store: EnhancedStore, module: FeatureModule, injector: Injec
   // Inject dependencies
   store = injectDependencies(store, injector);
 
-  // Create a new array with the module added to the store's modules
-  const newModules = [...store.modules, module];
-
-  // Return a new store with the updated properties
-  store.modules = newModules;
   return store;
 }
 
@@ -133,14 +133,15 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
   // Create a new array with the module removed from the store's modules
   const newModules = store.modules.filter(m => m.slice !== module.slice);
 
+  // Return a new store with the updated properties
+  store.modules = newModules;
+
   // Setup the reducers
   store = setupReducer(store);
 
   // Eject dependencies
   store = ejectDependencies(store, module);
 
-  // Return a new store with the updated properties
-  store.modules = newModules;
   return store;
 }
 
