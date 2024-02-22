@@ -26,9 +26,9 @@ export const reducer = (state = initialState, action: Action<any>) => {
     case loadHeroRequest.type:
       return { ...state, loading: true };
     case loadHeroSuccess.type:
-      return { ...state, loading: false, hero: action.payload };
+      return { ...state, loading: false, hero: action.payload.hero };
     case loadHeroFailure.type:
-      return { ...state, loading: false, error: action.payload };
+      return { ...state, loading: false, error: action.payload.hero };
     default:
       return state;
   }
