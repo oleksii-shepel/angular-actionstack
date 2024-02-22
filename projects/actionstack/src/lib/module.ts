@@ -1,4 +1,4 @@
-import { ModuleWithProviders, NgModule } from "@angular/core";
+import { Injector, ModuleWithProviders, NgModule } from "@angular/core";
 import { createStore } from "./store";
 import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
@@ -6,6 +6,11 @@ import { EnhancedStore, FeatureModule, MainModule } from "./types";
 export class StoreModule {
   static store: EnhancedStore | undefined = undefined;
   static modulesFn: Function[] = [];
+  static injector: Injector;
+
+  constructor(injector: Injector) {
+    StoreModule.injector = injector;
+  }
 
   static forRoot(module: MainModule): ModuleWithProviders<StoreModule> {
     return {
@@ -26,7 +31,7 @@ export class StoreModule {
   }
   static forFeature(module: FeatureModule): ModuleWithProviders<StoreModule> {
     const loadFeatureModule = () => {
-      StoreModule.store!.loadModule(module);
+      StoreModule.store!.loadModule(module, StoreModule.injector);
     };
 
     if (!StoreModule.store) {

@@ -1,3 +1,4 @@
+import { Injector, Type } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, combineLatest, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { createAction } from "./actions";
 import { ActionStack } from "./collections";
@@ -85,7 +86,7 @@ function initStore(mainModule: MainModule): EnhancedStore {
   let enhancedStore = {
     mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
     modules: MODULES_DEFAULT,
-    pipeline: Object.assign(PIPELINE_DEFAULT, mainModule),
+    pipeline: Object.assign(PIPELINE_DEFAULT, Object.create(mainModule)),
     actionStream: ACTION_STREAM_DEFAULT,
     actionStack: ACTION_STACK_DEFAULT,
     currentState: CURRENT_STATE_DEFAULT,
@@ -100,14 +101,14 @@ function initStore(mainModule: MainModule): EnhancedStore {
     select: function (selector: MemoizedSelector) { return select(this, selector); },
     enable: function (...args: (SideEffect | any)[]) { return Object.assign(this, {...this, ...enable(this, ...args) }); },
     disable: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...disable(this, ...effects) }); },
-    loadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...loadModule(this, module) }); },
+    loadModule: function (module: FeatureModule, injector: Injector) { return Object.assign(this, {...this, ...loadModule(this, module, injector) }); },
     unloadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...unloadModule(this, module) }); },
   } as EnhancedStore;
 
   return enhancedStore;
 };
 
-function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
+function loadModule(store: EnhancedStore, module: FeatureModule, injector: Injector): EnhancedStore {
   // Check if the module already exists in the store's modules
   if (store.modules.some(m => m.slice === module.slice)) {
     // If the module already exists, return the store without changes
@@ -118,7 +119,7 @@ function loadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore 
   store = setupReducer(store);
 
   // Inject dependencies
-  store = injectDependencies(store);
+  store = injectDependencies(store, injector);
 
   // Create a new array with the module added to the store's modules
   const newModules = [...store.modules, module];
@@ -144,36 +145,57 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
 }
 
 function select(store: EnhancedStore, selector: MemoizedSelector): Observable<any> {
-
   return new Observable(observer => {
-    const unsubscribe = store.subscribe(() => {
-      observer.next(selector(store.getState()));
+    const unsubscribe = store.subscribe(async () => {
+      const state = store.getState();
+      // Check if the selector is a promise and handle accordingly
+      const result = selector(state);
+      if (result instanceof Promise || result?.then instanceof Function) {
+        const resolvedResult = await result;
+        observer.next(resolvedResult);
+      } else {
+        observer.next(result);
+      }
     });
     return unsubscribe;
   });
 }
 
-function injectDependencies(store: EnhancedStore): EnhancedStore {
-  let dependencies = store.mainModule.dependencies ? {...store.mainModule.dependencies} : {};
-  for (const module of store.modules) {
-    for (const key in module.dependencies) {
-      if (dependencies.hasOwnProperty(key)) {
-        throw new Error(`Dependency property ${key} in module ${module.slice} conflicts with an existing dependency.`);
-      }
-      dependencies[key] = module.dependencies[key];
-    }
+
+function injectDependencies(store: EnhancedStore, injector: Injector): EnhancedStore {
+  // Handle dependencies for MainModule
+  let mainDependencies = store.mainModule.dependencies ? {...store.mainModule.dependencies} : {};
+  if(!store.pipeline.dependencies["main"]) {
+    store.pipeline.dependencies["main"] = {};
+  }
+  for (const key in mainDependencies) {
+    const DependencyType = mainDependencies[key] as Type<any>;
+    store.pipeline.dependencies["main"][key] = injector.get(DependencyType);
   }
 
-  store.pipeline.dependencies = dependencies;
+  // Handle dependencies for each FeatureModule
+  for (const module of store.modules) {
+    let dependencies = module.dependencies ? {...module.dependencies} : {};
+    if(!store.pipeline.dependencies[module.slice]) {
+      store.pipeline.dependencies[module.slice] = {};
+    }
+
+    for (const key in module.dependencies) {
+      if (!store.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
+        const DependencyType = module.dependencies[key] as Type<any>;
+        store.pipeline.dependencies[module.slice][key] = injector.get(DependencyType);
+      }
+    }
+  }
   return store;
 }
 
 function ejectDependencies(store: EnhancedStore, module: FeatureModule): EnhancedStore {
-
-  let dependencies = store.pipeline.dependencies;
-  delete dependencies[module.slice];
-
-  store.pipeline.dependencies = dependencies;
+  for (const key in module.dependencies) {
+    if(store.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
+      delete store.pipeline.dependencies[module.slice][key];
+    }
+  }
   return store;
 }
 
@@ -187,9 +209,15 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
     return reducers;
   }, {} as Record<string, Reducer>);
 
+  if(featureReducers.hasOwnProperty("main")) {
+    throw new Error("Module name 'main' is reserved. Please provide other name for the module");
+  }
+
+  featureReducers["main"] = mainReducer;
+
   // Combine the main module reducer with the feature module reducers
   const combinedReducer = (state: any = {}, action: Action<any>) => {
-    let newState = mainReducer(state, action);
+    let newState = state;
 
     Object.keys(featureReducers).forEach((key) => {
       newState[key] = featureReducers[key](newState[key], action);

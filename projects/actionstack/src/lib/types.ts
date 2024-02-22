@@ -1,3 +1,4 @@
+import { Injector } from "@angular/core";
 import { BehaviorSubject, Observable, Observer, Subject, Subscription } from "rxjs";
 import { ActionStack } from './collections';
 import { CustomAsyncSubject } from './subject';
@@ -95,7 +96,7 @@ export interface EnhancedStore extends Store {
   enable: (...effects: (SideEffect | any)[]) => void;
   disable: (...effects: SideEffect[]) => void;
 
-  loadModule: (module: FeatureModule) => void;
+  loadModule: (module: FeatureModule, injector: Injector) => void;
   unloadModule: (module: FeatureModule) => void;
 
   pipeline: {
