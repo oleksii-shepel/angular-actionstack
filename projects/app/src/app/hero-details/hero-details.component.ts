@@ -5,7 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { EnhancedStore } from 'actionstack';
 import { Observable } from 'rxjs';
 import { Hero } from '../hero';
-import { heroSelector, loadHeroRequest } from './hero-details.slice';
+import { heroSelector, loadHero } from './hero-details.slice';
 
 @Component({
   selector: 'app-hero-details',
@@ -29,7 +29,7 @@ export class HeroDetailsComponent implements OnInit {
 
   loadHero(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.store.dispatch(loadHeroRequest(id));
+    this.store.dispatch(loadHero(id));
   }
 
   goBack(): void {

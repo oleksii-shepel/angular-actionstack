@@ -8,7 +8,8 @@ export const loadHeroRequest = createAction('LOAD_HERO_REQUEST');
 export const loadHeroSuccess = createAction('LOAD_HERO_SUCCESS', (hero: Hero) => ({ hero }));
 export const loadHeroFailure = createAction('LOAD_HERO_FAILURE', (error: Error) => ({ error }));
 
-export const loadHero = createAction('LOAD_HERO', (id: number) => async (dispatch: Function, getState: Function, dependencies: any) => {
+export const loadHero = createAction((id: number) => async (dispatch: Function, getState: Function, dependencies: any) => {
+  dispatch(loadHeroRequest(id));
   try {
     const heroService = dependencies[slice].heroService;
     const hero = await firstValueFrom(heroService.getHero(id));
