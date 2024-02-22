@@ -2,15 +2,16 @@ import { CommonModule } from "@angular/common";
 import { NgModule } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterModule } from '@angular/router';
-import { Action, StoreModule } from "actionstack";
+import { StoreModule } from "actionstack";
+import { HeroService } from "../hero.service";
 import { DashboardComponent } from "./dashboard.component";
-
+import { reducer, slice } from "./dashboard.slice";
 
 @NgModule({
   imports: [CommonModule, FormsModule, RouterModule, StoreModule.forFeature({
-    slice: 'dashboard',
-    reducer: (state: any = {}, action: Action<any>) => state,
-    dependencies: {}
+    slice: slice,
+    reducer: reducer,
+    dependencies: {heroService: HeroService}
   })],
   declarations: [
     DashboardComponent,
