@@ -5,7 +5,7 @@ import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, SideEffect, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -86,7 +86,7 @@ function initStore(mainModule: MainModule): EnhancedStore {
   let enhancedStore = {
     mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
     modules: MODULES_DEFAULT,
-    pipeline: Object.assign(PIPELINE_DEFAULT, Object.create(mainModule)),
+    pipeline: Object.assign(PIPELINE_DEFAULT, deepClone(mainModule)),
     actionStream: ACTION_STREAM_DEFAULT,
     actionStack: ACTION_STACK_DEFAULT,
     currentState: CURRENT_STATE_DEFAULT,
@@ -359,3 +359,4 @@ function disable(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore 
   store.pipeline.effects = newEffects;
   return store;
 }
+

@@ -193,7 +193,29 @@ function isDate(val: any): boolean {
   return typeof val.toDateString === "function" && typeof val.getDate === "function" && typeof val.setDate === "function";
 }
 
-export {
-  isAction, isPlainObject, kindOf
-};
+const isBoxed = (value: any) => value !== undefined && value !== null && value.valueOf() !== value;
+const isPrimitive = (value: any) => value === undefined || value === null || typeof value !== 'object';
+
+function deepClone(objectToClone: any) {
+  if (isPrimitive(objectToClone)) return objectToClone;
+
+  let obj = undefined;
+  if (isBoxed(objectToClone)) {
+    if (objectToClone instanceof Date) { obj = new Date(objectToClone.valueOf()); }
+    else { obj = {...objectToClone.constructor(objectToClone.valueOf())}; return obj; }
+  }
+  else if(objectToClone instanceof Map) { obj = new Map(objectToClone); return obj; }
+  else if(objectToClone instanceof Set) { obj = new Set(objectToClone); return obj; }
+  else if(Array.isArray(objectToClone)) { obj = [...objectToClone]; }
+  else if (typeof objectToClone === 'object') { obj = {...objectToClone}; }
+
+  for (const key in obj) {
+    const value = objectToClone[key];
+    obj[key] = typeof value === 'object' ? deepClone(value) : value;
+  }
+
+  return obj;
+}
+
+export { deepClone, isAction, isBoxed, isPlainObject, isPrimitive, kindOf };
 
