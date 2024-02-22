@@ -19,7 +19,7 @@ export function createEffect(
           return result.pipe(
             concatMap((resultAction) => {
               if (action.type === resultAction.type && !shallowEqual(action, resultAction)) {
-                throw new Error("Effect may result in an infinite loop. The source action and the result action have to be of different type.");
+                throw new Error("Effect may result in an infinite loop. The source action and the result action must be of different types.");
               }
               return resultAction.type === action.type ? of(resultAction).pipe(ignoreElements()) : of(resultAction);
             })
