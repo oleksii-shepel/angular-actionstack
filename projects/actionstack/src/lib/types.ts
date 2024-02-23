@@ -27,12 +27,6 @@ export interface Middleware {
   (store: any): (next: (action: any) => any) => Promise<(action: any) => any> | any;
   internal?: boolean;
 }
-export interface Store {
-  dispatch: (action: any) => any;
-  getState: () => any;
-  addReducer: (featureKey: string, reducer: Reducer) => void;
-  subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
-}
 
 export type AnyFn = (...args: any[]) => any;
 
@@ -44,8 +38,7 @@ export interface ProjectionFunction {
   (state: any | any[], props?: any): any;
 }
 
-export interface MemoizedSelector {
-  (state: any): any;
+export interface MemoizedFn extends AnyFn {
   release: () => any;
 }
 
@@ -69,7 +62,7 @@ export interface Store {
   dispatch: (action: any) => any;
   getState: () => any;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
-  select: (selector: MemoizedSelector) => Observable<any>;
+  select: (selector: AnyFn | Promise<MemoizedFn>) => Observable<any>;
 }
 
 
@@ -77,7 +70,7 @@ export interface EnhancedStore extends Store {
   dispatch: (action: any) => any;
   getState: () => any;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
-  select: (selector: MemoizedSelector) => Observable<any>;
+  select: (selector: AnyFn | Promise<MemoizedFn>) => Observable<any>;
 
   enable: (...effects: (SideEffect | any)[]) => void;
   disable: (...effects: SideEffect[]) => void;

@@ -5,7 +5,7 @@ import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedSelector, Reducer, SideEffect, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedFn, MemoizedSelector, Reducer, SideEffect, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -145,7 +145,7 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
   return store;
 }
 
-function select(store: EnhancedStore, selector: Promise<MemoizedSelector> | AnyFn): Observable<any> {
+function select(store: EnhancedStore, selector: Promise<MemoizedFn> | AnyFn): Observable<any> {
   return new Observable(observer => {
     const unsubscribe = store.subscribe(async () => {
       const state = store.getState();

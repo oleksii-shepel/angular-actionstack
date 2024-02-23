@@ -1,4 +1,4 @@
-import { AnyFn, MemoizedSelector, ProjectionFunction } from "./types";
+import { AnyFn, MemoizedFn, ProjectionFunction } from "./types";
 
 // Shallow equality check function
 const shallowEqual = (a: any[], b: any[]): boolean => {
@@ -16,12 +16,12 @@ const shallowEqual = (a: any[], b: any[]): boolean => {
   return true;
 };
 
-export const defaultMemoize: AnyFn = (fn: AnyFn): MemoizedSelector => {
+export const defaultMemoize: AnyFn = (fn: AnyFn): MemoizedFn => {
   let lastArgs: any[] | undefined = undefined;
   let lastResult: any | undefined = undefined;
   let called = false;
 
-  const resultFunc: MemoizedSelector = (...args: any[]): any => {
+  const resultFunc: MemoizedFn = (...args: any[]): any => {
     if (called && lastArgs !== undefined && shallowEqual(args, lastArgs)) {
       return lastResult;
     }
@@ -58,7 +58,7 @@ export function createSelector(
   selectors: AnyFn | AnyFn[],
   projectionOrOptions?: ProjectionFunction | { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn },
   options: { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn } = {}
-): (props?: any[] | any, projectionProps?: any) => MemoizedSelector {
+): (props?: any[] | any, projectionProps?: any) => MemoizedFn {
   options = (typeof projectionOrOptions !== "function" ? projectionOrOptions : options) || {};
 
   const isSelectorArray = Array.isArray(selectors);
@@ -107,14 +107,14 @@ export function createSelector(
 }
 
 export function createSelectorAsync(
-  selectors: AnyFn | AnyFn[] | Promise<MemoizedSelector> | Promise<MemoizedSelector>[],
+  selectors: AnyFn | AnyFn[] | Promise<MemoizedFn> | Promise<MemoizedFn>[],
   projectionOrOptions?: ProjectionFunction | { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn },
   options: { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn } = {}
-): (props?: any[] | any, projectionProps?: any) => Promise<MemoizedSelector> {
+): (props?: any[] | any, projectionProps?: any) => Promise<MemoizedFn> {
   options = (typeof projectionOrOptions !== "function" ? projectionOrOptions : options) || {};
 
   const isSelectorArray = Array.isArray(selectors);
-  const selectorArray: (AnyFn | Promise<MemoizedSelector>)[] = isSelectorArray ? selectors : [selectors];
+  const selectorArray: (AnyFn | Promise<MemoizedFn>)[] = isSelectorArray ? selectors : [selectors];
   const projection = typeof projectionOrOptions === "function" ? projectionOrOptions : undefined;
 
   // Default memoization functions if not provided
