@@ -10,7 +10,7 @@ import { loadHeroes, selectTopHeroes } from './dashboard.slice';
   styleUrls: [ './dashboard.component.css' ]
 })
 export class DashboardComponent implements OnInit {
-  heroes$: Observable<Hero[]> = this.store.select(selectTopHeroes);
+  heroes$: Observable<Hero[]> = this.store.select(selectTopHeroes());
 
   constructor(@Inject('Store') private store: EnhancedStore) { }
 

@@ -8,7 +8,7 @@ import { addMessage, clearMessages, selectMessages } from './messages.slice';
   styleUrls: ['./messages.component.css']
 })
 export class MessagesComponent {
-  messages$ = this.store.select(selectMessages);
+  messages$ = this.store.select(selectMessages());
 
   constructor(@Inject('Store') private store: EnhancedStore) {}
 

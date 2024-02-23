@@ -4,7 +4,7 @@ import { EnhancedStore } from 'actionstack';
 import { Subscription } from 'rxjs';
 import { Hero } from '../hero';
 import { HeroService } from '../hero.service';
-import { loadHeroes$, selectHeroes, setHeroes } from './heroes.slice';
+import { getHeroes, loadHeroes$, selectHeroes } from './heroes.slice';
 
 @Component({
   selector: 'app-heroes',
@@ -20,7 +20,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.store.enable(loadHeroes$, { heroService: this.heroService });
 
-    this.subscription = this.store.select(selectHeroes).subscribe(value => {
+    this.subscription = this.store.select(selectHeroes()).subscribe(value => {
       this.heroes = value;
     });
 
@@ -28,7 +28,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   }
 
   getHeroes(): void {
-    this.store.dispatch(setHeroes(this.heroes));
+    this.store.dispatch(getHeroes(this.heroes));
   }
 
   ngOnDestroy(): void {

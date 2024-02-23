@@ -4,11 +4,11 @@ import { Hero } from "../hero";
 
 export const slice = "heroes";
 
-export const setHeroes = createAction("SET_HEROES", (heroes: Hero[]) => ({heroes}));
-export const setHeroesSuccess = createAction("SET_HEROES_SUCCESS", (heroes: Hero[]) => ({heroes}));
+export const getHeroes = createAction("GET_HEROES", (heroes: Hero[]) => ({heroes}));
+export const getHeroesSuccess = createAction("GET_HEROES_SUCCESS", (heroes: Hero[]) => ({heroes}));
 
-export const loadHeroes$ = createEffect(setHeroes.type, (action, state, { heroService }) => {
-  return heroService.getHeroes().pipe(map(heroes => setHeroesSuccess(heroes)));
+export const loadHeroes$ = createEffect(getHeroes.type, (action, state, { heroService }) => {
+  return heroService.getHeroes().pipe(map(heroes => getHeroesSuccess(heroes)));
 });
 
 const initialState = {
@@ -18,8 +18,8 @@ const initialState = {
 // Define the reducer
 export function reducer(state = initialState, action: Action<any>) {
   switch (action.type) {
-    case setHeroes.type:
-    case setHeroesSuccess.type:
+    case getHeroes.type:
+    case getHeroesSuccess.type:
       return {
         ...state,
         heroes: action.payload.heroes

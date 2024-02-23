@@ -20,7 +20,7 @@ export class HeroDetailsComponent implements OnInit {
     private route: ActivatedRoute,
     private location: Location
   ) {
-    this.hero$ = this.store.select(heroSelector);
+    this.hero$ = this.store.select(heroSelector());
   }
 
   ngOnInit(): void {

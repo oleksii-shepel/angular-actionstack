@@ -29,4 +29,5 @@ export function reducer(state = initialState, action: Action<any>) {
 }
 
 export const selectMessages = createSelector(state => state[slice].messages);
-export const selectMessageCount = createSelector(selectMessages, (messages) => messages.length);
+export const selectMessageCount = createSelector(selectMessages(), (messages) => messages.length);
+

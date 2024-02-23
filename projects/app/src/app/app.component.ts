@@ -1,5 +1,4 @@
-import { Component, Inject } from "@angular/core";
-import { EnhancedStore } from "actionstack";
+import { Component } from "@angular/core";
 
 
 @Component({
@@ -9,7 +8,4 @@ import { EnhancedStore } from "actionstack";
 })
 export class AppComponent {
   title = 'Tour of Heroes';
-  constructor(@Inject('Store') private store: EnhancedStore) {
-
-  }
 }
