@@ -1,4 +1,5 @@
 import { Injector, ModuleWithProviders, NgModule } from "@angular/core";
+import { asapScheduler } from "rxjs";
 import { createStore } from "./store";
 import { EnhancedStore, FeatureModule, MainModule } from "./types";
 
@@ -21,8 +22,9 @@ export class StoreModule {
           useFactory: () => {
             if (!StoreModule.store) {
               StoreModule.store = createStore(module) as EnhancedStore;
-              StoreModule.modulesFn.forEach(fn => fn());
             }
+
+            asapScheduler.schedule(() => StoreModule.modulesFn.forEach(fn => fn()));
             return StoreModule.store;
           }
         }
