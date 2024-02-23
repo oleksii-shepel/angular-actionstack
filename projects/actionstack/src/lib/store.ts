@@ -5,7 +5,7 @@ import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedFn, MemoizedSelector, Reducer, SideEffect, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -98,7 +98,7 @@ function initStore(mainModule: MainModule): EnhancedStore {
     dispatch: function (action: Action<any>)  { return dispatch(this, action); },
     getState: function () { return this.currentState.value; },
     subscribe: function (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) { return subscribe(this, next, error, complete); },
-    select: function (selector: MemoizedSelector) { return select(this, selector); },
+    select: function (selector: AnyFn | Promise<MemoizedFn>) { return select(this, selector); },
     enable: function (...args: (SideEffect | any)[]) { return Object.assign(this, {...this, ...enable(this, ...args) }); },
     disable: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...disable(this, ...effects) }); },
     loadModule: function (module: FeatureModule, injector: Injector) { return Object.assign(this, {...this, ...loadModule(this, module, injector) }); },
