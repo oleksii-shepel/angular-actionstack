@@ -59,7 +59,7 @@ export interface MemoizedProjectionFunction extends MemoizedFunction, Projection
 }
 
 export interface MemoizedSelector extends MemoizedFunction {
-  (props: any | any[], projectorProps?: any): any;
+  (props?: any | any[], projectorProps?: any): any;
   release: () => any;
 }
 

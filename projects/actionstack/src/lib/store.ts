@@ -164,6 +164,7 @@ function select(store: EnhancedStore, selector: MemoizedSelector): Observable<an
 
 
 function injectDependencies(store: EnhancedStore, injector: Injector): EnhancedStore {
+
   // Handle dependencies for MainModule
   let mainDependencies = store.mainModule.dependencies ? {...store.mainModule.dependencies} : {};
   if(!store.pipeline.dependencies["main"]) {
