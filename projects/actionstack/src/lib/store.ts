@@ -262,7 +262,6 @@ export function processAction(store: Store) {
   };
 }
 
-
 function dispatch(store: Store, action: Action<any>): any {
   if (!isPlainObject(action)) {
     throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your store setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-store#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.`);
@@ -344,8 +343,6 @@ function enable(store: Store, ...args: (SideEffect | any)[]): Store {
   store.pipeline.effects = newEffects;
   return store;
 }
-
-
 
 function disable(store: Store, ...effects: SideEffect[]): Store {
   let newEffects = new Map(store.pipeline.effects);
