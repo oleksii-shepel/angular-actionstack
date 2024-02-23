@@ -304,7 +304,8 @@ export class Store {
             finalize(() => {
               if (this.actionStack.length > 0) {
                 this.actionStack.pop();
-              } else {
+              }
+              if (this.actionStack.length === 0) {
                 this.isProcessing.next(false);
               }
             }))
