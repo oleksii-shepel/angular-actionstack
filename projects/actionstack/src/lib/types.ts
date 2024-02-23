@@ -34,32 +34,18 @@ export interface Store {
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
 }
 
-
 export type AnyFn = (...args: any[]) => any;
 
 export interface SelectorFunction {
-  (state: any, props: any): any | Promise<any>;
+  (state: any, props?: any): any;
 }
 
 export interface ProjectionFunction {
-  (state: any | any[], props: any): any;
+  (state: any | any[], props?: any): any;
 }
 
-export interface MemoizedFunction {
-  (...args: any[]): any;
-  release: () => any;
-}
-
-export interface MemoizedSelectorFunction extends MemoizedFunction, SelectorFunction {
-
-}
-
-export interface MemoizedProjectionFunction extends MemoizedFunction, ProjectionFunction {
-
-}
-
-export interface MemoizedSelector extends MemoizedFunction {
-  (props?: any | any[], projectorProps?: any): any;
+export interface MemoizedSelector {
+  (state: any): any;
   release: () => any;
 }
 

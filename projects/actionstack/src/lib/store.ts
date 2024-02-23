@@ -145,18 +145,14 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
   return store;
 }
 
-function select(store: EnhancedStore, selector: MemoizedSelector): Observable<any> {
+function select(store: EnhancedStore, selector: Promise<MemoizedSelector> | AnyFn): Observable<any> {
   return new Observable(observer => {
     const unsubscribe = store.subscribe(async () => {
       const state = store.getState();
-      // Check if the selector is a promise and handle accordingly
-      const result = selector(state);
-      if (result instanceof Promise || result?.then instanceof Function) {
-        const resolvedResult = await result;
-        observer.next(resolvedResult);
-      } else {
-        observer.next(result);
-      }
+      // If the selector is a promise, await it to get the function
+      const resolvedSelector = selector instanceof Promise ? await selector : selector;
+      const result = resolvedSelector(state);
+      observer.next(result);
     });
     return unsubscribe;
   });
