@@ -5,7 +5,7 @@ import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, EnhancedStore, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, Store, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -57,7 +57,7 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
   return storeCreator(mainModule);
 }
 
-function initStore(mainModule: MainModule): EnhancedStore {
+function initStore(mainModule: MainModule): Store {
 
   const MAIN_MODULE_DEFAULT = {
     middlewares: [],
@@ -83,7 +83,7 @@ function initStore(mainModule: MainModule): EnhancedStore {
 
   const DISPATCHING_DEFAULT = new BehaviorSubject(false);
 
-  let enhancedStore = {
+  let store = {
     mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
     modules: MODULES_DEFAULT,
     pipeline: Object.assign(PIPELINE_DEFAULT, deepClone(mainModule)),
@@ -93,8 +93,8 @@ function initStore(mainModule: MainModule): EnhancedStore {
     isProcessing: DISPATCHING_DEFAULT
   } as any;
 
-  enhancedStore = {
-    ...enhancedStore,
+  store = {
+    ...store,
     dispatch: function (action: Action<any>)  { return dispatch(this, action); },
     getState: function () { return this.currentState.value; },
     subscribe: function (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) { return subscribe(this, next, error, complete); },
@@ -103,12 +103,12 @@ function initStore(mainModule: MainModule): EnhancedStore {
     disable: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...disable(this, ...effects) }); },
     loadModule: function (module: FeatureModule, injector: Injector) { return Object.assign(this, {...this, ...loadModule(this, module, injector) }); },
     unloadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...unloadModule(this, module) }); },
-  } as EnhancedStore;
+  } as Store;
 
-  return enhancedStore;
+  return store;
 };
 
-function loadModule(store: EnhancedStore, module: FeatureModule, injector: Injector): EnhancedStore {
+function loadModule(store: Store, module: FeatureModule, injector: Injector): Store {
   // Check if the module already exists in the store's modules
   if (store.modules.some(m => m.slice === module.slice)) {
     // If the module already exists, return the store without changes
@@ -129,7 +129,7 @@ function loadModule(store: EnhancedStore, module: FeatureModule, injector: Injec
   return store;
 }
 
-function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStore {
+function unloadModule(store: Store, module: FeatureModule): Store {
   // Create a new array with the module removed from the store's modules
   const newModules = store.modules.filter(m => m.slice !== module.slice);
 
@@ -145,7 +145,7 @@ function unloadModule(store: EnhancedStore, module: FeatureModule): EnhancedStor
   return store;
 }
 
-function select(store: EnhancedStore, selector: Promise<MemoizedFn> | AnyFn): Observable<any> {
+function select(store: Store, selector: Promise<MemoizedFn> | AnyFn): Observable<any> {
   return new Observable(observer => {
     const unsubscribe = store.subscribe(async () => {
       const state = store.getState();
@@ -159,7 +159,7 @@ function select(store: EnhancedStore, selector: Promise<MemoizedFn> | AnyFn): Ob
 }
 
 
-function injectDependencies(store: EnhancedStore, injector: Injector): EnhancedStore {
+function injectDependencies(store: Store, injector: Injector): Store {
 
   // Handle dependencies for MainModule
   let mainDependencies = store.mainModule.dependencies ? {...store.mainModule.dependencies} : {};
@@ -188,7 +188,7 @@ function injectDependencies(store: EnhancedStore, injector: Injector): EnhancedS
   return store;
 }
 
-function ejectDependencies(store: EnhancedStore, module: FeatureModule): EnhancedStore {
+function ejectDependencies(store: Store, module: FeatureModule): Store {
   for (const key in module.dependencies) {
     if(store.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
       delete store.pipeline.dependencies[module.slice][key];
@@ -197,7 +197,7 @@ function ejectDependencies(store: EnhancedStore, module: FeatureModule): Enhance
   return store;
 }
 
-function setupReducer(store: EnhancedStore): EnhancedStore {
+function setupReducer(store: Store): Store {
   // Get the main module reducer
   const mainReducer = store.mainModule.reducer;
 
@@ -229,7 +229,7 @@ function setupReducer(store: EnhancedStore): EnhancedStore {
 }
 
 
-export function processAction(store: EnhancedStore) {
+export function processAction(store: Store) {
   return (source: Observable<Action<any>>) => {
     const runSideEffects = store.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
@@ -263,7 +263,7 @@ export function processAction(store: EnhancedStore) {
 }
 
 
-function dispatch(store: EnhancedStore, action: Action<any>): any {
+function dispatch(store: Store, action: Action<any>): any {
   if (!isPlainObject(action)) {
     throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your store setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-store#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.`);
   }
@@ -277,7 +277,7 @@ function dispatch(store: EnhancedStore, action: Action<any>): any {
   store.actionStream.next(action);
 }
 
-function subscribe(store: EnhancedStore, next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
+function subscribe(store: Store, next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
   if (typeof next === 'function') {
     return store.currentState.subscribe({next, error, complete});
   } else {
@@ -297,7 +297,7 @@ function compose(...funcs: AnyFn[]): AnyFn {
   return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
 }
 
-function applyMiddleware(store: EnhancedStore): EnhancedStore {
+function applyMiddleware(store: Store): Store {
 
   let dispatch = (action: any) => {
     throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
@@ -325,7 +325,7 @@ function applyMiddleware(store: EnhancedStore): EnhancedStore {
   return store;
 }
 
-function enable(store: EnhancedStore, ...args: (SideEffect | any)[]): EnhancedStore {
+function enable(store: Store, ...args: (SideEffect | any)[]): Store {
   let dependencies = {};
   let effects: SideEffect[] = [];
 
@@ -347,7 +347,7 @@ function enable(store: EnhancedStore, ...args: (SideEffect | any)[]): EnhancedSt
 
 
 
-function disable(store: EnhancedStore, ...effects: SideEffect[]): EnhancedStore {
+function disable(store: Store, ...effects: SideEffect[]): Store {
   let newEffects = new Map(store.pipeline.effects);
 
   effects.forEach((effect) => {

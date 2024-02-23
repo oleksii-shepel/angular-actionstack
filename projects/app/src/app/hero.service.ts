@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@angular/core';
 
 import { Observable, from } from 'rxjs';
 
-import { EnhancedStore } from 'actionstack';
+import { Store } from 'actionstack';
 import { Hero } from './hero';
 import { addMessage } from './messages/messages.slice';
 import { HEROES } from './mock-heroes';
@@ -11,7 +11,7 @@ import { HEROES } from './mock-heroes';
 export class HeroService {
   timeout = 200;
 
-  constructor(@Inject('Store') private store: EnhancedStore) { }
+  constructor(@Inject('Store') private store: Store) { }
 
   getHeroes(): Observable<Hero[]> {
     return from(new Promise<Hero[]>((resolve) => {

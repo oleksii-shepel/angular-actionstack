@@ -63,14 +63,6 @@ export interface Store {
   getState: () => any;
   subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
   select: (selector: AnyFn | Promise<MemoizedFn>) => Observable<any>;
-}
-
-
-export interface EnhancedStore extends Store {
-  dispatch: (action: any) => any;
-  getState: () => any;
-  subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
-  select: (selector: AnyFn | Promise<MemoizedFn>) => Observable<any>;
 
   enable: (...effects: (SideEffect | any)[]) => void;
   disable: (...effects: SideEffect[]) => void;
@@ -97,7 +89,7 @@ export interface EnhancedStore extends Store {
 }
 
 
-export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => EnhancedStore;
+export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;
 export type StoreEnhancer = (next: StoreCreator) => StoreCreator;
 
 

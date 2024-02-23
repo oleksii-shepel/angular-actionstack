@@ -1,5 +1,5 @@
 import { Component, Inject } from '@angular/core';
-import { EnhancedStore } from 'actionstack';
+import { Store } from 'actionstack';
 import { addMessage, clearMessages, selectMessages } from './messages.slice';
 
 @Component({
@@ -10,7 +10,7 @@ import { addMessage, clearMessages, selectMessages } from './messages.slice';
 export class MessagesComponent {
   messages$ = this.store.select(selectMessages());
 
-  constructor(@Inject('Store') private store: EnhancedStore) {}
+  constructor(@Inject('Store') private store: Store) {}
 
   addMessage(message: string) {
     this.store.dispatch(addMessage(message));

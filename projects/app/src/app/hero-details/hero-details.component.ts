@@ -2,7 +2,7 @@ import { Location } from '@angular/common';
 import { Component, Inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
-import { EnhancedStore } from 'actionstack';
+import { Store } from 'actionstack';
 import { Observable } from 'rxjs';
 import { Hero } from '../hero';
 import { heroSelector, loadHero } from './hero-details.slice';
@@ -16,7 +16,7 @@ export class HeroDetailsComponent implements OnInit {
   hero$: Observable<Hero | undefined>;
 
   constructor(
-    @Inject('Store') private store: EnhancedStore,
+    @Inject('Store') private store: Store,
     private route: ActivatedRoute,
     private location: Location
   ) {
