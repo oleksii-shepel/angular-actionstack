@@ -1,7 +1,7 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { Store } from 'actionstack';
 import { Observable } from 'rxjs';
 import { Hero } from '../hero';
-import { Store } from './../../../../actionstack/src/lib/types';
 import { loadHeroes, selectTopHeroes } from './dashboard.slice';
 
 @Component({
@@ -12,7 +12,7 @@ import { loadHeroes, selectTopHeroes } from './dashboard.slice';
 export class DashboardComponent implements OnInit {
   heroes$: Observable<Hero[]> = this.store.select(selectTopHeroes());
 
-  constructor(@Inject('Store') private store: Store) { }
+  constructor(private store: Store) { }
 
   ngOnInit(): void {
     this.store.dispatch(loadHeroes());

@@ -1,11 +1,11 @@
-import { Inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Store } from 'actionstack';
 
 @Injectable({ providedIn: 'root' })
 export class MessageService {
   messages: string[] = [];
 
-  constructor(@Inject('Store') private store: Store) {
+  constructor(private store: Store) {
   }
 
   add(message: string) {

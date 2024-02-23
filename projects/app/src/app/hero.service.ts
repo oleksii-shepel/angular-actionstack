@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 
 import { Observable, from } from 'rxjs';
 
@@ -11,7 +11,7 @@ import { HEROES } from './mock-heroes';
 export class HeroService {
   timeout = 200;
 
-  constructor(@Inject('Store') private store: Store) { }
+  constructor(private store: Store) { }
 
   getHeroes(): Observable<Hero[]> {
     return from(new Promise<Hero[]>((resolve) => {

@@ -1,4 +1,4 @@
-import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 
 import { Store } from 'actionstack';
 import { Subscription } from 'rxjs';
@@ -15,7 +15,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   heroes: Hero[] = [];
   subscription!: Subscription;
 
-  constructor(@Inject('Store') private store: Store, private heroService: HeroService) { }
+  constructor(private store: Store, private heroService: HeroService) { }
 
   ngOnInit(): void {
     this.store.enable(loadHeroes$, { heroService: this.heroService });

@@ -5,7 +5,7 @@ import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, Store, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -26,332 +26,332 @@ const actionCreators = {
   unregisterEffects: createAction(actions.UNREGISTER_EFFECTS, (module: FeatureModule) => module)
 };
 
-export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
+export class Store {
+  mainModule: MainModule;
+  modules: FeatureModule[];
+  pipeline: {
+    middlewares: any[];
+    reducer: Reducer;
+    effects: Map<SideEffect, any>;
+    dependencies: Record<string, any>;
+    strategy: "exclusive" | "concurrent";
+  };
+  actionStream: Subject<Action<any>>;
+  actionStack: ActionStack;
+  currentState: CustomAsyncSubject<any>;
+  isProcessing: BehaviorSubject<boolean>;
+  subscription: Subscription;
 
-  let storeCreator = (mainModule: MainModule) => {
-    let store = initStore(mainModule);
-    store = applyMiddleware(store);
+  constructor(mainModule: MainModule) {
+    const MAIN_MODULE_DEFAULT = {
+      middlewares: [],
+      reducer: (state: any = {}, action: Action<any>) => state,
+      dependencies: {},
+      strategy: "exclusive"
+    };
 
-    let action$ = store.actionStream.asObservable();
+    const MODULES_DEFAULT: FeatureModule[] = [];
 
-    let subscription = action$.pipe(
-      processAction(store)
-    ).subscribe();
+    const PIPELINE_DEFAULT = {
+      middlewares: [],
+      reducer: (state: any = {}, action: Action<any>) => state,
+      effects: [],
+      dependencies: {},
+      strategy: "exclusive"
+    };
 
-    store.dispatch(actionCreators.initStore());
+    const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
+    const ACTION_STACK_DEFAULT = new ActionStack();
 
-    return {
-      ...store,
-      subscription
+    const CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>({});
+
+    const DISPATCHING_DEFAULT = new BehaviorSubject(false);
+
+    this.mainModule = Object.assign(MAIN_MODULE_DEFAULT, mainModule);
+    this.modules = MODULES_DEFAULT;
+    this.pipeline = Object.assign(PIPELINE_DEFAULT, deepClone(mainModule));
+    this.actionStream = ACTION_STREAM_DEFAULT;
+    this.actionStack = ACTION_STACK_DEFAULT;
+    this.currentState = CURRENT_STATE_DEFAULT;
+    this.isProcessing = DISPATCHING_DEFAULT;
+    this.subscription = Subscription.EMPTY;
+  }
+
+  static createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
+
+    let storeCreator = (mainModule: MainModule) => {
+
+      let store = new Store(mainModule);
+      store.applyMiddleware();
+
+      let action$ = store.actionStream.asObservable();
+
+      store.subscription = action$.pipe(
+        store.processAction()
+      ).subscribe();
+
+      store.dispatch(actionCreators.initStore());
+
+      return store;
+    }
+
+    if (typeof enhancer !== "undefined") {
+      if (typeof enhancer !== "function") {
+        throw new Error(`Expected the enhancer to be a function. Instead, received: '${kindOf(enhancer)}'`);
+      }
+      // Apply the enhancer to the this
+      return enhancer(storeCreator)(mainModule);
+    }
+
+    return storeCreator(mainModule);
+  }
+
+  dispatch(action: Action<any>) {
+    if (!isPlainObject(action)) {
+      throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your this setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-this#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.`);
+    }
+    if (typeof action.type === "undefined") {
+      throw new Error('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
+    }
+    if (typeof action.type !== "string") {
+      throw new Error(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
+    }
+
+    this.actionStream.next(action);
+  }
+
+  getState() {
+    return this.currentState.value;
+  }
+
+  subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
+    if (typeof next === 'function') {
+      return this.currentState.subscribe({next, error, complete});
+    } else {
+      return this.currentState.subscribe(next as Partial<AsyncObserver<any>>);
+    }
+  }
+
+  select(selector: Promise<MemoizedFn> | AnyFn): Observable<any> {
+    return new Observable(observer => {
+      const unsubscribe = this.subscribe(async () => {
+        const state = this.getState();
+        // If the selector is a promise, await it to get the function
+        const resolvedSelector = selector instanceof Promise ? await selector : selector;
+        const result = resolvedSelector(state);
+        observer.next(result);
+      });
+      return unsubscribe;
+    });
+  }
+
+  enable(...args: (SideEffect | any)[]) {
+    let dependencies = {};
+    let effects: SideEffect[] = [];
+
+    if (typeof args[args.length - 1] !== "function") {
+      dependencies = args.pop();
+    }
+
+    effects = args;
+
+    let newEffects = new Map(this.pipeline.effects);
+
+    effects.forEach((effect) => {
+      newEffects.set(effect, dependencies);
+    });
+
+    this.pipeline.effects = newEffects;
+    return this;
+  }
+
+  disable(...effects: SideEffect[]) {
+    let newEffects = new Map(this.pipeline.effects);
+
+    effects.forEach((effect) => {
+      newEffects.delete(effect);
+    });
+
+    this.pipeline.effects = newEffects;
+    return this;
+  }
+
+  loadModule(module: FeatureModule, injector: Injector) {
+    // Check if the module already exists in the this's modules
+    if (this.modules.some(m => m.slice === module.slice)) {
+      // If the module already exists, return the this without changes
+      return this;
+    }
+    // Create a new array with the module added to the this's modules
+    const newModules = [...this.modules, module];
+
+    // Return a new this with the updated properties
+    this.modules = newModules;
+
+    // Setup the reducers
+    this.setupReducer();
+
+    // Inject dependencies
+    this.injectDependencies(injector);
+
+    return this;
+  }
+
+  unloadModule(module: FeatureModule) {
+    // Create a new array with the module removed from the this's modules
+    const newModules = this.modules.filter(m => m.slice !== module.slice);
+
+    // Return a new this with the updated properties
+    this.modules = newModules;
+
+    // Setup the reducers
+    this.setupReducer();
+
+    // Eject dependencies
+    this.ejectDependencies(module);
+
+    return this;
+  }
+
+  setupReducer(): Store {
+    // Get the main module reducer
+    const mainReducer = this.mainModule.reducer;
+
+    // Get the feature module reducers
+    const featureReducers = this.modules.reduce((reducers, module) => {
+      reducers[module.slice] = module.reducer;
+      return reducers;
+    }, {} as Record<string, Reducer>);
+
+    if(featureReducers.hasOwnProperty("main")) {
+      throw new Error("Module name 'main' is reserved. Please provide other name for the module");
+    }
+
+    featureReducers["main"] = mainReducer;
+
+    // Combine the main module reducer with the feature module reducers
+    const combinedReducer = (state: any = {}, action: Action<any>) => {
+      let newState = state;
+
+      Object.keys(featureReducers).forEach((key) => {
+        newState[key] = featureReducers[key](newState[key], action);
+      });
+
+      return newState;
+    };
+
+    this.pipeline.reducer = combinedReducer;
+    return this;
+  }
+
+  injectDependencies(injector: Injector): Store {
+
+    // Handle dependencies for MainModule
+    let mainDependencies = this.mainModule.dependencies ? {...this.mainModule.dependencies} : {};
+    if(!this.pipeline.dependencies["main"]) {
+      this.pipeline.dependencies["main"] = {};
+    }
+    for (const key in mainDependencies) {
+      const DependencyType = mainDependencies[key] as Type<any>;
+      this.pipeline.dependencies["main"][key] = injector.get(DependencyType);
+    }
+
+    // Handle dependencies for each FeatureModule
+    for (const module of this.modules) {
+      let dependencies = module.dependencies ? {...module.dependencies} : {};
+      if(!this.pipeline.dependencies[module.slice]) {
+        this.pipeline.dependencies[module.slice] = {};
+      }
+
+      for (const key in module.dependencies) {
+        if (!this.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
+          const DependencyType = module.dependencies[key] as Type<any>;
+          this.pipeline.dependencies[module.slice][key] = injector.get(DependencyType);
+        }
+      }
+    }
+    return this;
+  }
+
+  ejectDependencies(module: FeatureModule): Store {
+    for (const key in module.dependencies) {
+      if(this.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
+        delete this.pipeline.dependencies[module.slice][key];
+      }
+    }
+    return this;
+  }
+
+  processAction() {
+    return (source: Observable<Action<any>>) => {
+      const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
+      const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
+      return source.pipe(
+        concatMap((action: Action<any>) => {
+          let state = this.pipeline.reducer(this.currentState.value, action);
+          return combineLatest([from(this.currentState.next(state)), runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
+            mapMethod((childActions: Action<any>[]) => {
+              if (childActions.length > 0) {
+                return from(childActions).pipe(
+                  tap((nextAction: Action<any>) => {
+                    this.actionStack.push(nextAction);
+                    this.dispatch(nextAction);
+                  }),
+                );
+              }
+              return EMPTY;
+            }),
+            finalize(() => {
+              if (this.actionStack.length > 0) {
+                this.actionStack.pop();
+              } else {
+                this.isProcessing.next(false);
+              }
+            }))
+          ])
+        }),
+        ignoreElements()
+      );
     };
   }
 
-  if (typeof enhancer !== "undefined") {
-    if (typeof enhancer !== "function") {
-      throw new Error(`Expected the enhancer to be a function. Instead, received: '${kindOf(enhancer)}'`);
-    }
-    // Apply the enhancer to the store
-    return enhancer(storeCreator)(mainModule);
-  }
-
-  return storeCreator(mainModule);
-}
-
-function initStore(mainModule: MainModule): Store {
-
-  const MAIN_MODULE_DEFAULT = {
-    middlewares: [],
-    reducer: (state: any = {}, action: Action<any>) => state,
-    dependencies: {},
-    strategy: "exclusive"
-  };
-
-  const MODULES_DEFAULT: FeatureModule[] = [];
-
-  const PIPELINE_DEFAULT = {
-    middlewares: [],
-    reducer: (state: any = {}, action: Action<any>) => state,
-    effects: [],
-    dependencies: {},
-    strategy: "exclusive"
-  };
-
-  const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
-  const ACTION_STACK_DEFAULT = new ActionStack();
-
-  const CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>({});
-
-  const DISPATCHING_DEFAULT = new BehaviorSubject(false);
-
-  let store = {
-    mainModule: Object.assign(MAIN_MODULE_DEFAULT, mainModule),
-    modules: MODULES_DEFAULT,
-    pipeline: Object.assign(PIPELINE_DEFAULT, deepClone(mainModule)),
-    actionStream: ACTION_STREAM_DEFAULT,
-    actionStack: ACTION_STACK_DEFAULT,
-    currentState: CURRENT_STATE_DEFAULT,
-    isProcessing: DISPATCHING_DEFAULT
-  } as any;
-
-  store = {
-    ...store,
-    dispatch: function (action: Action<any>)  { return dispatch(this, action); },
-    getState: function () { return this.currentState.value; },
-    subscribe: function (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) { return subscribe(this, next, error, complete); },
-    select: function (selector: AnyFn | Promise<MemoizedFn>) { return select(this, selector); },
-    enable: function (...args: (SideEffect | any)[]) { return Object.assign(this, {...this, ...enable(this, ...args) }); },
-    disable: function (...effects: SideEffect[]) { return Object.assign(this, {...this, ...disable(this, ...effects) }); },
-    loadModule: function (module: FeatureModule, injector: Injector) { return Object.assign(this, {...this, ...loadModule(this, module, injector) }); },
-    unloadModule: function (module: FeatureModule) { return Object.assign(this, {...this, ...unloadModule(this, module) }); },
-  } as Store;
-
-  return store;
-};
-
-function loadModule(store: Store, module: FeatureModule, injector: Injector): Store {
-  // Check if the module already exists in the store's modules
-  if (store.modules.some(m => m.slice === module.slice)) {
-    // If the module already exists, return the store without changes
-    return store;
-  }
-  // Create a new array with the module added to the store's modules
-  const newModules = [...store.modules, module];
-
-  // Return a new store with the updated properties
-  store.modules = newModules;
-
-  // Setup the reducers
-  store = setupReducer(store);
-
-  // Inject dependencies
-  store = injectDependencies(store, injector);
-
-  return store;
-}
-
-function unloadModule(store: Store, module: FeatureModule): Store {
-  // Create a new array with the module removed from the store's modules
-  const newModules = store.modules.filter(m => m.slice !== module.slice);
-
-  // Return a new store with the updated properties
-  store.modules = newModules;
-
-  // Setup the reducers
-  store = setupReducer(store);
-
-  // Eject dependencies
-  store = ejectDependencies(store, module);
-
-  return store;
-}
-
-function select(store: Store, selector: Promise<MemoizedFn> | AnyFn): Observable<any> {
-  return new Observable(observer => {
-    const unsubscribe = store.subscribe(async () => {
-      const state = store.getState();
-      // If the selector is a promise, await it to get the function
-      const resolvedSelector = selector instanceof Promise ? await selector : selector;
-      const result = resolvedSelector(state);
-      observer.next(result);
-    });
-    return unsubscribe;
-  });
-}
-
-
-function injectDependencies(store: Store, injector: Injector): Store {
-
-  // Handle dependencies for MainModule
-  let mainDependencies = store.mainModule.dependencies ? {...store.mainModule.dependencies} : {};
-  if(!store.pipeline.dependencies["main"]) {
-    store.pipeline.dependencies["main"] = {};
-  }
-  for (const key in mainDependencies) {
-    const DependencyType = mainDependencies[key] as Type<any>;
-    store.pipeline.dependencies["main"][key] = injector.get(DependencyType);
-  }
-
-  // Handle dependencies for each FeatureModule
-  for (const module of store.modules) {
-    let dependencies = module.dependencies ? {...module.dependencies} : {};
-    if(!store.pipeline.dependencies[module.slice]) {
-      store.pipeline.dependencies[module.slice] = {};
+  compose(...funcs: AnyFn[]): AnyFn {
+    if (funcs.length === 0) {
+      return (arg: any): any => arg;
     }
 
-    for (const key in module.dependencies) {
-      if (!store.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
-        const DependencyType = module.dependencies[key] as Type<any>;
-        store.pipeline.dependencies[module.slice][key] = injector.get(DependencyType);
-      }
+    if (funcs.length === 1) {
+      return funcs[0];
     }
-  }
-  return store;
-}
 
-function ejectDependencies(store: Store, module: FeatureModule): Store {
-  for (const key in module.dependencies) {
-    if(store.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
-      delete store.pipeline.dependencies[module.slice][key];
+    return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
+  }
+
+  applyMiddleware(): Store {
+
+    let dispatch = (action: any) => {
+      throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
     }
-  }
-  return store;
-}
 
-function setupReducer(store: Store): Store {
-  // Get the main module reducer
-  const mainReducer = store.mainModule.reducer;
+    const internalAPI = {
+      getState: () => this.getState(),
+      dispatch: (action: any) => dispatch(action),
+      isProcessing: this.isProcessing,
+      actionStack: this.actionStack,
+      dependencies: () => this.pipeline.dependencies,
+      strategy: () => this.pipeline.strategy
+    };
 
-  // Get the feature module reducers
-  const featureReducers = store.modules.reduce((reducers, module) => {
-    reducers[module.slice] = module.reducer;
-    return reducers;
-  }, {} as Record<string, Reducer>);
+    const middlewareAPI = {
+      getState: () => this.getState(),
+      dispatch: (action: any) => dispatch(action),
+    };
 
-  if(featureReducers.hasOwnProperty("main")) {
-    throw new Error("Module name 'main' is reserved. Please provide other name for the module");
-  }
+    const middlewares = [starter, ...this.pipeline.middlewares];
+    const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
+    dispatch = this.compose(...chain)(this.dispatch.bind(this));
 
-  featureReducers["main"] = mainReducer;
-
-  // Combine the main module reducer with the feature module reducers
-  const combinedReducer = (state: any = {}, action: Action<any>) => {
-    let newState = state;
-
-    Object.keys(featureReducers).forEach((key) => {
-      newState[key] = featureReducers[key](newState[key], action);
-    });
-
-    return newState;
-  };
-
-  store.pipeline.reducer = combinedReducer;
-  return store;
-}
-
-
-export function processAction(store: Store) {
-  return (source: Observable<Action<any>>) => {
-    const runSideEffects = store.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
-    const mapMethod = store.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-    return source.pipe(
-      concatMap((action: Action<any>) => {
-        let state = store.pipeline.reducer(store.currentState.value, action);
-        return combineLatest([from(store.currentState.next(state)), runSideEffects(store.pipeline.effects.entries())([of(action), of(state)]).pipe(
-          mapMethod((childActions: Action<any>[]) => {
-            if (childActions.length > 0) {
-              return from(childActions).pipe(
-                tap((nextAction: Action<any>) => {
-                  store.actionStack.push(nextAction);
-                  store.dispatch(nextAction);
-                }),
-              );
-            }
-            return EMPTY;
-          }),
-          finalize(() => {
-            if (store.actionStack.length > 0) {
-              store.actionStack.pop();
-            } else {
-              store.isProcessing.next(false);
-            }
-          }))
-        ])
-      }),
-      ignoreElements()
-    );
-  };
-}
-
-function dispatch(store: Store, action: Action<any>): any {
-  if (!isPlainObject(action)) {
-    throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your store setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-store#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.`);
-  }
-  if (typeof action.type === "undefined") {
-    throw new Error('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
-  }
-  if (typeof action.type !== "string") {
-    throw new Error(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
-  }
-
-  store.actionStream.next(action);
-}
-
-function subscribe(store: Store, next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
-  if (typeof next === 'function') {
-    return store.currentState.subscribe({next, error, complete});
-  } else {
-    return store.currentState.subscribe(next as Partial<AsyncObserver<any>>);
+    this.dispatch = dispatch;
+    return this;
   }
 }
-
-function compose(...funcs: AnyFn[]): AnyFn {
-  if (funcs.length === 0) {
-    return (arg: any): any => arg;
-  }
-
-  if (funcs.length === 1) {
-    return funcs[0];
-  }
-
-  return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
-}
-
-function applyMiddleware(store: Store): Store {
-
-  let dispatch = (action: any) => {
-    throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
-  }
-
-  const internalAPI = {
-    getState: store.getState,
-    dispatch: (action: any) => dispatch(action),
-    isProcessing: store.isProcessing,
-    actionStack: store.actionStack,
-    dependencies: () => store.pipeline.dependencies,
-    strategy: () => store.pipeline.strategy
-  };
-
-  const middlewareAPI = {
-    getState: store.getState,
-    dispatch: (action: any) => dispatch(action),
-  };
-
-  const middlewares = [starter, ...store.pipeline.middlewares];
-  const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
-  dispatch = compose(...chain)(store.dispatch.bind(store));
-
-  store.dispatch = dispatch;
-  return store;
-}
-
-function enable(store: Store, ...args: (SideEffect | any)[]): Store {
-  let dependencies = {};
-  let effects: SideEffect[] = [];
-
-  if (typeof args[args.length - 1] !== "function") {
-    dependencies = args.pop();
-  }
-
-  effects = args;
-
-  let newEffects = new Map(store.pipeline.effects);
-
-  effects.forEach((effect) => {
-    newEffects.set(effect, dependencies);
-  });
-
-  store.pipeline.effects = newEffects;
-  return store;
-}
-
-function disable(store: Store, ...effects: SideEffect[]): Store {
-  let newEffects = new Map(store.pipeline.effects);
-
-  effects.forEach((effect) => {
-    newEffects.delete(effect);
-  });
-
-  store.pipeline.effects = newEffects;
-  return store;
-}
-

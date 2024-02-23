@@ -1,7 +1,5 @@
-import { Injector } from "@angular/core";
-import { BehaviorSubject, Observable, Observer, Subject, Subscription } from "rxjs";
-import { ActionStack } from './collections';
-import { CustomAsyncSubject } from './subject';
+import { Observable } from "rxjs";
+import { Store } from "./store";
 
 export interface Action<T = any> {
   type: string;
@@ -58,40 +56,8 @@ export interface MainModule {
   strategy?: "exclusive" | "concurrent";
 }
 
-export interface Store {
-  dispatch: (action: any) => any;
-  getState: () => any;
-  subscribe: (next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn) => Subscription;
-  select: (selector: AnyFn | Promise<MemoizedFn>) => Observable<any>;
-
-  enable: (...effects: (SideEffect | any)[]) => void;
-  disable: (...effects: SideEffect[]) => void;
-
-  loadModule: (module: FeatureModule, injector: Injector) => void;
-  unloadModule: (module: FeatureModule) => void;
-
-  pipeline: {
-    middlewares: Middleware[];
-    reducer: Reducer;
-    dependencies: Record<string, any>;
-    effects: Map<SideEffect, any>;
-    strategy: "exclusive" | "concurrent";
-  };
-
-  mainModule: MainModule;
-  modules: FeatureModule[];
-
-  actionStream: Subject<Action<any>>;
-  actionStack: ActionStack;
-
-  currentState: CustomAsyncSubject<any>;
-  isProcessing: BehaviorSubject<boolean>;
-}
-
-
 export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;
 export type StoreEnhancer = (next: StoreCreator) => StoreCreator;
-
 
 function isAction(action: any): boolean {
   return isPlainObject(action) && "type" in action && typeof action.type === "string";

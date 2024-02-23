@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
 import { Store } from 'actionstack';
@@ -16,7 +16,7 @@ export class HeroDetailsComponent implements OnInit {
   hero$: Observable<Hero | undefined>;
 
   constructor(
-    @Inject('Store') private store: Store,
+    private store: Store,
     private route: ActivatedRoute,
     private location: Location
   ) {
