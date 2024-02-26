@@ -82,7 +82,7 @@ export function createSelector(
 
   // The createSelector function will return a function that takes some arguments and returns combined result of selection and projection
   return (props?: any[] | any, projectionProps?: any) => {
-    if(props.length !== (selectors as any[])?.length) {
+    if(props?.length !== (selectors as any[])?.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
     // The memoizedSelector function will return a function that executes the selectors and projection
@@ -135,7 +135,7 @@ export function createSelectorAsync(
 
   // The createSelectorAsync function will return a function that takes some arguments and returns combined result of selection and projection
   return async (props?: any[] | any, projectionProps?: any) => {
-    if(props.length !== (selectors as any[])?.length) {
+    if(props?.length !== (selectors as any[])?.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
     // The memoizedSelector function will return a function that executes the selectors and projection
