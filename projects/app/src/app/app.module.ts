@@ -7,6 +7,7 @@ import { AppComponent } from './app.component';
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import { Action, StoreModule, createEffect, measure } from 'actionstack';
 import { AppRoutingModule } from './app-routing.module';
+import { MessagesModule } from './messages/messages.module';
 
 
 export const pingEpic = createEffect('PING', (action, state, dependencies) => ({ type: 'PONG' }));
@@ -31,6 +32,9 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
     },
   ],
   imports: [
+    BrowserModule,
+    FormsModule,
+    AppRoutingModule,
     StoreModule.forRoot({
       preloadedState: {},
       middlewares: [measure],
@@ -38,9 +42,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
       dependencies: {},
       strategy: "concurrent"
     }),
-    BrowserModule,
-    FormsModule,
-    AppRoutingModule
+    MessagesModule
   ],
   declarations: [
     AppComponent
