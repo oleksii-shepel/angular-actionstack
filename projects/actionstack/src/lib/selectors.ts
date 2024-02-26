@@ -80,7 +80,7 @@ export function createSelector(
   // If a projection is provided, memoize it; otherwise, use identity function
   const memoizedProjection = memoizeProjection === nomemoize ? projection : (projection ? memoizeProjection(projection) : undefined);
 
-  // The createSelector function will return a function that takes some arguments and returns a SelectorFunction or an array of SelectorFunctions
+  // The createSelector function will return a function that takes some arguments and returns combined result of selection and projection
   return (props?: any[] | any, projectionProps?: any) => {
     if(props.length !== (selectors as any[])?.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
@@ -133,7 +133,7 @@ export function createSelectorAsync(
   // If a projection is provided, memoize it; otherwise, use identity function
   const memoizedProjection = memoizeProjection === nomemoize ? projection : (projection ? memoizeProjection(projection) : undefined);
 
-  // The createSelectorAsync function will return a function that takes some arguments and returns a SelectorFunction or an array of SelectorFunctions
+  // The createSelectorAsync function will return a function that takes some arguments and returns combined result of selection and projection
   return async (props?: any[] | any, projectionProps?: any) => {
     if(props.length !== (selectors as any[])?.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
