@@ -108,7 +108,7 @@ export class Store {
 
   dispatch(action: Action<any>) {
     if (!isPlainObject(action)) {
-      throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your this setup to handle dispatching other values, such as 'redux-thunk' to handle dispatching functions. See https://redux.js.org/tutorials/fundamentals/part-4-this#middleware and https://redux.js.org/tutorials/fundamentals/part-6-async-logic#using-the-redux-thunk-middleware for examples.`);
+      throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
     }
     if (typeof action.type === "undefined") {
       throw new Error('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
