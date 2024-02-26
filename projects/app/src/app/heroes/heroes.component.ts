@@ -4,7 +4,7 @@ import { Store } from 'actionstack';
 import { Subscription } from 'rxjs';
 import { Hero } from '../hero';
 import { HeroService } from '../hero.service';
-import { getHeroesRequest, loadHeroes$, selectHeroes } from './heroes.slice';
+import { getHeroesRequest, loadHeroes, selectHeroes } from './heroes.slice';
 
 @Component({
   selector: 'app-heroes',
@@ -18,7 +18,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   constructor(private store: Store, private heroService: HeroService) { }
 
   ngOnInit(): void {
-    this.store.extend(loadHeroes$, { heroService: this.heroService });
+    this.store.extend(loadHeroes, { heroService: this.heroService });
 
     this.subscription = this.store.select(selectHeroes()).subscribe(value => {
       this.heroes = value;
@@ -32,7 +32,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.store.revoke(loadHeroes$);
+    this.store.revoke(loadHeroes);
     this.subscription.unsubscribe();
   }
 }
