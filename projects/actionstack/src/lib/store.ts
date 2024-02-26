@@ -145,7 +145,7 @@ export class Store {
     });
   }
 
-  enable(...args: (SideEffect | any)[]) {
+  extend(...args: [...SideEffect[], any | never]) {
     let dependencies = {};
     let effects: SideEffect[] = [];
 
@@ -165,7 +165,7 @@ export class Store {
     return this;
   }
 
-  disable(...effects: SideEffect[]) {
+  remove(...effects: SideEffect[]) {
     let newEffects = new Map(this.pipeline.effects);
 
     effects.forEach((effect) => {

@@ -18,7 +18,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   constructor(private store: Store, private heroService: HeroService) { }
 
   ngOnInit(): void {
-    this.store.enable(loadHeroes$, { heroService: this.heroService });
+    this.store.extend(loadHeroes$, { heroService: this.heroService });
 
     this.subscription = this.store.select(selectHeroes()).subscribe(value => {
       this.heroes = value;
@@ -32,7 +32,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.store.disable(loadHeroes$);
+    this.store.remove(loadHeroes$);
     this.subscription.unsubscribe();
   }
 }
