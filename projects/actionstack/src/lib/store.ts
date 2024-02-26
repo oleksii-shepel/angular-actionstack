@@ -165,7 +165,7 @@ export class Store {
     return this;
   }
 
-  remove(...effects: SideEffect[]) {
+  revoke(...effects: SideEffect[]) {
     let newEffects = new Map(this.pipeline.effects);
 
     effects.forEach((effect) => {

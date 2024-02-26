@@ -32,7 +32,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.store.remove(loadHeroes$);
+    this.store.revoke(loadHeroes$);
     this.subscription.unsubscribe();
   }
 }
