@@ -55,7 +55,7 @@ export class Store {
     const PIPELINE_DEFAULT = {
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
-      effects: [],
+      effects: new Map(),
       dependencies: {},
       strategy: "exclusive"
     };
