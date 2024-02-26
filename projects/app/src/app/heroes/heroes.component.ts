@@ -4,7 +4,7 @@ import { Store } from 'actionstack';
 import { Subscription } from 'rxjs';
 import { Hero } from '../hero';
 import { HeroService } from '../hero.service';
-import { getHeroes, loadHeroes$, selectHeroes } from './heroes.slice';
+import { getHeroesRequest, loadHeroes$, selectHeroes } from './heroes.slice';
 
 @Component({
   selector: 'app-heroes',
@@ -28,7 +28,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   }
 
   getHeroes(): void {
-    this.store.dispatch(getHeroes(this.heroes));
+    this.store.dispatch(getHeroesRequest(this.heroes));
   }
 
   ngOnDestroy(): void {
