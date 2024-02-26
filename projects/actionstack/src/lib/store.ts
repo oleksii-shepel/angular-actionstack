@@ -5,7 +5,7 @@ import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, deepClone, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isBoxed, isPlainObject, isPrimitive, kindOf } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -316,18 +316,6 @@ export class Store {
     };
   }
 
-  compose(...funcs: AnyFn[]): AnyFn {
-    if (funcs.length === 0) {
-      return (arg: any): any => arg;
-    }
-
-    if (funcs.length === 1) {
-      return funcs[0];
-    }
-
-    return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
-  }
-
   applyMiddleware(): Store {
 
     let dispatch = (action: any) => {
@@ -350,9 +338,54 @@ export class Store {
 
     const middlewares = [starter, ...this.pipeline.middlewares];
     const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
-    dispatch = this.compose(...chain)(this.dispatch.bind(this));
+    dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
     return this;
   }
+}
+
+export function compose(...funcs: AnyFn[]): AnyFn {
+  if (funcs.length === 0) {
+    return (arg: any): any => arg;
+  }
+
+  if (funcs.length === 1) {
+    return funcs[0];
+  }
+
+  return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
+}
+
+function deepClone<T>(objectToClone: T): T {
+  if (isPrimitive(objectToClone)) return objectToClone;
+
+  let obj: any;
+  if (isBoxed(objectToClone)) {
+    obj = (objectToClone as any).valueOf();
+  } else if (objectToClone instanceof Date) {
+    obj = new Date((objectToClone as Date).valueOf());
+  } else if (objectToClone instanceof Map) {
+    obj = new Map(Array.from(objectToClone as Map<any, any>, ([key, value]) => [deepClone(key), deepClone(value)]));
+  } else if (objectToClone instanceof Set) {
+    obj = new Set(Array.from(objectToClone as Set<any>, value => deepClone(value)));
+  } else if (Array.isArray(objectToClone)) {
+    obj = (objectToClone as any[]).map(value => deepClone(value));
+  } else if (typeof objectToClone === 'object') {
+    obj = Object.create(Object.getPrototypeOf(objectToClone));
+    for (const key in objectToClone) {
+      if (Object.prototype.hasOwnProperty.call(objectToClone, key)) {
+        obj[key] = deepClone((objectToClone as any)[key]);
+      }
+    }
+  } else {
+    obj = objectToClone;
+  }
+
+  return obj;
+}
+
+export function shallowEqual(obj1: any, obj2: any) {
+  return Object.keys(obj1).length === Object.keys(obj2).length &&
+  Object.keys(obj1).every(key => obj1[key] === obj2[key]);
 }
