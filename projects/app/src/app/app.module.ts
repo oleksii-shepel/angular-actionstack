@@ -7,10 +7,6 @@ import { AppComponent } from './app.component';
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import { Action, StoreModule, createEffect, measure } from 'actionstack';
 import { AppRoutingModule } from './app-routing.module';
-import { DashboardModule } from './dashboard/dashboard.module';
-import { HeroDetailsModule } from './hero-details/hero-details.module';
-import { HeroesModule } from './heroes/heroes.module';
-import { MessagesModule } from './messages/messages.module';
 
 
 export const pingEpic = createEffect('PING', (action, state, dependencies) => ({ type: 'PONG' }));
@@ -44,11 +40,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
     }),
     BrowserModule,
     FormsModule,
-    AppRoutingModule,
-    DashboardModule,
-    HeroesModule,
-    HeroDetailsModule,
-    MessagesModule,
+    AppRoutingModule
   ],
   declarations: [
     AppComponent
