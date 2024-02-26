@@ -1,5 +1,5 @@
-import { Observable, OperatorFunction, concatMap, filter, from, ignoreElements, isObservable, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
-import { Action, SideEffect, isAction, shallowEqual } from "./types";
+import { Observable, OperatorFunction, concatMap, filter, from, isObservable, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
+import { Action, SideEffect, isAction } from "./types";
 
 
 export function createEffect(
@@ -13,19 +13,22 @@ export function createEffect(
       concatMap(([action, state]) => {
         const result = effectFn(action, state, dependencies);
         if (result === null || result === undefined) {
-          throw new Error("Effect has to return an action or an observable. Instead it does not return anything.");
+          throw new Error(`The effect for action type "${actionType}" must return an action or an observable. It currently does not return anything.`);
         }
         if (isObservable(result)) {
           return result.pipe(
             concatMap((resultAction) => {
-              if (action.type === resultAction.type && !shallowEqual(action, resultAction)) {
-                throw new Error("Effect may result in an infinite loop. The source action and the result action must be of different types.");
+              if (action.type === resultAction.type) {
+                throw new Error(`The effect for action type "${actionType}" may result in an infinite loop as it returns an action of the same type.`);
               }
-              return resultAction.type === action.type ? of(resultAction).pipe(ignoreElements()) : of(resultAction);
+              return of(resultAction);
             })
           );
         }
-        return result.type === action.type ? of(result).pipe(ignoreElements()) : of(result);
+        if (result.type === action.type) {
+          throw new Error(`The effect for action type "${actionType}" returns an action of the same type, which can lead to an infinite loop.`);
+        }
+        return of(result);
       })
     );
 }
@@ -67,7 +70,3 @@ export function runSideEffectsInParallel(sideEffects: IterableIterator<[SideEffe
       toArray()
     );
 }
-
-
-
-
