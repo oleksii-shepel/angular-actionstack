@@ -1,6 +1,5 @@
 import { Observable, Subscription } from 'rxjs';
 
-
 export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Observable<T> {
   return new Observable<T>((subscriber) => {
     const subscription = customAsyncSubject.subscribe({
@@ -18,7 +17,6 @@ export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Obse
     return () => subscription.unsubscribe();
   });
 }
-
 
 export type AsyncObserver<T> = {
   next: (value: T) => Promise<void>;
@@ -43,16 +41,34 @@ export class AsyncObservable<T> {
     } as Subscription;
   }
 
-  async notify(value: T): Promise<void> {
-    await Promise.all(this.observers.map(observer => observer.next(value)));
+  async notify(value: T): Promise<(void | Error)[]> {
+    const results = await Promise.allSettled(this.observers.map(observer => observer.next(value)));
+    return results.map((result, index) => {
+      if (result.status === 'rejected') {
+        return new Error(`Error in observer ${index}: ${result.reason}`);
+      }
+      return result.value;
+    });
   }
 
-  async notifyError(error: any): Promise<void> {
-    await Promise.all(this.observers.map(observer => observer.error && observer.error(error)));
+  async notifyError(error: any): Promise<(void | Error)[]> {
+    const results = await Promise.allSettled(this.observers.map(observer => observer.error && observer.error(error)));
+    return results.map((result, index) => {
+      if (result.status === 'rejected') {
+        return new Error(`Error in observer ${index}: ${result.reason}`);
+      }
+      return result.value;
+    });
   }
 
-  async notifyComplete(): Promise<void> {
-    await Promise.all(this.observers.map(observer => observer.complete && observer.complete()));
+  async notifyComplete(): Promise<(void | Error)[]> {
+    const results = await Promise.allSettled(this.observers.map(observer => observer.complete && observer.complete()));
+    return results.map((result, index) => {
+      if (result.status === 'rejected') {
+        return new Error(`Error in observer ${index}: ${result.reason}`);
+      }
+      return result.value;
+    });
   }
 }
 
@@ -65,7 +81,6 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
   }
 
   override subscribe(observer: Partial<AsyncObserver<T>>): Subscription {
-
     // Convert the unsubscribe function to a Subscription object
     return super.subscribe(observer as AsyncObserver<T>);
   }
