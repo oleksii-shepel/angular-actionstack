@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, combineLatest, concatMap, finalize, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { createAction } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -27,22 +27,22 @@ const actionCreators = {
 };
 
 export class Store {
-  mainModule: MainModule;
-  modules: FeatureModule[];
-  pipeline: {
+  protected mainModule: MainModule;
+  protected modules: FeatureModule[];
+  protected pipeline: {
     middlewares: any[];
     reducer: Reducer;
     effects: Map<SideEffect, any>;
     dependencies: Record<string, any>;
     strategy: "exclusive" | "concurrent";
   };
-  actionStream: Subject<Action<any>>;
-  actionStack: ActionStack;
-  currentState: CustomAsyncSubject<any>;
-  isProcessing: BehaviorSubject<boolean>;
-  subscription: Subscription;
+  protected actionStream: Subject<Action<any>>;
+  protected actionStack: ActionStack;
+  protected currentState: CustomAsyncSubject<any>;
+  protected isProcessing: BehaviorSubject<boolean>;
+  protected subscription: Subscription;
 
-  constructor() {
+  protected constructor() {
     const MAIN_MODULE_DEFAULT = {
       slice: "main",
       middlewares: [],
@@ -156,74 +156,105 @@ export class Store {
   }
 
   extend(...args: [...SideEffect[], any | never]) {
-    let dependencies = {};
-    let effects: SideEffect[] = [];
+    const fnBody = () => {
+      let dependencies = {};
+      let effects: SideEffect[] = [];
 
-    if (typeof args[args.length - 1] !== "function") {
-      dependencies = args.pop();
+      if (typeof args[args.length - 1] !== "function") {
+        dependencies = args.pop();
+      }
+
+      effects = args;
+
+      let newEffects = new Map(this.pipeline.effects);
+
+      effects.forEach((effect) => {
+        newEffects.set(effect, dependencies);
+      });
+
+      this.pipeline.effects = newEffects;
+    };
+
+    if(this.isProcessing.value) {
+      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
+    } else {
+      fnBody();
     }
-
-    effects = args;
-
-    let newEffects = new Map(this.pipeline.effects);
-
-    effects.forEach((effect) => {
-      newEffects.set(effect, dependencies);
-    });
-
-    this.pipeline.effects = newEffects;
     return this;
   }
 
   revoke(...effects: SideEffect[]) {
-    let newEffects = new Map(this.pipeline.effects);
 
-    effects.forEach((effect) => {
-      newEffects.delete(effect);
-    });
+    const fnBody = () => {
+      let newEffects = new Map(this.pipeline.effects);
 
-    this.pipeline.effects = newEffects;
+      effects.forEach((effect) => {
+        newEffects.delete(effect);
+      });
+
+      this.pipeline.effects = newEffects;
+    };
+
+    if(this.isProcessing.value) {
+      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
+    } else {
+      fnBody();
+    }
     return this;
   }
 
   loadModule(module: FeatureModule, injector: Injector) {
-    // Check if the module already exists in the this's modules
-    if (this.modules.some(m => m.slice === module.slice)) {
-      // If the module already exists, return the this without changes
-      return this;
+    const fnBody = () => {
+      // Check if the module already exists in the this's modules
+      if (this.modules.some(m => m.slice === module.slice)) {
+        // If the module already exists, return the this without changes
+        return;
+      }
+      // Create a new array with the module added to the this's modules
+      const newModules = [...this.modules, module];
+
+      // Return a new this with the updated properties
+      this.modules = newModules;
+
+      // Setup the reducers
+      this.setupReducer();
+
+      // Inject dependencies
+      this.injectDependencies(injector);
+    };
+
+    if(this.isProcessing.value) {
+      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
+    } else {
+      fnBody();
     }
-    // Create a new array with the module added to the this's modules
-    const newModules = [...this.modules, module];
-
-    // Return a new this with the updated properties
-    this.modules = newModules;
-
-    // Setup the reducers
-    this.setupReducer();
-
-    // Inject dependencies
-    this.injectDependencies(injector);
-
     return this;
   }
 
   unloadModule(module: FeatureModule) {
-    // Create a new array with the module removed from the this's modules
-    const newModules = this.modules.filter(m => m.slice !== module.slice);
+    const fnBody = () => {
+      // Create a new array with the module removed from the this's modules
+      const newModules = this.modules.filter(m => m.slice !== module.slice);
 
-    // Return a new this with the updated properties
-    this.modules = newModules;
+      // Return a new this with the updated properties
+      this.modules = newModules;
 
-    // Setup the reducers
-    this.setupReducer();
+      // Setup the reducers
+      this.setupReducer();
 
-    // Eject dependencies
-    this.ejectDependencies(module);
+      // Eject dependencies
+      this.ejectDependencies(module);
+    };
 
+    if(this.isProcessing.value) {
+      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
+    } else {
+      fnBody();
+    }
     return this;
   }
 
-  setupReducer(): Store {
+  protected setupReducer(): Store {
     // Get the main module reducer
     const mainReducer = this.mainModule.reducer;
 
@@ -254,7 +285,7 @@ export class Store {
     return this;
   }
 
-  injectDependencies(injector: Injector): Store {
+  protected injectDependencies(injector: Injector): Store {
 
     // Handle dependencies for MainModule
     let mainDependencies = this.mainModule.dependencies ? {...this.mainModule.dependencies} : {};
@@ -283,7 +314,7 @@ export class Store {
     return this;
   }
 
-  ejectDependencies(module: FeatureModule): Store {
+  protected ejectDependencies(module: FeatureModule): Store {
     for (const key in module.dependencies) {
       if(this.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
         delete this.pipeline.dependencies[module.slice][key];
@@ -292,7 +323,7 @@ export class Store {
     return this;
   }
 
-  processAction() {
+  protected processAction() {
     return (source: Observable<Action<any>>) => {
       const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
       const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
@@ -326,7 +357,7 @@ export class Store {
     };
   }
 
-  applyMiddleware(): Store {
+  protected applyMiddleware(): Store {
 
     let dispatch = (action: any) => {
       throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
