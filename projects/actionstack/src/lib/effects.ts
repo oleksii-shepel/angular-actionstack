@@ -1,10 +1,10 @@
-import { Observable, OperatorFunction, concatMap, filter, from, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
+import { Observable, OperatorFunction, concatMap, filter, from, isObservable, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 
 export function createEffect(
   actionType: string,
-  effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any>
+  effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | Observable<Action<any>>
 ): SideEffect {
   return (action$: Observable<Action<any>>, state$: Observable<any>, dependencies: Record<string, any>) =>
     action$.pipe(
@@ -13,7 +13,17 @@ export function createEffect(
       concatMap(([action, state]) => {
         const result = effectFn(action, state, dependencies);
         if (result === null || result === undefined) {
-          throw new Error(`The effect for action type "${actionType}" must return an action. It currently does not return anything.`);
+          throw new Error(`The effect for action type "${actionType}" must return an action or an observable. It currently does not return anything.`);
+        }
+        if (isObservable(result)) {
+          return result.pipe(
+            concatMap((resultAction) => {
+              if (action.type === resultAction.type) {
+                throw new Error(`The effect for action type "${actionType}" may result in an infinite loop as it returns an action of the same type.`);
+              }
+              return of(resultAction);
+            })
+          );
         }
         if (result.type === action.type) {
           throw new Error(`The effect for action type "${actionType}" returns an action of the same type, which can lead to an infinite loop.`);
