@@ -54,11 +54,11 @@ export function nomemoize(fn: AnyFn) {
   return func;
 }
 
-export function createSelector<T = any>(
+export function createSelector<V = any, T = any>(
   selectors: AnyFn | AnyFn[],
   projectionOrOptions?: ProjectionFunction | { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn },
   options: { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn } = {}
-): (props?: any[] | any, projectionProps?: any) => MemoizedFn {
+): (props?: any[] | any, projectionProps?: any) => MemoizedFn<T> {
   options = (typeof projectionOrOptions !== "function" ? projectionOrOptions : options) || {};
 
   const isSelectorArray = Array.isArray(selectors);
@@ -86,7 +86,7 @@ export function createSelector<T = any>(
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
     // The memoizedSelector function will return a function that executes the selectors and projection
-    const fn = (state: any): T => {
+    const fn = (state: V): T => {
       const selectorResults = Array.isArray(memoizedSelectors)
         ? memoizedSelectors.map((selector, index) => selector(state, props[index]))
         : memoizedSelectors(state, props);
@@ -107,11 +107,11 @@ export function createSelector<T = any>(
   };
 }
 
-export function createSelectorAsync<T = any>(
+export function createSelectorAsync<V = any, T = any>(
   selectors: AnyFn | AnyFn[] | Promise<AnyFn> | Promise<AnyFn>[],
   projectionOrOptions?: ProjectionFunction | { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn },
   options: { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn } = {}
-): (props?: any[] | any, projectionProps?: any) => Promise<MemoizedFn> {
+): (props?: any[] | any, projectionProps?: any) => Promise<MemoizedFn<T>> {
   options = (typeof projectionOrOptions !== "function" ? projectionOrOptions : options) || {};
 
   const isSelectorArray = Array.isArray(selectors);
@@ -139,7 +139,7 @@ export function createSelectorAsync<T = any>(
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
     // The memoizedSelector function will return a function that executes the selectors and projection
-    const fn = async (state: any): Promise<T> => {
+    const fn = async (state: V): Promise<T> => {
       const selectorResults = Array.isArray(memoizedSelectors)
         ? (await Promise.allSettled(memoizedSelectors.map((selector, index) => selector(state, props[index])))).map(result => {
             if (result.status === 'rejected') {
