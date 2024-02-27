@@ -7,23 +7,23 @@ import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
-const actions = {
-  INIT_STORE: 'INIT_STORE',
-  LOAD_MODULE: 'LOAD_MODULE',
-  UNLOAD_MODULE: 'UNLOAD_MODULE',
-  APPLY_MIDDLEWARES: 'APPLY_MIDDLEWARES',
-  REGISTER_EFFECTS: 'REGISTER_EFFECTS',
-  UNREGISTER_EFFECTS: 'UNREGISTER_EFFECTS'
+const randomString = () => Math.random().toString(36).substring(7).split('').join('.');
+
+export const systemActions = {
+  STORE_INITIALIZED: `STORE_INITIALIZED⛽${randomString()}`,
+  MODULE_LOADED: `MODULE_LOADED⛽${randomString()}`,
+  MODULE_UNLOADED: `MODULE_UNLOADED⛽${randomString()}`,
+  EFFECTS_REGISTERED: `EFFECTS_REGISTERED⛽${randomString()}`,
+  EFFECTS_UNREGISTERED: `EFFECTS_UNREGISTERED⛽${randomString()}`
 };
 
 // Define the action creators
 const actionCreators = {
-  initStore: createAction(actions.INIT_STORE),
-  applyMiddlewares: createAction(actions.APPLY_MIDDLEWARES),
-  registerEffects: createAction(actions.REGISTER_EFFECTS),
-  loadModule: createAction(actions.LOAD_MODULE, (module: MainModule) => module),
-  unloadModule: createAction(actions.UNLOAD_MODULE, (module: FeatureModule) => module),
-  unregisterEffects: createAction(actions.UNREGISTER_EFFECTS, (module: FeatureModule) => module)
+  storeInitialized: createAction(systemActions.STORE_INITIALIZED),
+  moduleLoaded: createAction(systemActions.MODULE_LOADED, (module: FeatureModule) => ({module})),
+  moduleUnloaded: createAction(systemActions.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
+  effectsRegistered: createAction(systemActions.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
+  effectsUnregistered: createAction(systemActions.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
 };
 
 export class Store {
@@ -100,7 +100,7 @@ export class Store {
         store.processAction()
       ).subscribe();
 
-      store.dispatch(actionCreators.initStore());
+      store.dispatch(actionCreators.storeInitialized());
 
       return store;
     }
@@ -180,6 +180,8 @@ export class Store {
     } else {
       fnBody();
     }
+
+    this.dispatch(actionCreators.effectsRegistered(args));
     return this;
   }
 
@@ -200,6 +202,8 @@ export class Store {
     } else {
       fnBody();
     }
+
+    this.dispatch(actionCreators.effectsUnregistered(effects));
     return this;
   }
 
@@ -228,6 +232,8 @@ export class Store {
     } else {
       fnBody();
     }
+
+    this.dispatch(actionCreators.moduleLoaded(module));
     return this;
   }
 
@@ -251,6 +257,8 @@ export class Store {
     } else {
       fnBody();
     }
+
+    this.dispatch(actionCreators.moduleUnloaded(module));
     return this;
   }
 
