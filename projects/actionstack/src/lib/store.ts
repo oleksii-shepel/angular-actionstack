@@ -5,7 +5,7 @@ import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isBoxed, isPlainObject, isPrimitive, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 const actions = {
   INIT_STORE: 'INIT_STORE',
@@ -42,12 +42,13 @@ export class Store {
   isProcessing: BehaviorSubject<boolean>;
   subscription: Subscription;
 
-  constructor(mainModule: MainModule) {
+  constructor() {
     const MAIN_MODULE_DEFAULT = {
+      slice: "main",
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
-      strategy: "exclusive"
+      strategy: "exclusive" as "exclusive"
     };
 
     const MODULES_DEFAULT: FeatureModule[] = [];
@@ -57,7 +58,7 @@ export class Store {
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: new Map(),
       dependencies: {},
-      strategy: "exclusive"
+      strategy: "exclusive" as "exclusive"
     };
 
     const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
@@ -67,9 +68,9 @@ export class Store {
 
     const DISPATCHING_DEFAULT = new BehaviorSubject(false);
 
-    this.mainModule = Object.assign(MAIN_MODULE_DEFAULT, mainModule);
+    this.mainModule = MAIN_MODULE_DEFAULT;
     this.modules = MODULES_DEFAULT;
-    this.pipeline = Object.assign(PIPELINE_DEFAULT, deepClone(mainModule));
+    this.pipeline = PIPELINE_DEFAULT;
     this.actionStream = ACTION_STREAM_DEFAULT;
     this.actionStack = ACTION_STACK_DEFAULT;
     this.currentState = CURRENT_STATE_DEFAULT;
@@ -81,7 +82,16 @@ export class Store {
 
     let storeCreator = (mainModule: MainModule) => {
 
-      let store = new Store(mainModule);
+      let store = new Store();
+
+      store.mainModule = Object.assign(store.mainModule, mainModule);
+      store.pipeline = Object.assign(store.pipeline, {
+        middlewares: Array.from(mainModule.middlewares ?? store.pipeline.middlewares),
+        reducer: mainModule.reducer,
+        dependencies: Object.assign(Object.assign(store.pipeline.dependencies, mainModule.dependencies)),
+        strategy: mainModule.strategy ?? store.pipeline.strategy,
+      });
+
       store.applyMiddleware();
 
       let action$ = store.actionStream.asObservable();
@@ -223,11 +233,11 @@ export class Store {
       return reducers;
     }, {} as Record<string, Reducer>);
 
-    if(featureReducers.hasOwnProperty("main")) {
+    if(featureReducers.hasOwnProperty(this.mainModule.slice!)) {
       throw new Error("Module name 'main' is reserved. Please provide other name for the module");
     }
 
-    featureReducers["main"] = mainReducer;
+    featureReducers[this.mainModule.slice!] = mainReducer;
 
     // Combine the main module reducer with the feature module reducers
     const combinedReducer = (state: any = {}, action: Action<any>) => {
@@ -248,12 +258,12 @@ export class Store {
 
     // Handle dependencies for MainModule
     let mainDependencies = this.mainModule.dependencies ? {...this.mainModule.dependencies} : {};
-    if(!this.pipeline.dependencies["main"]) {
-      this.pipeline.dependencies["main"] = {};
+    if(!this.pipeline.dependencies[this.mainModule.slice!]) {
+      this.pipeline.dependencies[this.mainModule.slice!] = {};
     }
     for (const key in mainDependencies) {
       const DependencyType = mainDependencies[key] as Type<any>;
-      this.pipeline.dependencies["main"][key] = injector.get(DependencyType);
+      this.pipeline.dependencies[this.mainModule.slice!][key] = injector.get(DependencyType);
     }
 
     // Handle dependencies for each FeatureModule
@@ -355,32 +365,4 @@ export function compose(...funcs: AnyFn[]): AnyFn {
   }
 
   return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
-}
-
-function deepClone<T>(objectToClone: T): T {
-  if (isPrimitive(objectToClone)) return objectToClone;
-
-  let obj: any;
-  if (isBoxed(objectToClone)) {
-    obj = (objectToClone as any).valueOf();
-  } else if (objectToClone instanceof Date) {
-    obj = new Date((objectToClone as Date).valueOf());
-  } else if (objectToClone instanceof Map) {
-    obj = new Map(Array.from(objectToClone as Map<any, any>, ([key, value]) => [deepClone(key), deepClone(value)]));
-  } else if (objectToClone instanceof Set) {
-    obj = new Set(Array.from(objectToClone as Set<any>, value => deepClone(value)));
-  } else if (Array.isArray(objectToClone)) {
-    obj = (objectToClone as any[]).map(value => deepClone(value));
-  } else if (typeof objectToClone === 'object') {
-    obj = Object.create(Object.getPrototypeOf(objectToClone));
-    for (const key in objectToClone) {
-      if (Object.prototype.hasOwnProperty.call(objectToClone, key)) {
-        obj[key] = deepClone((objectToClone as any)[key]);
-      }
-    }
-  } else {
-    obj = objectToClone;
-  }
-
-  return obj;
 }

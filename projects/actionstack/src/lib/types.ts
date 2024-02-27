@@ -49,6 +49,7 @@ export interface FeatureModule {
 }
 
 export interface MainModule {
+  slice?: string;
   preloadedState?: any;
   middlewares?: Middleware[];
   reducer: Reducer;
