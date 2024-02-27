@@ -36,8 +36,9 @@ export interface ProjectionFunction {
   (state: any | any[], props?: any): any;
 }
 
-export interface MemoizedFn extends AnyFn {
-  release: () => any;
+export interface MemoizedFn<T = any> extends AnyFn {
+  (...args: any[]): T;
+  release: () => void;
 }
 
 export type SideEffect = (action: Observable<Action<any>>, state: Observable<any>, dependencies: Record<string, any>) => Observable<Action<any>>;
