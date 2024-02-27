@@ -9,7 +9,7 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
     } else if (payloadCreator) {
       let result = payloadCreator(...args);
       if (!result) {
-        throw new Error('payloadCreator did not return an object');
+        throw new Error('payloadCreator did not return an object. Did you forget to initialize an action with params?');
       }
 
       return {
