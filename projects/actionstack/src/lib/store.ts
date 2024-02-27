@@ -176,7 +176,7 @@ export class Store {
     };
 
     if(this.isProcessing.value) {
-      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
+      firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => fnBody())));
     } else {
       fnBody();
     }
@@ -198,7 +198,7 @@ export class Store {
     };
 
     if(this.isProcessing.value) {
-      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
+      firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => fnBody())));
     } else {
       fnBody();
     }
@@ -228,7 +228,7 @@ export class Store {
     };
 
     if(this.isProcessing.value) {
-      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
+      firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => fnBody())));
     } else {
       fnBody();
     }
@@ -253,7 +253,7 @@ export class Store {
     };
 
     if(this.isProcessing.value) {
-      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
+      firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => fnBody())));
     } else {
       fnBody();
     }
