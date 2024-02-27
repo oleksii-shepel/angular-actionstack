@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { createAction } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -156,7 +156,7 @@ export class Store {
   }
 
   extend(...args: [...SideEffect[], any | never]) {
-    const fnBody = () => {
+    firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => {
       let dependencies = {};
       let effects: SideEffect[] = [];
 
@@ -173,13 +173,7 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
-    };
-
-    if(this.isProcessing.value) {
-      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
-    } else {
-      fnBody();
-    }
+    })));
 
     this.dispatch(actionCreators.effectsRegistered(args));
     return this;
@@ -187,7 +181,7 @@ export class Store {
 
   revoke(...effects: SideEffect[]) {
 
-    const fnBody = () => {
+    firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => {
       let newEffects = new Map(this.pipeline.effects);
 
       effects.forEach((effect) => {
@@ -195,20 +189,14 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
-    };
-
-    if(this.isProcessing.value) {
-      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
-    } else {
-      fnBody();
-    }
+    })));
 
     this.dispatch(actionCreators.effectsUnregistered(effects));
     return this;
   }
 
   loadModule(module: FeatureModule, injector: Injector) {
-    const fnBody = () => {
+    firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => {
       // Check if the module already exists in the this's modules
       if (this.modules.some(m => m.slice === module.slice)) {
         // If the module already exists, return the this without changes
@@ -225,20 +213,14 @@ export class Store {
 
       // Inject dependencies
       this.injectDependencies(injector);
-    };
-
-    if(this.isProcessing.value) {
-      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
-    } else {
-      fnBody();
-    }
+    })));
 
     this.dispatch(actionCreators.moduleLoaded(module));
     return this;
   }
 
   unloadModule(module: FeatureModule) {
-    const fnBody = () => {
+    firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => {
       // Create a new array with the module removed from the this's modules
       const newModules = this.modules.filter(m => m.slice !== module.slice);
 
@@ -250,13 +232,7 @@ export class Store {
 
       // Eject dependencies
       this.ejectDependencies(module);
-    };
-
-    if(this.isProcessing.value) {
-      firstValueFrom(this.isProcessing.pipe(filter(value => value === false))).then(fnBody);
-    } else {
-      fnBody();
-    }
+    })));
 
     this.dispatch(actionCreators.moduleUnloaded(module));
     return this;
@@ -272,19 +248,37 @@ export class Store {
       return reducers;
     }, {} as Record<string, Reducer>);
 
-    if(featureReducers.hasOwnProperty(this.mainModule.slice!)) {
-      throw new Error("Module name 'main' is reserved. Please provide other name for the module");
-    }
-
     featureReducers[this.mainModule.slice!] = mainReducer;
+
+    // Initialize state
+    let stateUpdated = false, state = this.getState();
+    Object.keys(featureReducers).forEach((key) => {
+      if(state[key] === undefined) {
+        state[key] = featureReducers[key](undefined, undefined!);
+        stateUpdated = true;
+      }
+    });
+
+    if(stateUpdated) {
+      state = { ...state };
+      this.currentState.next(state);
+    }
 
     // Combine the main module reducer with the feature module reducers
     const combinedReducer = (state: any = {}, action: Action<any>) => {
-      let newState = state;
+      let newState = state, stateUpdated = false;
 
       Object.keys(featureReducers).forEach((key) => {
-        newState[key] = featureReducers[key](newState[key], action);
+        const featureState = featureReducers[key](newState[key], action);
+        if(featureState !== newState[key]){
+          stateUpdated = true;
+          newState[key] = featureState;
+        }
       });
+
+      if(stateUpdated) {
+        newState = { ...newState };
+      }
 
       return newState;
     };
@@ -312,9 +306,9 @@ export class Store {
         this.pipeline.dependencies[module.slice] = {};
       }
 
-      for (const key in module.dependencies) {
+      for (const key in dependencies) {
         if (!this.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
-          const DependencyType = module.dependencies[key] as Type<any>;
+          const DependencyType = dependencies[key] as Type<any>;
           this.pipeline.dependencies[module.slice][key] = injector.get(DependencyType);
         }
       }
@@ -335,32 +329,48 @@ export class Store {
     return (source: Observable<Action<any>>) => {
       const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
       const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
+
       return source.pipe(
         concatMap((action: Action<any>) => {
-          let state = this.pipeline.reducer(this.currentState.value, action);
-          return combineLatest([from(this.currentState.next(state)), runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
-            mapMethod((childActions: Action<any>[]) => {
-              if (childActions.length > 0) {
-                return from(childActions).pipe(
-                  tap((nextAction: Action<any>) => {
-                    this.actionStack.push(nextAction);
-                    this.dispatch(nextAction);
-                  }),
-                );
-              }
-              return EMPTY;
-            }),
-            finalize(() => {
-              if (this.actionStack.length > 0) {
-                this.actionStack.pop();
-              }
-              if (this.actionStack.length === 0) {
-                this.isProcessing.next(false);
-              }
+          let state;
+          try {
+            state = this.pipeline.reducer(this.currentState.value, action);
+          } catch (error: any) {
+            throw new Error(`Error in reducer: ${error}`);
+          }
+          return combineLatest([
+            from(this.currentState.next(state)),
+            runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
+              catchError((error) => {
+                throw new Error(`Error in side effects: ${error}`);
+              }),
+              mapMethod((childActions: Action<any>[]) => {
+                if (childActions.length > 0) {
+                  return from(childActions).pipe(
+                    tap((nextAction: Action<any>) => {
+                      this.actionStack.push(nextAction);
+                      this.dispatch(nextAction);
+                    }),
+                    catchError((error) => {
+                      throw new Error(`Error dispatching action: ${error}`);
+                    }),
+                    finalize(() => {
+                      this.actionStack.pop(); // Pop the action from the stack after it is processed
+                      if (this.actionStack.length === 0) {
+                        this.isProcessing.next(false); // Set isProcessing to false if there are no more actions in the stack
+                      }
+                    }),
+                  );
+                }
+                return EMPTY;
             }))
-          ])
+          ]);
         }),
-        ignoreElements()
+        ignoreElements(),
+        catchError((error) => {
+          console.error(error);
+          return EMPTY;
+        })
       );
     };
   }

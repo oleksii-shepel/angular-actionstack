@@ -41,34 +41,19 @@ export class AsyncObservable<T> {
     } as Subscription;
   }
 
-  async notify(value: T): Promise<(void | Error)[]> {
+  async notify(value: T): Promise<void[]> {
     const results = await Promise.allSettled(this.observers.map(observer => observer.next(value)));
-    return results.map((result, index) => {
-      if (result.status === 'rejected') {
-        return new Error(`Error in observer ${index}: ${result.reason}`);
-      }
-      return result.value;
-    });
-  }
 
-  async notifyError(error: any): Promise<(void | Error)[]> {
-    const results = await Promise.allSettled(this.observers.map(observer => observer.error && observer.error(error)));
-    return results.map((result, index) => {
-      if (result.status === 'rejected') {
-        return new Error(`Error in observer ${index}: ${result.reason}`);
-      }
-      return result.value;
-    });
-  }
+    // Count failed selectors
+    const failedSelectorsCount = results.filter(result => result.status === 'rejected').length;
 
-  async notifyComplete(): Promise<(void | Error)[]> {
-    const results = await Promise.allSettled(this.observers.map(observer => observer.complete && observer.complete()));
-    return results.map((result, index) => {
-      if (result.status === 'rejected') {
-        return new Error(`Error in observer ${index}: ${result.reason}`);
-      }
-      return result.value;
-    });
+    // Log information about failed selectors
+    if (failedSelectorsCount > 0) {
+      throw new Error(`${failedSelectorsCount} selectors failed during state propagation.`);
+    }
+
+    // Resolve with an empty array to indicate successful completion (of those that succeeded)
+    return [];
   }
 }
 
