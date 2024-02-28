@@ -29,4 +29,5 @@ export function reducer(state = initialState, action: Action<any>) {
   }
 }
 
-export const selectHeroes = createSelector((state) => state[slice].heroes);
+export const featureSelector = createSelector<typeof initialState>(state => state[slice]);
+export const selectHeroes = createSelector(featureSelector(), state => state.heroes);

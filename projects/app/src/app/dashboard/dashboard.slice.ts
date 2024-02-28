@@ -19,7 +19,7 @@ export const loadHeroes = createAction(() => async (dispatch: Function, getState
   }
 });
 
-const initialState = { heroes: undefined, loading: false, error: null };
+const initialState = { heroes: [], loading: false, error: null };
 
 export function reducer(state = initialState, action: any): any {
   switch (action.type) {
@@ -34,5 +34,5 @@ export function reducer(state = initialState, action: any): any {
   }
 }
 
-export const selectHeroes = createSelector(state => state[slice].heroes);
-export const selectTopHeroes = createSelector(selectHeroes(), (heroes: Hero[]) => heroes ? heroes.slice(1, 5) : []);
+export const featureSelector = createSelector<typeof initialState>(state => state[slice]);
+export const selectTopHeroes = createSelector(featureSelector(), state => state.heroes.slice(1, 5));

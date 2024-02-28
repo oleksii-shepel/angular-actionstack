@@ -54,11 +54,11 @@ export function nomemoize(fn: AnyFn) {
   return func;
 }
 
-export function createSelector<V = any, T = any>(
+export function createSelector<U = any, T = any>(
   selectors: AnyFn | AnyFn[],
   projectionOrOptions?: ProjectionFunction | { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn },
   options: { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn } = {}
-): (props?: any[] | any, projectionProps?: any) => MemoizedFn<T> {
+): (props?: any[] | any, projectionProps?: any) => MemoizedFn<U> {
   options = (typeof projectionOrOptions !== "function" ? projectionOrOptions : options) || {};
 
   const isSelectorArray = Array.isArray(selectors);
@@ -86,12 +86,19 @@ export function createSelector<V = any, T = any>(
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
     // The memoizedSelector function will return a function that executes the selectors and projection
-    const fn = (state: V): T => {
-      const selectorResults = Array.isArray(memoizedSelectors)
-        ? memoizedSelectors.map((selector, index) => selector(state, props[index]))
-        : memoizedSelectors(state, props);
-
-      return memoizedProjection ? memoizedProjection(selectorResults, projectionProps) : selectorResults;
+    const fn = (state: T): U => {
+      let selectorResults;
+      if(Array.isArray(memoizedSelectors)) {
+        selectorResults = memoizedSelectors.map((selector, index) => selector(state, props[index]))
+        return (selectorResults.some(result => typeof result === 'undefined'))
+          ? undefined as U
+          : memoizedProjection ? memoizedProjection(selectorResults, projectionProps) : selectorResults;
+      } else {
+        selectorResults = memoizedSelectors && memoizedSelectors(state, props);
+        return (typeof selectorResults === 'undefined')
+          ? undefined as U
+          : memoizedProjection ? memoizedProjection(selectorResults, projectionProps) : selectorResults;
+      }
     };
 
     // Implement a release method if your memoization functions require cleanup
@@ -107,11 +114,11 @@ export function createSelector<V = any, T = any>(
   };
 }
 
-export function createSelectorAsync<V = any, T = any>(
+export function createSelectorAsync<U = any, T = any>(
   selectors: AnyFn | AnyFn[] | Promise<AnyFn> | Promise<AnyFn>[],
   projectionOrOptions?: ProjectionFunction | { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn },
   options: { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn } = {}
-): (props?: any[] | any, projectionProps?: any) => Promise<MemoizedFn<T>> {
+): (props?: any[] | any, projectionProps?: any) => Promise<MemoizedFn<U>> {
   options = (typeof projectionOrOptions !== "function" ? projectionOrOptions : options) || {};
 
   const isSelectorArray = Array.isArray(selectors);
@@ -139,17 +146,21 @@ export function createSelectorAsync<V = any, T = any>(
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
     // The memoizedSelector function will return a function that executes the selectors and projection
-    const fn = async (state: V): Promise<T> => {
-      const selectorResults = Array.isArray(memoizedSelectors)
-        ? (await Promise.allSettled(memoizedSelectors.map((selector, index) => selector(state, props[index])))).map(result => {
-            if (result.status === 'rejected') {
-              throw new Error(result.reason);
-            }
-            return result.value;
-          })
-        : await memoizedSelectors(state, props);
+    const fn = async (state: T): Promise<U> => {
+      let selectorResults;
+      if(Array.isArray(memoizedSelectors)) {
+        selectorResults = await Promise.allSettled(memoizedSelectors.map((selector, index) => selector(state, props[index])));
+        selectorResults = selectorResults.map(result => (result.status === 'rejected') ? undefined : result.value);
 
-      return memoizedProjection ? memoizedProjection(selectorResults, projectionProps) : selectorResults;
+        return (selectorResults.some(result => typeof result === 'undefined'))
+          ? undefined as U
+          : memoizedProjection ? memoizedProjection(selectorResults, projectionProps) : selectorResults;
+      } else {
+        selectorResults = memoizedSelectors && await memoizedSelectors(state, props);
+        return (typeof selectorResults === 'undefined')
+          ? undefined as U
+          : memoizedProjection ? memoizedProjection(selectorResults, projectionProps) : selectorResults;
+      }
     };
 
     const memoizedFn = (await fn) as MemoizedFn;
