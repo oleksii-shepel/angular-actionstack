@@ -14,7 +14,8 @@ export const loadHeroes = createAction(() => async (dispatch: Function, getState
     const heroService = dependencies[slice].heroService;
     const heroes = await firstValueFrom(heroService.getHeroes());
     dispatch(loadHeroesSuccess(heroes));
-  } catch (error) {
+  } catch (error: any) {
+    console.warn(`Error in effect: ${error.message}`);
     dispatch(loadHeroesFailure(error));
   }
 });

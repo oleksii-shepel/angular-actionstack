@@ -355,12 +355,8 @@ export class Store {
 
       return source.pipe(
         concatMap((action: Action<any>) => {
-          let state;
-          try {
-            state = this.pipeline.reducer(this.currentState.value, action);
-          } catch (error: any) {
-            throw new Error(`Error in reducer: ${error}`);
-          }
+          let state = this.pipeline.reducer(this.currentState.value, action);
+
           return combineLatest([
             from(this.currentState.next(state)),
             runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
