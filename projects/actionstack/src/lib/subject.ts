@@ -45,11 +45,12 @@ export class AsyncObservable<T> {
     const results = await Promise.allSettled(this.observers.map(observer => observer.next(value)));
 
     // Count failed selectors
-    const failedSelectorsCount = results.filter(result => result.status === 'rejected').length;
+    const failedSelectors = (results as PromiseRejectedResult[]).filter(result => result.status === 'rejected').map(result => result.reason).slice(0, 5);
 
     // Log information about failed selectors
-    if (failedSelectorsCount > 0) {
-      throw new Error(`${failedSelectorsCount} selectors failed during state propagation.`);
+    if (failedSelectors.length > 0) {
+      let receivedErrors = failedSelectors.join('\n');
+      throw new Error(`${failedSelectors.length} selectors failed during state propagation.\n${receivedErrors}`);
     }
 
     // Resolve with an empty array to indicate successful completion (of those that succeeded)
@@ -78,4 +79,5 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
   get value(): T {
     return this._value;
   }
+
 }

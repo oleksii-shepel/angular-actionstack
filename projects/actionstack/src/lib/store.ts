@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { createAction } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -10,6 +10,7 @@ import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffe
 const randomString = () => Math.random().toString(36).substring(7).split('').join('.');
 
 export const systemActions = {
+  INITIALIZE_STATE: `INITIALIZE_STATE⛽${randomString()}`,
   STORE_INITIALIZED: `STORE_INITIALIZED⛽${randomString()}`,
   MODULE_LOADED: `MODULE_LOADED⛽${randomString()}`,
   MODULE_UNLOADED: `MODULE_UNLOADED⛽${randomString()}`,
@@ -18,7 +19,8 @@ export const systemActions = {
 };
 
 // Define the action creators
-const actionCreators = {
+export const systemActionCreators = {
+  initializeState: createAction(systemActions.INITIALIZE_STATE),
   storeInitialized: createAction(systemActions.STORE_INITIALIZED),
   moduleLoaded: createAction(systemActions.MODULE_LOADED, (module: FeatureModule) => ({module})),
   moduleUnloaded: createAction(systemActions.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
@@ -66,7 +68,7 @@ export class Store {
 
     const CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>({});
 
-    const DISPATCHING_DEFAULT = new BehaviorSubject(false);
+    const PROCESSING_DEFAULT = new BehaviorSubject(false);
 
     this.mainModule = MAIN_MODULE_DEFAULT;
     this.modules = MODULES_DEFAULT;
@@ -74,7 +76,7 @@ export class Store {
     this.actionStream = ACTION_STREAM_DEFAULT;
     this.actionStack = ACTION_STACK_DEFAULT;
     this.currentState = CURRENT_STATE_DEFAULT;
-    this.isProcessing = DISPATCHING_DEFAULT;
+    this.isProcessing = PROCESSING_DEFAULT;
     this.subscription = Subscription.EMPTY;
   }
 
@@ -87,7 +89,7 @@ export class Store {
       store.mainModule = Object.assign(store.mainModule, mainModule);
       store.pipeline = Object.assign(store.pipeline, {
         middlewares: Array.from(mainModule.middlewares ?? store.pipeline.middlewares),
-        reducer: mainModule.reducer,
+        reducer: store.setupReducer(),
         dependencies: Object.assign(Object.assign(store.pipeline.dependencies, mainModule.dependencies)),
         strategy: mainModule.strategy ?? store.pipeline.strategy,
       });
@@ -100,7 +102,7 @@ export class Store {
         store.processAction()
       ).subscribe();
 
-      store.dispatch(actionCreators.storeInitialized());
+      //store.dispatch(systemActionCreators.storeInitialized());
 
       return store;
     }
@@ -175,7 +177,7 @@ export class Store {
       this.pipeline.effects = newEffects;
     })));
 
-    this.dispatch(actionCreators.effectsRegistered(args));
+    this.dispatch(systemActionCreators.effectsRegistered(args));
     return this;
   }
 
@@ -191,7 +193,7 @@ export class Store {
       this.pipeline.effects = newEffects;
     })));
 
-    this.dispatch(actionCreators.effectsUnregistered(effects));
+    this.dispatch(systemActionCreators.effectsUnregistered(effects));
     return this;
   }
 
@@ -215,7 +217,7 @@ export class Store {
       this.injectDependencies(injector);
     })));
 
-    this.dispatch(actionCreators.moduleLoaded(module));
+    this.dispatch(systemActionCreators.moduleLoaded(module));
     return this;
   }
 
@@ -234,11 +236,11 @@ export class Store {
       this.ejectDependencies(module);
     })));
 
-    this.dispatch(actionCreators.moduleUnloaded(module));
+    this.dispatch(systemActionCreators.moduleUnloaded(module));
     return this;
   }
 
-  protected setupReducer(): Store {
+  protected setupReducer(): Reducer {
     // Get the main module reducer
     const mainReducer = this.mainModule.reducer;
 
@@ -254,7 +256,7 @@ export class Store {
     let stateUpdated = false, state = this.getState();
     Object.keys(featureReducers).forEach((key) => {
       if(state[key] === undefined) {
-        state[key] = featureReducers[key](undefined, undefined!);
+        state[key] = featureReducers[key](undefined, systemActionCreators.initializeState());
         stateUpdated = true;
       }
     });
@@ -284,7 +286,7 @@ export class Store {
     };
 
     this.pipeline.reducer = combinedReducer;
-    return this;
+    return combinedReducer;
   }
 
   protected injectDependencies(injector: Injector): Store {
@@ -329,48 +331,32 @@ export class Store {
     return (source: Observable<Action<any>>) => {
       const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
       const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-
       return source.pipe(
         concatMap((action: Action<any>) => {
-          let state;
-          try {
-            state = this.pipeline.reducer(this.currentState.value, action);
-          } catch (error: any) {
-            throw new Error(`Error in reducer: ${error}`);
-          }
-          return combineLatest([
-            from(this.currentState.next(state)),
-            runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
-              catchError((error) => {
-                throw new Error(`Error in side effects: ${error}`);
-              }),
-              mapMethod((childActions: Action<any>[]) => {
-                if (childActions.length > 0) {
-                  return from(childActions).pipe(
-                    tap((nextAction: Action<any>) => {
-                      this.actionStack.push(nextAction);
-                      this.dispatch(nextAction);
-                    }),
-                    catchError((error) => {
-                      throw new Error(`Error dispatching action: ${error}`);
-                    }),
-                    finalize(() => {
-                      this.actionStack.pop(); // Pop the action from the stack after it is processed
-                      if (this.actionStack.length === 0) {
-                        this.isProcessing.next(false); // Set isProcessing to false if there are no more actions in the stack
-                      }
-                    }),
-                  );
-                }
-                return EMPTY;
+          let state = this.pipeline.reducer(this.currentState.value, action);
+          return combineLatest([from(this.currentState.next(state)), runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
+            mapMethod((childActions: Action<any>[]) => {
+              if (childActions.length > 0) {
+                return from(childActions).pipe(
+                  tap((nextAction: Action<any>) => {
+                    this.actionStack.push(nextAction);
+                    this.dispatch(nextAction);
+                  }),
+                );
+              }
+              return EMPTY;
+            }),
+            finalize(() => {
+              if (this.actionStack.length > 0) {
+                this.actionStack.pop();
+              }
+              if (this.actionStack.length === 0) {
+                this.isProcessing.next(false);
+              }
             }))
-          ]);
+          ])
         }),
-        ignoreElements(),
-        catchError((error) => {
-          console.error(error);
-          return EMPTY;
-        })
+        ignoreElements()
       );
     };
   }
