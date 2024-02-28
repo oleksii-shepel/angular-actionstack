@@ -4,7 +4,11 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
   function actionCreator(...args: any[]) {
     if (typeof typeOrThunk === 'function') {
       return async (dispatch: Function, getState: Function, dependencies: any) => {
-        return await typeOrThunk(...args)(dispatch, getState, dependencies);
+        try {
+          return await typeOrThunk(...args)(dispatch, getState, dependencies);
+        } catch (error: any) {
+          console.warn(`Error in action: ${error.message}`);
+        }
       }
     } else if (payloadCreator) {
       let result = payloadCreator(...args);
