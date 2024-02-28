@@ -356,31 +356,26 @@ export class Store {
       return source.pipe(
         concatMap((action: Action<any>) => {
           let state = this.pipeline.reducer(this.currentState.value, action);
-
           return combineLatest([
             from(this.currentState.next(state)),
             runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
-              catchError((error) => {
-                throw new Error(`Error in side effects: ${error}`);
-              }),
               mapMethod((childActions: Action<any>[]) => {
                 if (childActions.length > 0) {
                   return from(childActions).pipe(
                     tap((nextAction: Action<any>) => {
                       this.actionStack.push(nextAction);
                       this.dispatch(nextAction);
-                    }),
-                    catchError((error) => {
-                      throw new Error(`Error dispatching action: ${error}`);
                     })
                   );
                 }
                 return EMPTY;
               }),
               finalize(() => {
-                this.actionStack.pop(); // Pop the action from the stack after it is processed
+                // Pop the action from the stack after it is processed
+                this.actionStack.pop();
                 if (this.actionStack.length === 0) {
-                  this.isProcessing.next(false); // Set isProcessing to false if there are no more actions in the stack
+                  // Set isProcessing to false if there are no more actions in the stack
+                  this.isProcessing.next(false);
                 }
               })
             )
@@ -388,6 +383,7 @@ export class Store {
         }),
         ignoreElements(),
         catchError((error) => {
+          console.warn(error);
           return EMPTY;
         })
       );
