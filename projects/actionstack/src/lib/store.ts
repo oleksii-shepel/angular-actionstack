@@ -102,7 +102,7 @@ export class Store {
         store.processAction()
       ).subscribe();
 
-      //store.dispatch(systemActionCreators.storeInitialized());
+      store.dispatch(systemActionCreators.storeInitialized());
 
       return store;
     }
