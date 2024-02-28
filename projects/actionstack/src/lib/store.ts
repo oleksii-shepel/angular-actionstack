@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, tap } from "rxjs";
 import { createAction } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -89,12 +89,15 @@ export class Store {
       store.mainModule = Object.assign(store.mainModule, mainModule);
       store.pipeline = Object.assign(store.pipeline, {
         middlewares: Array.from(mainModule.middlewares ?? store.pipeline.middlewares),
-        reducer: store.setupReducer(),
+        reducer: (state: any, action: any) => state,
         dependencies: Object.assign(Object.assign(store.pipeline.dependencies, mainModule.dependencies)),
         strategy: mainModule.strategy ?? store.pipeline.strategy,
       });
 
+      try { store.setupReducer(); } catch (error) { console.warn(error); }
+
       store.applyMiddleware();
+
 
       let action$ = store.actionStream.asObservable();
 
@@ -211,7 +214,7 @@ export class Store {
       this.modules = newModules;
 
       // Setup the reducers
-      this.setupReducer();
+      try { this.setupReducer(); } catch (error) { console.warn(error); }
 
       // Inject dependencies
       this.injectDependencies(injector);
@@ -230,7 +233,7 @@ export class Store {
       this.modules = newModules;
 
       // Setup the reducers
-      this.setupReducer();
+      try { this.setupReducer(); } catch (error) { console.warn(error); }
 
       // Eject dependencies
       this.ejectDependencies(module);
@@ -240,12 +243,14 @@ export class Store {
     return this;
   }
 
-  protected setupReducer(): Reducer {
+  protected setupReducer(): void {
+    let errors = new Map<string, string>();
+
     // Get the main module reducer
     const mainReducer = this.mainModule.reducer;
 
     // Get the feature module reducers
-    const featureReducers = this.modules.reduce((reducers, module) => {
+    let featureReducers = this.modules.reduce((reducers, module) => {
       reducers[module.slice] = module.reducer;
       return reducers;
     }, {} as Record<string, Reducer>);
@@ -255,9 +260,13 @@ export class Store {
     // Initialize state
     let stateUpdated = false, state = this.getState();
     Object.keys(featureReducers).forEach((key) => {
-      if(state[key] === undefined) {
-        state[key] = featureReducers[key](undefined, systemActionCreators.initializeState());
-        stateUpdated = true;
+      try {
+        if(state[key] === undefined) {
+          state[key] = featureReducers[key](undefined, systemActionCreators.initializeState());
+          stateUpdated = true;
+        }
+      } catch (error: any) {
+        errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
       }
     });
 
@@ -266,15 +275,23 @@ export class Store {
       this.currentState.next(state);
     }
 
+    Object.keys(featureReducers).filter((key) => errors.has(key)).forEach(key => {
+      delete featureReducers[key];
+    });
+
     // Combine the main module reducer with the feature module reducers
     const combinedReducer = (state: any = {}, action: Action<any>) => {
       let newState = state, stateUpdated = false;
 
-      Object.keys(featureReducers).forEach((key) => {
-        const featureState = featureReducers[key](newState[key], action);
-        if(featureState !== newState[key]){
-          stateUpdated = true;
-          newState[key] = featureState;
+      Object.keys(featureReducers).filter(reducer => !errors.has(reducer)).forEach((key) => {
+        try {
+            const featureState = featureReducers[key](newState[key], action);
+            if(featureState !== newState[key]){
+              stateUpdated = true;
+              newState[key] = featureState;
+            }
+        } catch (error) {
+          throw new Error(`Error occurred while processing action ${action.type} for ${key}: ${error}`);
         }
       });
 
@@ -286,7 +303,11 @@ export class Store {
     };
 
     this.pipeline.reducer = combinedReducer;
-    return combinedReducer;
+
+    if(errors.size) {
+      let receivedErrors = Array.from(errors.entries()).map((value) => value[1]).join('\n');
+      throw new Error(`${errors.size} errors during state initialization.\n${receivedErrors}`);
+    }
   }
 
   protected injectDependencies(injector: Injector): Store {
@@ -331,35 +352,85 @@ export class Store {
     return (source: Observable<Action<any>>) => {
       const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
       const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
+
       return source.pipe(
         concatMap((action: Action<any>) => {
-          let state = this.pipeline.reducer(this.currentState.value, action);
-          return combineLatest([from(this.currentState.next(state)), runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
-            mapMethod((childActions: Action<any>[]) => {
-              if (childActions.length > 0) {
-                return from(childActions).pipe(
-                  tap((nextAction: Action<any>) => {
-                    this.actionStack.push(nextAction);
-                    this.dispatch(nextAction);
-                  }),
-                );
-              }
-              return EMPTY;
-            }),
-            finalize(() => {
-              if (this.actionStack.length > 0) {
-                this.actionStack.pop();
-              }
-              if (this.actionStack.length === 0) {
-                this.isProcessing.next(false);
-              }
-            }))
-          ])
+          let state;
+          try {
+            state = this.pipeline.reducer(this.currentState.value, action);
+          } catch (error: any) {
+            throw new Error(`Error in reducer: ${error}`);
+          }
+          return combineLatest([
+            from(this.currentState.next(state)),
+            runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
+              catchError((error) => {
+                throw new Error(`Error in side effects: ${error}`);
+              }),
+              mapMethod((childActions: Action<any>[]) => {
+                if (childActions.length > 0) {
+                  return from(childActions).pipe(
+                    tap((nextAction: Action<any>) => {
+                      this.actionStack.push(nextAction);
+                      this.dispatch(nextAction);
+                    }),
+                    catchError((error) => {
+                      throw new Error(`Error dispatching action: ${error}`);
+                    })
+                  );
+                }
+                return EMPTY;
+              }),
+              finalize(() => {
+                this.actionStack.pop(); // Pop the action from the stack after it is processed
+                if (this.actionStack.length === 0) {
+                  this.isProcessing.next(false); // Set isProcessing to false if there are no more actions in the stack
+                }
+              })
+            )
+          ]);
         }),
-        ignoreElements()
+        ignoreElements(),
+        catchError((error) => {
+          return EMPTY;
+        })
       );
     };
   }
+
+  // protected processAction() {
+  //   return (source: Observable<Action<any>>) => {
+  //     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
+  //     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
+  //     return source.pipe(
+  //       concatMap((action: Action<any>) => {
+  //         let state = this.pipeline.reducer(this.currentState.value, action);
+  //         return combineLatest([from(this.currentState.next(state)), runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
+  //           mapMethod((childActions: Action<any>[]) => {
+  //             if (childActions.length > 0) {
+  //               return from(childActions).pipe(
+  //                 tap((nextAction: Action<any>) => {
+  //                   this.actionStack.push(nextAction);
+  //                   this.dispatch(nextAction);
+  //                 }),
+  //               );
+  //             }
+  //             return EMPTY;
+  //           }),
+  //           finalize(() => {
+  //             if (this.actionStack.length > 0) {
+  //               this.actionStack.pop();
+  //             }
+  //             if (this.actionStack.length === 0) {
+  //               this.isProcessing.next(false);
+  //             }
+  //           }))
+  //         ])
+  //       }),
+  //       ignoreElements()
+  //     );
+  //   };
+  // }
 
   protected applyMiddleware(): Store {
 
