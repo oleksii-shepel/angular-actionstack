@@ -15,8 +15,8 @@ export const loadHeroes = createAction(() => async (dispatch: Function, getState
     const heroes = await firstValueFrom(heroService.getHeroes());
     dispatch(loadHeroesSuccess(heroes));
   } catch (error: any) {
-    console.warn(`Error in effect: ${error.message}`);
     dispatch(loadHeroesFailure(error));
+    throw error;
   }
 });
 
