@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, startWith, tap } from "rxjs";
 import { createAction } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -94,18 +94,22 @@ export class Store {
         strategy: mainModule.strategy ?? store.pipeline.strategy,
       });
 
-      try { store.setupReducer(); } catch (error) { console.warn(error); }
-
       store.applyMiddleware();
-
 
       let action$ = store.actionStream.asObservable();
 
       store.subscription = action$.pipe(
+        startWith(systemActionCreators.initializeState()),
+        scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
+        concatMap(({count, action}: any) => (count === 1)
+          ? from(store.setupReducer()).pipe(
+              catchError(error => { console.warn(error); return EMPTY; }),
+              map(() => action),
+              tap(() => store.dispatch(systemActionCreators.storeInitialized()))
+            )
+          : of(action)),
         store.processAction()
       ).subscribe();
-
-      store.dispatch(systemActionCreators.storeInitialized());
 
       return store;
     }
@@ -135,7 +139,7 @@ export class Store {
     this.actionStream.next(action);
   }
 
-  getState() {
+  getState(): any | Promise<any> {
     return this.currentState.value;
   }
 
@@ -202,49 +206,49 @@ export class Store {
   }
 
   loadModule(module: FeatureModule, injector: Injector) {
-    firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => {
-      // Check if the module already exists in the this's modules
-      if (this.modules.some(m => m.slice === module.slice)) {
-        // If the module already exists, return the this without changes
-        return;
-      }
-      // Create a new array with the module added to the this's modules
-      const newModules = [...this.modules, module];
+    firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
+      tap(() => {
+        // Check if the module already exists in the this's modules
+        if (this.modules.some(m => m.slice === module.slice)) {
+          // If the module already exists, return the this without changes
+          return;
+        }
+        // Create a new array with the module added to the this's modules
+        const newModules = [...this.modules, module];
 
-      // Return a new this with the updated properties
-      this.modules = newModules;
+        // Return a new this with the updated properties
+        this.modules = newModules;
 
-      // Setup the reducers
-      try { this.setupReducer(); } catch (error) { console.warn(error); }
+        // Inject dependencies
+        this.injectDependencies(injector);
+      }),
+      concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error); return EMPTY; }))),
+      tap(() => this.dispatch(systemActionCreators.moduleLoaded(module)))
+    ));
 
-      // Inject dependencies
-      this.injectDependencies(injector);
-    })));
-
-    this.dispatch(systemActionCreators.moduleLoaded(module));
     return this;
   }
 
   unloadModule(module: FeatureModule) {
-    firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => {
-      // Create a new array with the module removed from the this's modules
-      const newModules = this.modules.filter(m => m.slice !== module.slice);
+    firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
+      tap(() => {
+        // Create a new array with the module removed from the this's modules
+        const newModules = this.modules.filter(m => m.slice !== module.slice);
 
-      // Return a new this with the updated properties
-      this.modules = newModules;
+        // Return a new this with the updated properties
+        this.modules = newModules;
 
-      // Setup the reducers
-      try { this.setupReducer(); } catch (error) { console.warn(error); }
+        // Eject dependencies
+        this.ejectDependencies(module);
+      }),
+      concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error); return EMPTY; }))),
+      tap(() => this.dispatch(systemActionCreators.moduleUnloaded(module)))
+    ));
 
-      // Eject dependencies
-      this.ejectDependencies(module);
-    })));
-
-    this.dispatch(systemActionCreators.moduleUnloaded(module));
     return this;
   }
 
-  protected setupReducer(): void {
+  protected async setupReducer(): Promise<void> {
     let errors = new Map<string, string>();
 
     // Get the main module reducer
@@ -259,7 +263,7 @@ export class Store {
     featureReducers[this.mainModule.slice!] = mainReducer;
 
     // Initialize state
-    let stateUpdated = false, state = this.getState();
+    let stateUpdated = false, state = await this.getState();
     Object.keys(featureReducers).forEach((key) => {
       try {
         if(state[key] === undefined) {
