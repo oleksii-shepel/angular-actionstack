@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, startWith, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
 import { createAction } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -99,18 +99,19 @@ export class Store {
       let action$ = store.actionStream.asObservable();
 
       store.subscription = action$.pipe(
-        startWith(systemActionCreators.initializeState()),
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        concatMap(({count, action}: any) => (count === 1)
+        concatMap(({count, action}: any) => {
+          return (count === 1)
           ? from(store.setupReducer()).pipe(
               catchError(error => { console.warn(error); return EMPTY; }),
               map(() => action),
-              tap(() => store.dispatch(systemActionCreators.storeInitialized()))
             )
-          : of(action)),
+          : of(action)
+        }),
         store.processAction()
       ).subscribe();
 
+      store.dispatch(systemActionCreators.storeInitialized());
       return store;
     }
 
@@ -373,18 +374,16 @@ export class Store {
                     })
                   );
                 }
-                return EMPTY;
-              }),
-              finalize(() => {
-                // Pop the action from the stack after it is processed
-                this.actionStack.pop();
-                if (this.actionStack.length === 0) {
-                  // Set isProcessing to false if there are no more actions in the stack
-                  this.isProcessing.next(false);
-                }
+                return of(action);
               })
             )
-          ]);
+          ]).pipe(tap(() => {
+            this.actionStack.pop();
+            if (this.actionStack.length === 0) {
+              // Set isProcessing to false if there are no more actions in the stack
+              this.isProcessing.next(false);
+            }
+          }));
         }),
         ignoreElements(),
         catchError((error) => {
