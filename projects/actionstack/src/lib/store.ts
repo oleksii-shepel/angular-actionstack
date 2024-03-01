@@ -1,32 +1,11 @@
 import { Injector, Type } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
-import { createAction } from "./actions";
+import { systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject, toObservable } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
-
-const randomString = () => Math.random().toString(36).substring(7).split('').join('.');
-
-export const systemActions = {
-  INITIALIZE_STATE: `INITIALIZE_STATE⛽${randomString()}`,
-  STORE_INITIALIZED: `STORE_INITIALIZED⛽${randomString()}`,
-  MODULE_LOADED: `MODULE_LOADED⛽${randomString()}`,
-  MODULE_UNLOADED: `MODULE_UNLOADED⛽${randomString()}`,
-  EFFECTS_REGISTERED: `EFFECTS_REGISTERED⛽${randomString()}`,
-  EFFECTS_UNREGISTERED: `EFFECTS_UNREGISTERED⛽${randomString()}`
-};
-
-// Define the action creators
-export const systemActionCreators = {
-  initializeState: createAction(systemActions.INITIALIZE_STATE),
-  storeInitialized: createAction(systemActions.STORE_INITIALIZED),
-  moduleLoaded: createAction(systemActions.MODULE_LOADED, (module: FeatureModule) => ({module})),
-  moduleUnloaded: createAction(systemActions.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
-  effectsRegistered: createAction(systemActions.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
-  effectsUnregistered: createAction(systemActions.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
-};
 
 export class Store {
   protected mainModule: MainModule;
@@ -111,7 +90,9 @@ export class Store {
         store.processAction()
       ).subscribe();
 
+      store.dispatch(systemActionCreators.initializeState());
       store.dispatch(systemActionCreators.storeInitialized());
+
       return store;
     }
 

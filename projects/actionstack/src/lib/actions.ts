@@ -1,7 +1,34 @@
-import { isAction, kindOf } from "./types";
+import { FeatureModule, SideEffect, isAction, kindOf } from "./types";
+
+export const systemActions = {
+  INITIALIZE_STATE: `INITIALIZE_STATE`,
+  STORE_INITIALIZED: `STORE_INITIALIZED`,
+  MODULE_LOADED: `MODULE_LOADED`,
+  MODULE_UNLOADED: `MODULE_UNLOADED`,
+  EFFECTS_REGISTERED: `EFFECTS_REGISTERED`,
+  EFFECTS_UNREGISTERED: `EFFECTS_UNREGISTERED`
+};
+
+// Define the action creators
+export const systemActionCreators = {
+  initializeState: createAction(systemActions.INITIALIZE_STATE),
+  storeInitialized: createAction(systemActions.STORE_INITIALIZED),
+  moduleLoaded: createAction(systemActions.MODULE_LOADED, (module: FeatureModule) => ({module})),
+  moduleUnloaded: createAction(systemActions.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
+  effectsRegistered: createAction(systemActions.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
+  effectsUnregistered: createAction(systemActions.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
+};
+
+export function randomString() {
+  return Math.random().toString(36).substring(7).split('').join('.');
+}
 
 export function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
   function actionCreator(...args: any[]) {
+    let action: any = {
+      type: typeOrThunk,
+    };
+
     if (typeof typeOrThunk === 'function') {
       return async (dispatch: Function, getState: Function, dependencies: any) => {
         try {
@@ -16,14 +43,30 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
         throw new Error('payloadCreator did not return an object. Did you forget to initialize an action with params?');
       }
 
-      return {
-        type: typeOrThunk,
-        payload: result,
-        ...('meta' in result && { meta: result.meta }),
-        ...('error' in result && { error: result.error }),
+      // Do not return payload if it is undefined
+      if (result !== undefined) {
+        action.payload = result;
+        'meta' in result && (action.meta = result.meta);
+        'error' in result && (action.error = result.error);
       }
     }
-    return { type: typeOrThunk, payload: args[0] };
+    else {
+      // Do not return payload if it is undefined
+      if (args[0] !== undefined) {
+        action.payload = args[0];
+      }
+    }
+
+    // Check if typeOrThunk is in systemActions
+    if (typeOrThunk in systemActions) {
+      action.source = "system";
+      action.suffix = `[🤖 ${randomString()}]`;
+    } else {
+      action.source = "user";
+      action.suffix = `[🤹 ${randomString()}]`;
+    }
+
+    return action;
   }
 
   actionCreator.toString = () => `${typeOrThunk}`;

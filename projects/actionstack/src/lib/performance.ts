@@ -27,15 +27,17 @@ export const createPerformanceLogger = () => {
       if(actionStack.length === 1) {
         if(actionGroup.length > 0) {
           const totalDuration = actionGroup.reduce((total, ad) => total + ad.duration, 0);
+          const source = action as any;
 
           console.groupCollapsed(
-            `%caction %c${actionGroup[0].label}%c @ ${actionGroup[0].date.toISOString()} (duration: ${totalDuration.toFixed(5)} ms)`,
+            `%caction %c${actionGroup[0].label}%c @ ${actionGroup[0].date.toISOString()} (duration: ${totalDuration.toFixed(5)} ms)\n${source.suffix}`,
             'color: gray; font-weight: lighter;', // styles for 'action'
             'color: black; font-weight: bold;', // styles for action label
             'color: gray; font-weight: lighter;' // styles for the rest of the string
           );
-          actionGroup.forEach(ad => console.log(`%caction ${ad.label} @ ${ad.date.toISOString()} (${ad.duration.toFixed(5)} ms)`, 'color: gray; font-weight: bold;'));
+          actionGroup.forEach(ad => console.log(`%caction ${ad.label}%c @ ${ad.date.toISOString()} (${ad.duration.toFixed(5)} ms)\n${source.suffix}`, 'color: gray; font-weight: bold;', 'text-align: right;'));
           console.groupEnd();
+
           actionGroup = [];
         }
         return result;
