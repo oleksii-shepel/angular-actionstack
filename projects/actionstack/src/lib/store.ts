@@ -4,7 +4,7 @@ import { createAction } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
-import { AsyncObserver, CustomAsyncSubject } from "./subject";
+import { AsyncObserver, CustomAsyncSubject, toObservable } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 const randomString = () => Math.random().toString(36).substring(7).split('').join('.');
@@ -140,21 +140,22 @@ export class Store {
   }
 
   subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
+    const stateObservable = toObservable(this.currentState).pipe(filter(value => value !== undefined));
     if (typeof next === 'function') {
-      return this.currentState.subscribe({next, error, complete});
+      return stateObservable.subscribe({next, error, complete});
     } else {
-      return this.currentState.subscribe(next as Partial<AsyncObserver<any>>);
+      return stateObservable.subscribe(next as Partial<AsyncObserver<any>>);
     }
   }
 
   select(selector: Promise<MemoizedFn> | AnyFn): Observable<any> {
     return new Observable(observer => {
       const unsubscribe = this.subscribe(async () => {
-        const state = this.getState();
-        // If the selector is a promise, await it to get the function
         const resolvedSelector = selector instanceof Promise ? await selector : selector;
-        const result = resolvedSelector(state);
-        observer.next(result);
+        const result = resolvedSelector(this);
+        if(result !== undefined) {
+          observer.next(result);
+        }
       });
       return unsubscribe;
     });
@@ -389,40 +390,6 @@ export class Store {
       );
     };
   }
-
-  // protected processAction() {
-  //   return (source: Observable<Action<any>>) => {
-  //     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
-  //     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-  //     return source.pipe(
-  //       concatMap((action: Action<any>) => {
-  //         let state = this.pipeline.reducer(this.currentState.value, action);
-  //         return combineLatest([from(this.currentState.next(state)), runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
-  //           mapMethod((childActions: Action<any>[]) => {
-  //             if (childActions.length > 0) {
-  //               return from(childActions).pipe(
-  //                 tap((nextAction: Action<any>) => {
-  //                   this.actionStack.push(nextAction);
-  //                   this.dispatch(nextAction);
-  //                 }),
-  //               );
-  //             }
-  //             return EMPTY;
-  //           }),
-  //           finalize(() => {
-  //             if (this.actionStack.length > 0) {
-  //               this.actionStack.pop();
-  //             }
-  //             if (this.actionStack.length === 0) {
-  //               this.isProcessing.next(false);
-  //             }
-  //           }))
-  //         ])
-  //       }),
-  //       ignoreElements()
-  //     );
-  //   };
-  // }
 
   protected applyMiddleware(): Store {
 

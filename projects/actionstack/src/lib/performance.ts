@@ -7,7 +7,7 @@ export const createPerformanceLogger = () => {
   let asyncLock = new Lock();
   const actionQueue = new ActionQueue();
 
-  const measurePerformance = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any>) => {
+  const measurePerformance = ({ actionStack }: any) => (next: Function) => async (action: Action<any>) => {
     async function processAction(action: Action<any>) {
       const startTime = performance.now(); // Capture the start time
 

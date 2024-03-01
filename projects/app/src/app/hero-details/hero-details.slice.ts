@@ -34,5 +34,4 @@ export const reducer = (state = initialState, action: Action<any>) => {
   }
 };
 
-export const featureSelector = createSelector<typeof initialState>(state => state[slice]);
-export const heroSelector = createSelector(featureSelector(), state => state.hero);
+export const heroSelector = createSelector(slice, state => state.hero);
