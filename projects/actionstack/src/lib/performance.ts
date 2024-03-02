@@ -24,7 +24,7 @@ export const createPerformanceLogger = () => {
         actionDuration.duration = duration;
       }
 
-      if(actionStack.length === 1) {
+      if(actionStack.length === 0) {
         if(actionGroup.length > 0) {
           const totalDuration = actionGroup.reduce((total, ad) => total + ad.duration, 0);
           const source = action as any;
