@@ -57,7 +57,7 @@ export function nomemoize(fn: AnyFn) {
 
 function createFeatureSelector<T = any> (store: Store, slice: keyof T) {
   let state = store.getState();
-  return state && state[slice];
+  return slice === "@global" ? state : state && state[slice];
 }
 
 export function createSelector<U = any, T = any> (
@@ -128,7 +128,7 @@ export function createSelector<U = any, T = any> (
 
 async function createFeatureSelectorAsync<T = any> (store: Store, slice: keyof T) {
   let state = await store.getState();
-  return state && state[slice];
+  return slice === "@global" ? state : state && state[slice];
 }
 
 export function createSelectorAsync<U = any, T = any> (
