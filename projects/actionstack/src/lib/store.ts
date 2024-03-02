@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concat, concatMap, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
 import { systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -343,7 +343,7 @@ export class Store {
       return source.pipe(
         concatMap((action: Action<any>) => {
           let state = this.pipeline.reducer(this.currentState.value, action);
-          return concat(
+          return combineLatest([
             from(this.currentState.next(state)),
             runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
               mapMethod((childActions: Action<any>[]) => {
@@ -358,7 +358,7 @@ export class Store {
                 return of(action);
               })
             )
-          ).pipe(tap(() => {
+          ]).pipe(tap(() => {
             this.actionStack.pop();
             if (this.actionStack.length === 0) {
               // Set isProcessing to false if there are no more actions in the stack
@@ -379,15 +379,6 @@ export class Store {
 
     let dispatch = (action: any) => {
       throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
-    }
-
-    const internalAPI = {
-      getState: () => this.getState(),
-      dispatch: (action: any) => dispatch(action),
-      isProcessing: this.isProcessing,
-      actionStack: this.actionStack,
-      dependencies: () => this.pipeline.dependencies,
-      strategy: () => this.pipeline.strategy
     };
 
     const middlewareAPI = {
@@ -396,7 +387,7 @@ export class Store {
     };
 
     const middlewares = [starter, ...this.pipeline.middlewares];
-    const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
+    const chain = middlewares.map(middleware => middleware(middleware.internal ? this : middlewareAPI));
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
