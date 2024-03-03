@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, distinctUntilChanged, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
 import { systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -126,7 +126,10 @@ export class Store {
   }
 
   subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
-    const stateObservable = toObservable(this.currentState).pipe(filter(value => value !== undefined));
+    const stateObservable = toObservable(this.currentState).pipe(
+      filter(value => value !== undefined),
+      distinctUntilChanged()
+    );
     if (typeof next === 'function') {
       return stateObservable.subscribe({next, error, complete});
     } else {
@@ -144,7 +147,7 @@ export class Store {
         }
       });
       return unsubscribe;
-    });
+    }).pipe(distinctUntilChanged());
   }
 
   extend(...args: [...SideEffect[], any | never]) {
