@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, distinctUntilChanged, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
 import { systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -137,11 +137,12 @@ export class Store {
     }
   }
 
-  select(selector: Promise<MemoizedFn> | AnyFn): Observable<any> {
+  select(selector: Promise<MemoizedFn> | AnyFn, defaultValue?: any): Observable<any> {
     return (selector instanceof Promise ? from(selector) :of(selector)).pipe(
       concatMap(async (selector) => await selector(this)),
       filter(value => value !== undefined),
-      distinctUntilChanged()
+      distinctUntilChanged(),
+      defaultValue ? defaultIfEmpty(defaultValue) : (value => value)
     );
   }
 
