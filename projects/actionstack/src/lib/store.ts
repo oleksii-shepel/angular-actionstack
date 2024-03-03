@@ -142,7 +142,7 @@ export class Store {
       concatMap(async (selector) => await selector(this)),
       filter(value => value !== undefined),
       distinctUntilChanged(),
-      defaultValue ? defaultIfEmpty(defaultValue) : (value => value)
+      defaultValue !== undefined ? defaultIfEmpty(defaultValue) : (value => value)
     );
   }
 
