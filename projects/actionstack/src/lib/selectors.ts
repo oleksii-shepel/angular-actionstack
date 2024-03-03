@@ -1,5 +1,6 @@
 import { Store } from './store';
 import { AnyFn, MemoizedFn, ProjectionFunction } from "./types";
+import { firstValueFrom } from 'rxjs';
 
 // Shallow equality check function
 const shallowEqual = (a: any[], b: any[]): boolean => {
@@ -127,7 +128,7 @@ export function createSelector<U = any, T = any> (
 }
 
 async function createFeatureSelectorAsync<T = any> (store: Store, slice: keyof T) {
-  let state = await store.getState();
+  let state = await firstValueFrom(store.currentState.asObservable());
   return slice === "@global" ? state : state && state[slice];
 }
 
