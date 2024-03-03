@@ -1,4 +1,4 @@
-import { Observable, Subject, Subscription, share } from 'rxjs';
+import { Observable, Subject, Subscription, shareReplay } from 'rxjs';
 
 export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Observable<T> {
   return new Observable<T>((subscriber) => {
@@ -15,7 +15,7 @@ export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Obse
     });
 
     return () => subscription.unsubscribe();
-  }).pipe(share());
+  }).pipe(shareReplay(1));
 }
 
 export type AsyncObserver<T> = {
