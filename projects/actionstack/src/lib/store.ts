@@ -138,16 +138,11 @@ export class Store {
   }
 
   select(selector: Promise<MemoizedFn> | AnyFn): Observable<any> {
-    return new Observable(observer => {
-      const unsubscribe = this.subscribe(async () => {
-        const resolvedSelector = selector instanceof Promise ? await selector : selector;
-        const result = resolvedSelector(this);
-        if(result !== undefined) {
-          observer.next(result);
-        }
-      });
-      return unsubscribe;
-    }).pipe(distinctUntilChanged());
+    return (selector instanceof Promise ? from(selector) :of(selector)).pipe(
+      concatMap(async (selector) => await selector(this)),
+      filter(value => value !== undefined),
+      distinctUntilChanged()
+    );
   }
 
   extend(...args: [...SideEffect[], any | never]) {
