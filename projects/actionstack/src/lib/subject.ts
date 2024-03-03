@@ -1,4 +1,22 @@
-import { Observable, Subject, Subscription, multicast } from 'rxjs';
+import { Observable, Subject, Subscription, share } from 'rxjs';
+
+export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Observable<T> {
+  return new Observable<T>((subscriber) => {
+    const subscription = customAsyncSubject.subscribe({
+      next: async (value) => {
+        subscriber.next(value);
+      },
+      error: async (error) => {
+        subscriber.error(error);
+      },
+      complete: async () => {
+        subscriber.complete();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }).pipe(share());
+}
 
 export type AsyncObserver<T> = {
   next: (value: T) => Promise<void>;
@@ -42,42 +60,21 @@ export class AsyncObservable<T> {
 
 export class CustomAsyncSubject<T> extends AsyncObservable<T> {
   private _value!: T;
-  // property to store the multicast observable
-  private multicastObservable: ConnectableObservable<T>;
+  private _observable: Observable<T>!;
   
   constructor(initialValue: T) {
     super();
     this._value = initialValue;
   }
-  
-  // method to create the multicast observable
-  private createMulticastObservable(): ConnectableObservable<T> {
-    // use the multicast operator to create a multicast observable
-    // pass a subject or a subject factory function as an argument
-    return this.pipe(
-      multicast(new Subject())
-    ) as ConnectableObservable<T>;
+
+  asObservable() {
+    this._observable = this._observable ?? toObservable(this);
+    return this._observable;
   }
 
-  // method to access the multicast observable
-  asObservable(): Observable<T> {
-    // check if the multicast observable exists
-    if (!this.multicastObservable) {
-      // create the multicast observable if not
-      this.multicastObservable = this.createMulticastObservable();
-      // call the connect method to start the source observable
-      this.multicastObservable.connect();
-    }
-    // return the multicast observable as a regular observable
-    return this.multicastObservable as Observable<T>;
-  }
-
-  // modify the subscribe method to use the multicast observable
   override subscribe(observer: Partial<AsyncObserver<T>>): Subscription {
-    // use the asObservable method to get the multicast observable
-    const observable = this.asObservable();
-    // subscribe to the multicast observable with the observer
-    return observable.subscribe(observer as AsyncObserver<T>);
+    // Convert the unsubscribe function to a Subscription object
+    return super.subscribe(observer as AsyncObserver<T>);
   }
 
   async next(value: T): Promise<void> {
