@@ -126,7 +126,7 @@ export class Store {
   }
 
   subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
-    const stateObservable = toObservable(this.currentState).pipe(
+    const stateObservable = this.currentState.asObservable().pipe(
       filter(value => value !== undefined),
       distinctUntilChanged()
     );
