@@ -121,12 +121,12 @@ export class Store {
     this.actionStream.next(action);
   }
 
-  getState(): any | Promise<any> {
+  getState(): any {
     return this.currentState.value;
   }
 
   subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
-    const stateObservable = this.currentState.asObservable().pipe(
+    const stateObservable = of(this.getState()).pipe(
       filter(value => value !== undefined),
       distinctUntilChanged()
     );
