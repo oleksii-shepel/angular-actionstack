@@ -146,12 +146,13 @@ export class Store {
   }
 
   select(selector: Promise<MemoizedFn> | AnyFn, defaultValue?: any): Observable<any> {
-    return (selector instanceof Promise ? from(selector) :of(selector)).pipe(
+    return this.currentState.asObservable().pipe(
+      concatMap(() => (selector instanceof Promise ? from(selector) : of(selector)).pipe(
       concatMap(async (selector) => await selector(this)),
       filter(value => value !== undefined),
       distinctUntilChanged(),
       defaultValue !== undefined ? defaultIfEmpty(defaultValue) : (value => value)
-    );
+    )));
   }
 
   extend(...args: [...SideEffect[], any | never]) {
