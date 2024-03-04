@@ -24,14 +24,16 @@ export const createStarter = () => {
     }
 
     // If there's an action being processed, enqueue the new action and return
-    if (asyncLock.isLocked && actionStack.length) {
+    if (asyncLock.isLocked && actionStack.length === 1) {
       actionQueue.enqueue(action as any);
       return;
     }
 
     try {
       // Lock the asyncLock and process the action
-      await asyncLock.acquire();
+      if(actionStack.length === 1) {
+        await asyncLock.acquire();
+      }
 
       await processAction(action);
 
@@ -71,14 +73,16 @@ export const createStarter = () => {
     }
 
     // If there's an action being processed, enqueue the new action and return
-    if (asyncLock.isLocked && actionStack.length) {
+    if (asyncLock.isLocked && actionStack.length === 1) {
       actionQueue.enqueue(action as any);
       return;
     }
 
     try {
       // Lock the asyncLock and process the action
-      await asyncLock.acquire();
+      if(actionStack.length === 1) {
+        await asyncLock.acquire();
+      }
 
       await processAction(action);
 
