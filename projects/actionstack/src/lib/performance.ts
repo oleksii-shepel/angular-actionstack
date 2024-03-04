@@ -1,4 +1,5 @@
 import { filter, firstValueFrom } from 'rxjs';
+import { randomString, systemActions } from './actions';
 import { ActionQueue } from "./collections";
 import { Lock } from "./lock";
 import { Action } from "./types";
@@ -29,15 +30,17 @@ export const createPerformanceLogger = () => {
       if(actionStack.length === 0) {
         if(actionGroup.length > 0) {
           const totalDuration = actionGroup.reduce((total, ad) => total + ad.duration, 0);
-          const source = action as any;
+          const uniqueId = (action.type in systemActions)
+            ? `[⚙️ ${randomString()}]`
+            : `[🤹 ${randomString()}]`;
 
           console.groupCollapsed(
-            `%caction %c${actionGroup[0].label}%c @ ${actionGroup[0].date.toISOString()} (duration: ${totalDuration.toFixed(5)} ms)\n${source.suffix}`,
+            `%caction %c${actionGroup[0].label}%c @ ${actionGroup[0].date.toISOString()} (duration: ${totalDuration.toFixed(5)} ms)\n${uniqueId}`,
             'color: gray; font-weight: lighter;', // styles for 'action'
             'color: black; font-weight: bold;', // styles for action label
             'color: gray; font-weight: lighter;' // styles for the rest of the string
           );
-          actionGroup.forEach(ad => console.log(`%caction ${ad.label}%c @ ${ad.date.toISOString()} (${ad.duration.toFixed(5)} ms)\n${source.suffix}`, 'color: gray; font-weight: bold;', 'text-align: right;'));
+          actionGroup.forEach(ad => console.log(`%caction ${ad.label}%c @ ${ad.date.toISOString()} (${ad.duration.toFixed(5)} ms)\n${uniqueId}`, 'color: gray; font-weight: bold;', 'text-align: right;'));
           console.groupEnd();
 
           actionGroup = [];

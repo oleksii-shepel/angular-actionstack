@@ -57,15 +57,6 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
       }
     }
 
-    // Check if typeOrThunk is in systemActions
-    if (typeOrThunk in systemActions) {
-      action.source = "system";
-      action.suffix = `[⚙️ ${randomString()}]`;
-    } else {
-      action.source = "user";
-      action.suffix = `[🤹 ${randomString()}]`;
-    }
-
     return action;
   }
 
