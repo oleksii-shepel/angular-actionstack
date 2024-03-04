@@ -15,7 +15,7 @@ export const createPerformanceLogger = () => {
       actionGroup.push({ action: action, label: `${action.type}`, duration: 0, date: new Date()});
 
       // If it's a regular action, pass it to the next middleware
-      const result = await next(action);
+      await next(action);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
 
       const endTime = performance.now(); // Capture the end time
@@ -42,7 +42,6 @@ export const createPerformanceLogger = () => {
 
           actionGroup = [];
         }
-        return result;
       }
     }
 
