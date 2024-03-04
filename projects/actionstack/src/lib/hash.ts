@@ -19,7 +19,5 @@ export function signature() {
 }
 
 export function isValidMiddleware(sign: string) {
-  sign = sign.split('.').join('');
-  let payload = sign.substring(0, 7);
-  return hash(payload) == sign.substring(7, 10);
+  return typeof sign === 'string' && (sign = sign.replace(/\./g, '')).length === 10 && hash(sign.slice(0, 7)) === sign.slice(7, 10);
 }
