@@ -3,6 +3,7 @@ import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, ca
 import { systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
+import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
@@ -404,7 +405,8 @@ export class Store {
     };
 
     const middlewares = [starter, ...this.pipeline.middlewares];
-    const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
+
+    const chain = middlewares.map(middleware => middleware(isValidMiddleware(middleware.signature) ? internalAPI : middlewareAPI));
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;

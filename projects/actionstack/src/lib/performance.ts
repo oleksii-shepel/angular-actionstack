@@ -1,6 +1,7 @@
 import { filter, firstValueFrom } from 'rxjs';
-import { randomString, systemActions } from './actions';
+import { systemActions } from './actions';
 import { ActionQueue } from "./collections";
+import { salt } from './hash';
 import { Lock } from "./lock";
 import { Action } from "./types";
 
@@ -31,8 +32,8 @@ export const createPerformanceLogger = () => {
         if(actionGroup.length > 0) {
           const totalDuration = actionGroup.reduce((total, ad) => total + ad.duration, 0);
           const uniqueId = (action.type in systemActions)
-            ? `[⚙️ ${randomString()}]`
-            : `[🤹 ${randomString()}]`;
+            ? `[⚙️ ${salt(5).split('').join('.')}]`
+            : `[🤹 ${salt(5).split('').join('.')}]`;
 
           console.groupCollapsed(
             `%caction %c${actionGroup[0].label}%c @ ${actionGroup[0].date.toISOString()} (duration: ${totalDuration.toFixed(5)} ms)\n${uniqueId}`,
@@ -73,7 +74,7 @@ export const createPerformanceLogger = () => {
     }
   };
 
-  measurePerformance.internal = true;
+  measurePerformance.signature = '2.m.z.d.u.x.w.l.v.e';
   return measurePerformance;
 };
 

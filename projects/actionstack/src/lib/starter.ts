@@ -110,7 +110,7 @@ export const createStarter = () => {
     return strategyFunc({ dispatch, getState, dependencies, isProcessing, actionStack })(next)(action);
   };
 
-  selectStrategy.internal = true;
+  selectStrategy.signature = 'i.p.5.j.7.0.2.1.8.b';
   return selectStrategy;
 };
 
