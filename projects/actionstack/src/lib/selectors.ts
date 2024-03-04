@@ -92,7 +92,7 @@ export function createSelector<U = any, T = any> (
     const fn = (store: Store): U => {
       let sliceState = store.getState(slice);
       if (sliceState instanceof Promise) {
-        throw new Error("getState method returned Promise. Please use async selector instead.")
+        throw new Error("getState method returned a promise. Please use async selector instead.")
       }
       if (sliceState === undefined) {
         return undefined as U;
