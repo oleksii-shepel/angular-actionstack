@@ -5,8 +5,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
 
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
-import { Action, StoreModule, createEffect } from 'actionstack';
-import logger from 'redux-logger';
+import { Action, StoreModule, createEffect, measure } from 'actionstack';
 import { AppRoutingModule } from './app-routing.module';
 import { MessagesModule } from './messages/messages.module';
 
@@ -38,7 +37,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
     AppRoutingModule,
     StoreModule.forRoot({
       preloadedState: {},
-      middlewares: [logger],
+      middlewares: [measure],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
       strategy: "concurrent"
