@@ -1,4 +1,4 @@
-import { EMPTY, Observable, OperatorFunction, concatMap, defaultIfEmpty, filter, from, isObservable, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
+import { EMPTY, Observable, OperatorFunction, concatMap, filter, from, isObservable, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 
@@ -59,8 +59,7 @@ export function runSideEffectsSequentially(sideEffects: IterableIterator<[SideEf
           concatMap(([sideEffect, dependencies]) => sideEffect(action$, state$, dependencies))
         )
       ),
-      toArray(),
-      defaultIfEmpty([])
+      toArray()
     );
 }
 
@@ -74,7 +73,6 @@ export function runSideEffectsInParallel(sideEffects: IterableIterator<[SideEffe
           mergeMap(([sideEffect, dependencies]) => sideEffect(action$, state$, dependencies))
         )
       ),
-      toArray(),
-      defaultIfEmpty([])
+      toArray()
     );
 }

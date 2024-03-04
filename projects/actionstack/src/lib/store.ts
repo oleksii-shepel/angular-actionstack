@@ -364,7 +364,7 @@ export class Store {
                     })
                   );
                 }
-                return of(action);
+                return EMPTY;
               })
             )
           ]).pipe(finalize(() => {
