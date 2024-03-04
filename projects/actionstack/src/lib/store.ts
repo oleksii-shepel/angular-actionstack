@@ -121,8 +121,16 @@ export class Store {
     this.actionStream.next(action);
   }
 
-  getState(): any {
-    return this.currentState.value;
+  getState(slice?: keyof T | string[]): any {
+    if (slice === undefined || typeof slice === "string" && slice == "@global") {
+      return this.currentState.value as T;
+    } else if (typeof slice === "string") {
+      return this.currentState.value[slice] as T;
+    } else if (Array.isArray(slice)) {
+      return slice.reduce((acc, key) => (acc && acc[key]) || undefined, this.currentState.value) as T;
+    } else {
+      throw new Error("Unsupported type of slice parameter");
+    }
   }
 
   subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
