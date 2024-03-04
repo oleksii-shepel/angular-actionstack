@@ -56,13 +56,8 @@ export function nomemoize(fn: AnyFn) {
   return func;
 }
 
-function createFeatureSelector<T = any> (store: Store, slice: keyof T) {
-  let state = store.getState();
-  return slice === "@global" ? state : state && state[slice];
-}
-
 export function createSelector<U = any, T = any> (
-  slice: keyof T,
+  slice: keyof T | string[],
   selectors: AnyFn | AnyFn[],
   projectionOrOptions?: ProjectionFunction | { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn },
   options: { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn } = {}
@@ -95,13 +90,16 @@ export function createSelector<U = any, T = any> (
     }
     // The memoizedSelector function will return a function that executes the selectors and projection
     const fn = (store: Store): U => {
-      let sliceState = createFeatureSelector(store, slice);
-      if(sliceState === undefined) {
+      let sliceState = store.getState(slice);
+      if (sliceState instanceof Promise) {
+        throw new Error("getState method returned Promise. Please use async selector instead.")
+      }
+      if (sliceState === undefined) {
         return undefined as U;
       }
 
       let selectorResults;
-      if(Array.isArray(memoizedSelectors)) {
+      if (Array.isArray(memoizedSelectors)) {
         selectorResults = memoizedSelectors.map((selector, index) => selector(sliceState, props[index]))
         return (selectorResults.some(result => typeof result === 'undefined'))
           ? undefined as U
@@ -127,13 +125,8 @@ export function createSelector<U = any, T = any> (
   };
 }
 
-async function createFeatureSelectorAsync<T = any> (store: Store, slice: keyof T) {
-  let state = await firstValueFrom(store.currentState.asObservable());
-  return slice === "@global" ? state : state && state[slice];
-}
-
 export function createSelectorAsync<U = any, T = any> (
-  slice: keyof T,
+  slice: keyof T | string[],
   selectors: AnyFn | AnyFn[] | Promise<AnyFn> | Promise<AnyFn>[],
   projectionOrOptions?: ProjectionFunction | { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn },
   options: { memoizeSelectors?: AnyFn; memoizeProjection?: AnyFn } = {}
@@ -161,18 +154,18 @@ export function createSelectorAsync<U = any, T = any> (
 
   // The createSelectorAsync function will return a function that takes some arguments and returns combined result of selection and projection
   return async (props?: any[] | any, projectionProps?: any) => {
-    if(Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
+    if (Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
     // The memoizedSelector function will return a function that executes the selectors and projection
     const fn = async (store: Store): Promise<U> => {
-      let sliceState = await createFeatureSelectorAsync(store, slice);
-      if(sliceState === undefined) {
+      let sliceState = await store.getState(slice);
+      if (sliceState === undefined) {
         return undefined as U;
       }
 
       let selectorResults;
-      if(Array.isArray(memoizedSelectors)) {
+      if (Array.isArray(memoizedSelectors)) {
         selectorResults = await Promise.allSettled(memoizedSelectors.map((selector, index) => selector(sliceState, props[index])));
         selectorResults = selectorResults.map(result => (result.status === 'rejected') ? undefined : result.value);
 
