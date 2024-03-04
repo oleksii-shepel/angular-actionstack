@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
 import { systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -367,7 +367,7 @@ export class Store {
                 return of(action);
               })
             )
-          ]).pipe(finalize(() => {
+          ]).pipe(tap(() => {
             this.actionStack.pop();
             if (this.actionStack.length === 0) {
               // Set isProcessing to false if there are no more actions in the stack

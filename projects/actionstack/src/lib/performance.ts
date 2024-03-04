@@ -1,4 +1,3 @@
-import { filter, firstValueFrom } from 'rxjs';
 import { systemActions } from './actions';
 import { ActionQueue } from "./collections";
 import { salt } from './hash';
@@ -18,7 +17,7 @@ export const createPerformanceLogger = () => {
 
       // If it's a regular action, pass it to the next middleware
       await next(action);
-      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
+      // await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
 
       const endTime = performance.now(); // Capture the end time
       const duration = Math.round((endTime - startTime) * 100000) / 100000;
@@ -28,7 +27,7 @@ export const createPerformanceLogger = () => {
         actionDuration.duration = duration;
       }
 
-      if(actionStack.length === 0) {
+      if(actionStack.length === 1) {
         if(actionGroup.length > 0) {
           const totalDuration = actionGroup.reduce((total, ad) => total + ad.duration, 0);
           const uniqueId = (action.type in systemActions)
