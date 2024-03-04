@@ -1,4 +1,4 @@
-import { Observable, Subject, Subscription, shareReplay } from 'rxjs';
+import { Observable, Subscription, shareReplay } from 'rxjs';
 
 export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Observable<T> {
   return new Observable<T>((subscriber) => {
@@ -60,8 +60,8 @@ export class AsyncObservable<T> {
 
 export class CustomAsyncSubject<T> extends AsyncObservable<T> {
   private _value!: T;
-  private _observable: Observable<T>!;
-  
+  private _observable!: Observable<T>;
+
   constructor(initialValue: T) {
     super();
     this._value = initialValue;

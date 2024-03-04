@@ -4,7 +4,7 @@ import { systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { starter } from "./starter";
-import { AsyncObserver, CustomAsyncSubject, toObservable } from "./subject";
+import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 export class Store {
@@ -121,7 +121,7 @@ export class Store {
     this.actionStream.next(action);
   }
 
-  getState(slice?: keyof T | string[]): any {
+  getState<T = any>(slice?: keyof T | string[]): any {
     if (slice === undefined || typeof slice === "string" && slice == "@global") {
       return this.currentState.value as T;
     } else if (typeof slice === "string") {
