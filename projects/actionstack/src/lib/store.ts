@@ -388,13 +388,22 @@ export class Store {
       throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
     };
 
+    const internalAPI = {
+      getState: () => this.getState(),
+      dispatch: (action: any) => dispatch(action),
+      isProcessing: this.isProcessing,
+      actionStack: this.actionStack,
+      dependencies: () => this.pipeline.dependencies,
+      strategy: () => this.pipeline.strategy
+    };
+
     const middlewareAPI = {
       getState: () => this.getState(),
       dispatch: (action: any) => dispatch(action),
     };
 
     const middlewares = [starter, ...this.pipeline.middlewares];
-    const chain = middlewares.map(middleware => middleware(middleware.internal ? this : middlewareAPI));
+    const chain = middlewares.map(middleware => middleware(middleware.internal ? internalAPI : middlewareAPI));
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
