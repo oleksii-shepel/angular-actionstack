@@ -1,3 +1,4 @@
+import { filter, firstValueFrom } from 'rxjs';
 import { ActionQueue } from "./collections";
 import { Lock } from "./lock";
 import { Action } from "./types";
@@ -7,7 +8,7 @@ export const createPerformanceLogger = () => {
   let asyncLock = new Lock();
   const actionQueue = new ActionQueue();
 
-  const measurePerformance = ({ actionStack }: any) => (next: Function) => async (action: Action<any>) => {
+  const measurePerformance = ({ isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any>) => {
     async function processAction(action: Action<any>) {
       const startTime = performance.now(); // Capture the start time
 
@@ -15,6 +16,7 @@ export const createPerformanceLogger = () => {
 
       // If it's a regular action, pass it to the next middleware
       const result = await next(action);
+      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
 
       const endTime = performance.now(); // Capture the end time
       const duration = Math.round((endTime - startTime) * 100000) / 100000;
