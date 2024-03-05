@@ -1,6 +1,8 @@
+
 import { ActionQueue } from "./collections";
 import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
+import { filter, firstValueFrom } from "rxjs";
 
 export const createStarter = () => {
   const actionQueue = new ActionQueue();
@@ -26,25 +28,20 @@ export const createStarter = () => {
     // If there's an action being processed, enqueue the new action and return
     if (asyncLock.isLocked && actionStack.length >= 1) {
       actionQueue.enqueue(action as any);
-      return;
+      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
     }
 
     try {
       // Lock the asyncLock and process the action
-      if(actionStack.length === 1) {
+      if(actionStack.length === 0) {
         await asyncLock.acquire();
       }
 
       await processAction(action);
-
-      // Process all enqueued actions
-      while (actionQueue.length > 0) {
-        const nextAction = actionQueue.dequeue()!;
-        await processAction(nextAction);
-      }
     } finally {
       // Release the lock
       if (asyncLock.isLocked) {
+        await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
         asyncLock.release();
       }
     }
@@ -75,25 +72,20 @@ export const createStarter = () => {
     // If there's an action being processed, enqueue the new action and return
     if (asyncLock.isLocked && actionStack.length >= 1) {
       actionQueue.enqueue(action as any);
-      return;
+      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
     }
 
     try {
       // Lock the asyncLock and process the action
-      if(actionStack.length === 1) {
+      if(actionStack.length === 0) {
         await asyncLock.acquire();
       }
 
       await processAction(action);
-
-      // Process all enqueued actions
-      while (actionQueue.length > 0) {
-        const nextAction = actionQueue.dequeue()!;
-        await processAction(nextAction);
-      }
     } finally {
       // Release the lock
       if (asyncLock.isLocked) {
+        await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
         asyncLock.release();
       }
     }
