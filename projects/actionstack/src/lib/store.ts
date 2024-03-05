@@ -83,7 +83,6 @@ export class Store {
         concatMap(({count, action}: any) => {
           return (count === 1)
           ? from(store.setupReducer()).pipe(
-              tap(() => store.dispatch(systemActionCreators.storeInitialized()),              ),
               catchError(error => { console.warn(error); return EMPTY; }),
               map(() => action),
             )
@@ -93,6 +92,7 @@ export class Store {
       ).subscribe();
 
       store.dispatch(systemActionCreators.initializeState());
+      store.dispatch(systemActionCreators.storeInitialized());
 
       return store;
     }

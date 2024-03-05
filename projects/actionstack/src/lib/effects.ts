@@ -27,7 +27,7 @@ export function createEffect(
             );
           }
           if (result.type === action.type) {
-            throw new Error(`The effect for action type "${actionType}" returns an action of the same type, which can lead to an infinite loop.`);
+            throw new Error(`The effect for action type "${actionType}" returns an action of the same type, this can lead to an infinite loop.`);
           }
           return of(result);
         }
