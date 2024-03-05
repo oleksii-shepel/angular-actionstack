@@ -174,9 +174,9 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
+      this.dispatch(systemActionCreators.effectsRegistered(args));
     })));
 
-    this.dispatch(systemActionCreators.effectsRegistered(args));
     return this;
   }
 
@@ -190,9 +190,9 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
+      this.dispatch(systemActionCreators.effectsUnregistered(effects));
     })));
 
-    this.dispatch(systemActionCreators.effectsUnregistered(effects));
     return this;
   }
 

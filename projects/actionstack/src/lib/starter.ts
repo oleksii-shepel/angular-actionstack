@@ -13,17 +13,18 @@ export const createStarter = () => {
         // If it's an async action (a function), process it
         return await action(dispatch, getState, dependencies());
       } else {
-        if(!actionStack.length) {
-          actionStack.push(action);
-          isProcessing.next(true);
-        }
         // If it's a regular action, pass it to the next middleware
         return await next(action);
       }
     }
 
+    if(typeof action !== 'function' && !actionStack.length) {
+      actionStack.push(action);
+      isProcessing.next(true);
+    }
+
     // If there's an action being processed, enqueue the new action and return
-    if (actionStack.length >= 1 && actionStack.peek() !== action) {
+    if (actionStack.length > 1 && actionStack.peek() !== action) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
@@ -45,17 +46,18 @@ export const createStarter = () => {
         // Add the function to the array
         asyncActions.push(asyncFunc);
       } else {
-        if(!actionStack.length) {
-          actionStack.push(action);
-          isProcessing.next(true);
-        }
         // If it's a regular action, pass it to the next middleware
         await next(action);
       }
     }
 
+    if(typeof action !== 'function' && !actionStack.length) {
+      actionStack.push(action);
+      isProcessing.next(true);
+    }
+
     // If there's an action being processed, enqueue the new action and return
-    if (actionStack.length >= 1 && actionStack.peek() !== action) {
+    if (actionStack.length > 1 && actionStack.peek() !== action) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
