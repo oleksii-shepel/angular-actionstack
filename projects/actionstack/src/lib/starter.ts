@@ -1,10 +1,12 @@
 import { filter, firstValueFrom } from "rxjs";
 import { ActionQueue } from "./collections";
+import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
 
 export const createStarter = () => {
   const actionQueue = new ActionQueue();
   let asyncActions: Promise<any>[] = [];
+  let lock = new Lock();
 
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
@@ -29,8 +31,12 @@ export const createStarter = () => {
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
     }
-
-    await processAction(action);
+    await lock.acquire()
+    try {
+      await processAction(action);
+    } finally {
+      lock.release();
+    }
   };
 
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
