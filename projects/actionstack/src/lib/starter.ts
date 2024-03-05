@@ -31,6 +31,7 @@ export const createStarter = () => {
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
     }
+
     await lock.acquire()
     try {
       await processAction(action);
@@ -69,7 +70,12 @@ export const createStarter = () => {
       actionQueue.dequeue();
     }
 
-    await processAction(action);
+    await lock.acquire()
+    try {
+      await processAction(action);
+    } finally {
+      lock.release();
+    }
   };
 
   // Map strategy names to functions

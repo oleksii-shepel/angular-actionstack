@@ -32,7 +32,7 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
       middlewares: [measure],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
-      strategy: "exclusive",
+      strategy: "concurrent",
     }),
     MessagesModule
   ],
