@@ -5,7 +5,6 @@ import { filter, firstValueFrom } from "rxjs";
 
 export const createStarter = () => {
   const actionQueue = new ActionQueue();
-  let asyncLock = new Lock();
   let asyncActions: Promise<any>[] = [];
 
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
@@ -25,26 +24,13 @@ export const createStarter = () => {
     }
 
     // If there's an action being processed, enqueue the new action and return
-    if (asyncLock.isLocked && actionStack.length >= 1) {
+    if (actionStack.length >= 1) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
     }
 
-    try {
-      // Lock the asyncLock and process the action
-      if(actionStack.length === 0) {
-        await asyncLock.acquire();
-      }
-
-      await processAction(action);
-    } finally {
-      // Release the lock
-      if (asyncLock.isLocked && actionStack.length <= 1) {
-        await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-        asyncLock.release();
-      }
-    }
+    await processAction(action);
   };
 
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
@@ -70,26 +56,13 @@ export const createStarter = () => {
     }
 
     // If there's an action being processed, enqueue the new action and return
-    if (asyncLock.isLocked && actionStack.length >= 1) {
+    if (actionStack.length >= 1) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
-  }
-
-    try {
-      // Lock the asyncLock and process the action
-      if(actionStack.length === 0) {
-        await asyncLock.acquire();
-      }
-
-      await processAction(action);
-    } finally {
-      // Release the lock
-      if (asyncLock.isLocked && actionStack.length <= 1) {
-        await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-        asyncLock.release();
-      }
     }
+
+    await processAction(action);
   };
 
   // Map strategy names to functions
