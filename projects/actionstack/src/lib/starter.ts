@@ -1,4 +1,3 @@
-
 import { ActionQueue } from "./collections";
 import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
@@ -29,6 +28,7 @@ export const createStarter = () => {
     if (asyncLock.isLocked && actionStack.length >= 1) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
+      actionQueue.dequeue();
     }
 
     try {
@@ -73,7 +73,8 @@ export const createStarter = () => {
     if (asyncLock.isLocked && actionStack.length >= 1) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-    }
+      actionQueue.dequeue();
+  }
 
     try {
       // Lock the asyncLock and process the action
