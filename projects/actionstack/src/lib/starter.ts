@@ -40,7 +40,7 @@ export const createStarter = () => {
       await processAction(action);
     } finally {
       // Release the lock
-      if (asyncLock.isLocked) {
+      if (asyncLock.isLocked && actionStack.length <= 1) {
         await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
         asyncLock.release();
       }
@@ -85,7 +85,7 @@ export const createStarter = () => {
       await processAction(action);
     } finally {
       // Release the lock
-      if (asyncLock.isLocked) {
+      if (asyncLock.isLocked && actionStack.length <= 1) {
         await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
         asyncLock.release();
       }
