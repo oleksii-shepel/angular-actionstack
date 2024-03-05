@@ -24,7 +24,7 @@ export const createStarter = () => {
     }
 
     // If there's an action being processed, enqueue the new action and return
-    if (actionStack.length > 1 && actionStack.peek() !== action) {
+    if (actionStack.length > 0 && actionStack.peek() !== action) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
@@ -57,7 +57,7 @@ export const createStarter = () => {
     }
 
     // If there's an action being processed, enqueue the new action and return
-    if (actionStack.length > 1 && actionStack.peek() !== action) {
+    if (actionStack.length > 0 && actionStack.peek() !== action) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
