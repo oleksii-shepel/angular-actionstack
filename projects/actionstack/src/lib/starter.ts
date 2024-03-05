@@ -1,5 +1,4 @@
 import { ActionQueue } from "./collections";
-import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
 import { filter, firstValueFrom } from "rxjs";
 
@@ -24,7 +23,7 @@ export const createStarter = () => {
     }
 
     // If there's an action being processed, enqueue the new action and return
-    if (actionStack.length >= 1) {
+    if (actionStack.length >= 1 && actioStack.peek() !== action) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
@@ -56,7 +55,7 @@ export const createStarter = () => {
     }
 
     // If there's an action being processed, enqueue the new action and return
-    if (actionStack.length >= 1) {
+    if (actionStack.length >= 1 && actioStack.peek() !== action) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
       actionQueue.dequeue();
