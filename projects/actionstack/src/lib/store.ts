@@ -300,6 +300,9 @@ export class Store {
         // If the property is not already present in the state, add it
         if (!newState.hasOwnProperty(prop) || newState[prop] === undefined) {
             newState[prop] = initialState[prop];
+        } else if (Array.isArray(initialState[prop])) {
+              // If the property is an array, merge the arrays
+              newState[prop] = newState[prop] ?? initialState[prop];
         } else if (typeof newState[prop] === 'object' && newState[prop] !== null) {
             // If the property is an object, recurse into it
             newState[prop] = this.hydrateState(newState[prop], initialState[prop]);
