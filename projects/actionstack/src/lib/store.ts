@@ -239,43 +239,110 @@ export class Store {
     return this;
   }
 
+  combineReducers(reducers: Record<string, Reducer>): [Reducer, any] {
+    let errors = new Map<string, string>();
+    let featureReducers = {...reducers};
+    let featureState = {} as any;
+    try {
+      // Initialize state
+      Object.keys(featureReducers).forEach((key) => {
+        try {
+          if(featureState[key] === undefined) {
+            featureState[key] = featureReducers[key](undefined, systemActionCreators.initializeState());
+          }
+        } catch (error: any) {
+          errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
+        }
+      });
+
+      Object.keys(featureReducers).filter((key) => errors.has(key)).forEach(key => {
+        delete featureReducers[key];
+      });
+
+      // Combine the main module reducer with the feature module reducers
+      const combinedReducer = (state: any = featureState, action: Action<any>) => {
+        let newState = state, stateUpdated = false;
+
+        Object.keys(featureReducers).filter(reducer => !errors.has(reducer)).forEach((key) => {
+          try {
+              const featureState = featureReducers[key](newState[key], action);
+              if(featureState !== newState[key]){
+                stateUpdated = true;
+                newState[key] = featureState;
+              }
+          } catch (error) {
+            throw new Error(`Error occurred while processing action ${action.type} for ${key}: ${error}`);
+          }
+        });
+
+        if(stateUpdated) {
+          newState = { ...newState };
+        }
+
+        return newState;
+      };
+
+      return [combinedReducer, featureState];
+    } finally {
+      if(errors.size) {
+        let receivedErrors = Array.from(errors.entries()).map((value) => value[1]).join('\n');
+        throw new Error(`${errors.size} errors during state initialization.\n${receivedErrors}`);
+      }
+    }
+  }
+
+  protected hydrateState(state: any, initialState: any): any {
+    // Create a new object to avoid mutating the original state
+    let newState = {...state};
+
+    // Iterate over each property in the initial state
+    for (let prop in initialState) {
+        // If the property is not already present in the state, add it
+        if (!newState.hasOwnProperty(prop) || newState[prop] === undefined) {
+            newState[prop] = initialState[prop];
+        } else if (typeof newState[prop] === 'object' && newState[prop] !== null) {
+            // If the property is an object, recurse into it
+            newState[prop] = this.hydrateState(newState[prop], initialState[prop]);
+        }
+    }
+
+    return newState;
+  }
+
   protected async setupReducer(): Promise<void> {
     let errors = new Map<string, string>();
+    let initialState = {} as any;
 
-    // Get the main module reducer
-    const mainReducer = this.mainModule.reducer;
-
-    // Get the feature module reducers
-    let featureReducers = this.modules.reduce((reducers, module) => {
-      reducers[module.slice] = module.reducer;
+    // Get the feature module reducers and initialize state
+    let featureReducers = [{slice: this.mainModule.slice!, reducer: this.mainModule.reducer}, ...this.modules].reduce((reducers, module) => {
+      try {
+        if(typeof module.reducer === "function") {
+          let [moduleReducer, moduleState]: any = [module.reducer, module.reducer(undefined, systemActionCreators.initializeState())];
+          reducers[module.slice] = moduleReducer;
+          initialState[module.slice] = moduleState;
+        } else {
+          let [moduleReducer, moduleState] = this.combineReducers(module.reducer);
+          reducers[module.slice] = moduleReducer;
+          initialState[module.slice] = moduleState;
+        }
+      }
+      catch (error: any) {
+        errors.set(module.slice, `Initializing state failed for ${module.slice}: ${error.message}`);
+        initialState[module.slice] = {};
+      }
       return reducers;
     }, {} as Record<string, Reducer>);
 
-    featureReducers[this.mainModule.slice!] = mainReducer;
-
-    // Initialize state
-    let stateUpdated = false, state = await this.getState();
-    Object.keys(featureReducers).forEach((key) => {
-      try {
-        if(state[key] === undefined) {
-          state[key] = featureReducers[key](undefined, systemActionCreators.initializeState());
-          stateUpdated = true;
-        }
-      } catch (error: any) {
-        errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
-      }
-    });
-
-    if(stateUpdated) {
-      state = { ...state };
-      this.currentState.next(state);
-    }
-
+    // Remove the reducer from the featureReducers object if its execution has failed
     Object.keys(featureReducers).filter((key) => errors.has(key)).forEach(key => {
       delete featureReducers[key];
     });
 
-    // Combine the main module reducer with the feature module reducers
+    // Update store state
+    const state = this.hydrateState(await this.getState(), initialState);
+    this.currentState.next(state);
+
+    // Combine multiple feature reducers into one
     const combinedReducer = (state: any = {}, action: Action<any>) => {
       let newState = state, stateUpdated = false;
 
@@ -287,7 +354,7 @@ export class Store {
               newState[key] = featureState;
             }
         } catch (error) {
-          throw new Error(`Error occurred while processing action ${action.type} for ${key}: ${error}`);
+          throw new Error(`Error occurred while processing the action ${action.type} for ${key}: ${error}`);
         }
       });
 
