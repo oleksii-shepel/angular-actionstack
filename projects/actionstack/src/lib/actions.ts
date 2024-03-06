@@ -22,17 +22,15 @@ export const systemActionCreators = {
 export function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
   function actionCreator(...args: any[]) {
     if (typeof typeOrThunk === 'function') {
-      return (dispatch, getState, dependencies) => {
-        return new Promise((resolve, reject) => {
-          typeOrThunk(...args)(dispatch, getState, dependencies)
-            .then(result => resolve(result))
-            .catch(error => {
-              console.warn(`Error in action: ${error.message}`);
-              reject(error);
-            });
-          });
+      return async (dispatch, getState, dependencies) => {
+        try {
+          const actionResult = await typeOrThunk(...args)(dispatch, getState, dependencies);
+          return actionResult;
+        } catch (error) {
+          console.warn(`Error in action: ${error.message}`);
+          throw error;
         }
-      }
+      };
     }
   
     let action: any = {
