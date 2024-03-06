@@ -26,11 +26,15 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
     };
 
     if (typeof typeOrThunk === 'function') {
-      return async (dispatch: Function, getState: Function, dependencies: any) => {
-        try {
-          return await typeOrThunk(...args)(dispatch, getState, dependencies);
-        } catch (error: any) {
-          console.warn(`Error in action: ${error.message}`);
+      return (dispatch, getState, dependencies) => {
+        return new Promise((resolve, reject) => {
+          typeOrThunk(...args)(dispatch, getState, dependencies)
+            .then(result => resolve(result))
+            .catch(error => {
+              console.warn(`Error in action: ${error.message}`);
+              reject(error);
+           });
+         });
         }
       }
     } else if (payloadCreator) {
