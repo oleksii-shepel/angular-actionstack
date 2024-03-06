@@ -21,10 +21,6 @@ export const systemActionCreators = {
 
 export function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
   function actionCreator(...args: any[]) {
-    let action: any = {
-      type: typeOrThunk,
-    };
-
     if (typeof typeOrThunk === 'function') {
       return (dispatch, getState, dependencies) => {
         return new Promise((resolve, reject) => {
@@ -33,11 +29,17 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
             .catch(error => {
               console.warn(`Error in action: ${error.message}`);
               reject(error);
-           });
-         });
+            });
+          });
         }
       }
-    } else if (payloadCreator) {
+    }
+  
+    let action: any = {
+      type: typeOrThunk,
+    };
+  
+    if (payloadCreator) {
       let result = payloadCreator(...args);
       if (!result) {
         throw new Error('payloadCreator did not return an object. Did you forget to initialize an action with params?');
@@ -60,6 +62,7 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
     return action;
   }
 
+  typeOrThunk = typeof typeOrThunk === "function" ? "ASYNC_ACTION" : typeOrThunk;
   actionCreator.toString = () => `${typeOrThunk}`;
   actionCreator.type = typeOrThunk;
   actionCreator.match = (action: any) => isAction(action) && action.type === typeOrThunk;
