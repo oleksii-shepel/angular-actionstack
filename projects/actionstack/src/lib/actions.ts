@@ -19,10 +19,6 @@ export const systemActionCreators = {
   effectsUnregistered: createAction(systemActions.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
 };
 
-export function randomString() {
-  return Math.random().toString(36).substring(7).split('').join('.');
-}
-
 export function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
   function actionCreator(...args: any[]) {
     let action: any = {
