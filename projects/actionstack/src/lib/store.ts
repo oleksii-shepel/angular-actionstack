@@ -220,7 +220,7 @@ export class Store {
     return this;
   }
 
-  unloadModule(module: FeatureModule) {
+  unloadModule(module: FeatureModule, clearState: boolean = false) {
     firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
       tap(() => {
         // Create a new array with the module removed from the this's modules
@@ -231,6 +231,17 @@ export class Store {
 
         // Eject dependencies
         this.ejectDependencies(module);
+      }),
+      concatMap(() => {
+        let stateOrPromise = this.getState();
+        return stateOrPromise instanceof Promise ? from(stateOrPromise) : of(stateOrPromise);
+      }),
+      tap((state) => {
+        if (clearState) {
+          let newState = {...state};
+          delete newState[module.slice];
+          this.currentState.next(newState);
+        }
       }),
       concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error); return EMPTY; }))),
       tap(() => this.dispatch(systemActionCreators.moduleUnloaded(module)))
@@ -297,16 +308,16 @@ export class Store {
 
     // Iterate over each property in the initial state
     for (let prop in initialState) {
-        // If the property is not already present in the state, add it
-        if (!newState.hasOwnProperty(prop) || newState[prop] === undefined) {
-          newState[prop] = initialState[prop];
-        } else if (Array.isArray(initialState[prop])) {
-          // If the property is an array, merge the arrays
-          newState[prop] = newState[prop] ?? initialState[prop];
-        } else if (typeof newState[prop] === 'object' && newState[prop] !== null) {
-          // If the property is an object, recurse into it
-          newState[prop] = this.hydrateState(newState[prop], initialState[prop]);
-        }
+      // If the property is not already present in the state, add it
+      if (!newState.hasOwnProperty(prop) || newState[prop] === undefined) {
+        newState[prop] = initialState[prop];
+      } else if (Array.isArray(initialState[prop])) {
+        // If the property is an array, merge the arrays
+        newState[prop] = newState[prop] ?? initialState[prop];
+      } else if (typeof newState[prop] === 'object' && newState[prop] !== null) {
+        // If the property is an object, recurse into it
+        newState[prop] = this.hydrateState(newState[prop], initialState[prop]);
+      }
     }
 
     return newState;
