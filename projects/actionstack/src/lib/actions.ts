@@ -24,8 +24,7 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
     if (typeof typeOrThunk === 'function') {
       return async (dispatch, getState, dependencies) => {
         try {
-          const actionResult = await typeOrThunk(...args)(dispatch, getState, dependencies);
-          return actionResult;
+          return await typeOrThunk(...args)(dispatch, getState, dependencies);
         } catch (error) {
           console.warn(`Error in action: ${error.message}`);
           throw error;
