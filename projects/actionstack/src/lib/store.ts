@@ -1,6 +1,6 @@
 import { Injector, Type } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
-import { systemActionCreators } from "./actions";
+import { bindActionCreators, systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { isValidMiddleware } from "./hash";
@@ -90,6 +90,8 @@ export class Store {
         }),
         store.processAction()
       ).subscribe();
+
+      systemActionCreators = bindActionCreators(systemActionCreators, store.dispatch);
 
       store.dispatch(systemActionCreators.initializeState());
       store.dispatch(systemActionCreators.storeInitialized());

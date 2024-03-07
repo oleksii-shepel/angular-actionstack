@@ -70,6 +70,7 @@ export function bindActionCreator(actionCreator: Function, dispatch: Function): 
 }
 
 export function bindActionCreators(actionCreators: any, dispatch: Function): any {
+  actionCreators = { ...actionCreators };
   if (typeof actionCreators === "function") {
     return bindActionCreator(actionCreators, dispatch);
   }
