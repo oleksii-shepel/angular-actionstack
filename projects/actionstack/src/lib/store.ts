@@ -30,7 +30,8 @@ export class Store {
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
-      strategy: "exclusive" as "exclusive"
+      strategy: "exclusive" as "exclusive",
+      systemActions: true
     };
 
     const MODULES_DEFAULT: FeatureModule[] = [];
@@ -90,9 +91,10 @@ export class Store {
         }),
         store.processAction()
       ).subscribe();
-
-      store.dispatch(systemActionCreators.initializeState());
-      store.dispatch(systemActionCreators.storeInitialized());
+      
+      systemActionCreators = bindActionCreators(systemActionCreators, (action: Action<any>) => store.mainModule.systemActions && store.dispatch(action));
+      systemActionCreators.initializeState();
+      systemActionCreators.storeInitialized();
 
       return store;
     }
@@ -174,7 +176,7 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
-      this.dispatch(systemActionCreators.effectsRegistered(args));
+      systemActionCreators.effectsRegistered(args);
     })));
 
     return this;
@@ -190,7 +192,7 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
-      this.dispatch(systemActionCreators.effectsUnregistered(effects));
+      systemActionCreators.effectsUnregistered(effects);
     })));
 
     return this;
@@ -214,7 +216,7 @@ export class Store {
         this.injectDependencies(injector);
       }),
       concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error); return EMPTY; }))),
-      tap(() => this.dispatch(systemActionCreators.moduleLoaded(module)))
+      tap(() => systemActionCreators.moduleLoaded(module))
     ));
 
     return this;
@@ -244,7 +246,7 @@ export class Store {
         }
       }),
       concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error); return EMPTY; }))),
-      tap(() => this.dispatch(systemActionCreators.moduleUnloaded(module)))
+      tap(() => systemActionCreators.moduleUnloaded(module))
     ));
 
     return this;
@@ -490,7 +492,7 @@ export class Store {
     const chain = middlewares.map(middleware => middleware(isValidMiddleware(middleware.signature) ? internalAPI : middlewareAPI));
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
-    this.dispatch = dispatch;
+    this.dispatch = dispatch.bind(this);
     return this;
   }
 }
