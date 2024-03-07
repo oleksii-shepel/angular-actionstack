@@ -23,6 +23,7 @@ export class Store {
   protected currentState: CustomAsyncSubject<any>;
   protected isProcessing: BehaviorSubject<boolean>;
   protected subscription: Subscription;
+  protected systemActions: Record<keyof typeof systemActionCreators, any>;
 
   protected constructor() {
     const MAIN_MODULE_DEFAULT = {
@@ -30,7 +31,8 @@ export class Store {
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
-      strategy: "exclusive" as "exclusive"
+      strategy: "exclusive" as "exclusive",
+      shouldDispatchSystemActions: true
     };
 
     const MODULES_DEFAULT: FeatureModule[] = [];
@@ -49,6 +51,8 @@ export class Store {
     const CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>({});
 
     const PROCESSING_DEFAULT = new BehaviorSubject(false);
+    const SUBSCRIPTION_DEFAULT = Subscription.EMPTY;
+    const SYSTEM_ACTIONS_DEFAULT = { ...systemActionCreators };
 
     this.mainModule = MAIN_MODULE_DEFAULT;
     this.modules = MODULES_DEFAULT;
@@ -57,7 +61,8 @@ export class Store {
     this.actionStack = ACTION_STACK_DEFAULT;
     this.currentState = CURRENT_STATE_DEFAULT;
     this.isProcessing = PROCESSING_DEFAULT;
-    this.subscription = Subscription.EMPTY;
+    this.subscription = SUBSCRIPTION_DEFAULT;
+    this.systemActions = SYSTEM_ACTIONS_DEFAULT;
   }
 
   static createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
@@ -91,10 +96,10 @@ export class Store {
         store.processAction()
       ).subscribe();
 
-      systemActionCreators = bindActionCreators(systemActionCreators, store.dispatch);
+      store.systemActions = bindActionCreators(systemActionCreators, (action: Action<any>) => store.mainModule.shouldDispatchSystemActions && store.dispatch(action));
 
-      store.dispatch(systemActionCreators.initializeState());
-      store.dispatch(systemActionCreators.storeInitialized());
+      store.systemActions.initializeState();
+      store.systemActions.storeInitialized();
 
       return store;
     }
@@ -176,7 +181,7 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
-      this.dispatch(systemActionCreators.effectsRegistered(args));
+      this.systemActions.effectsRegistered(args);
     })));
 
     return this;
@@ -192,7 +197,7 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
-      this.dispatch(systemActionCreators.effectsUnregistered(effects));
+      this.systemActions.effectsUnregistered(effects);
     })));
 
     return this;
@@ -216,7 +221,7 @@ export class Store {
         this.injectDependencies(injector);
       }),
       concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
-      tap(() => this.dispatch(systemActionCreators.moduleLoaded(module)))
+      tap(() => this.systemActions.moduleLoaded(module))
     ));
 
     return this;
@@ -246,7 +251,7 @@ export class Store {
         }
       }),
       concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
-      tap(() => this.dispatch(systemActionCreators.moduleUnloaded(module)))
+      tap(() => this.systemActions.moduleUnloaded(module))
     ));
 
     return this;
