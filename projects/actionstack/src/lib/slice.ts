@@ -6,7 +6,7 @@ import { Action, AnyFn, MemoizedFn, Reducer, SideEffect } from "./types";
 export interface SliceOptions {
   slice?: string;
   reducer?: Reducer;
-  effects?: SideEffect[];
+  effects?: (SideEffect | any)[];
   dependencies?: any;
   strategy?: "persistent" | "temporary";
 }
@@ -27,8 +27,8 @@ export class Slice implements OnDestroy {
 
   setup(opts: SliceOptions): void {
     this._opts = Object.assign(this._opts, opts);
-    opts.effects && opts.effects.length && this.store.extend(...opts.effects ?? [], opts.dependencies ?? {});
-    opts.slice && opts.reducer && this.store.loadModule({slice: opts.slice, reducer: opts.reducer}, StoreModule.injector);
+    opts.effects && opts.effects.length && this.store.extend(...opts.effects as any);
+    opts.slice && opts.reducer && this.store.loadModule({slice: opts.slice, dependencies: opts.dependencies, reducer: opts.reducer}, StoreModule.injector);
   }
 
   dispatch(action: Action<any>): void {
