@@ -56,6 +56,7 @@ export interface MainModule {
   reducer: Reducer | Record<string, Reducer>;
   dependencies?: Record<string, any>;
   strategy?: "exclusive" | "concurrent";
+  systemActions: boolean;
 }
 
 export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;
