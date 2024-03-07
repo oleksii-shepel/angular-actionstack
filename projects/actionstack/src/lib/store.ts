@@ -1,6 +1,6 @@
 import { Injector, Type } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
-import { systemActionCreators } from "./actions";
+import { bindActionCreators, systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { isValidMiddleware } from "./hash";
@@ -30,8 +30,7 @@ export class Store {
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
-      strategy: "exclusive" as "exclusive",
-      systemActions: true
+      strategy: "exclusive" as "exclusive"
     };
 
     const MODULES_DEFAULT: FeatureModule[] = [];
@@ -84,17 +83,18 @@ export class Store {
         concatMap(({count, action}: any) => {
           return (count === 1)
           ? from(store.setupReducer()).pipe(
-              catchError(error => { console.warn(error); return EMPTY; }),
+              catchError(error => { console.warn(error.message); return EMPTY; }),
               map(() => action),
             )
           : of(action)
         }),
         store.processAction()
       ).subscribe();
-      
-      systemActionCreators = bindActionCreators(systemActionCreators, (action: Action<any>) => store.mainModule.systemActions && store.dispatch(action));
-      systemActionCreators.initializeState();
-      systemActionCreators.storeInitialized();
+
+      let actions = bindActionCreators(systemActionCreators, (args: any) => store.dispatch(args));
+
+      actions.initializeState();
+      actions.storeInitialized();
 
       return store;
     }
@@ -176,7 +176,7 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
-      systemActionCreators.effectsRegistered(args);
+      this.dispatch(systemActionCreators.effectsRegistered(args));
     })));
 
     return this;
@@ -192,7 +192,7 @@ export class Store {
       });
 
       this.pipeline.effects = newEffects;
-      systemActionCreators.effectsUnregistered(effects);
+      this.dispatch(systemActionCreators.effectsUnregistered(effects));
     })));
 
     return this;
@@ -215,8 +215,8 @@ export class Store {
         // Inject dependencies
         this.injectDependencies(injector);
       }),
-      concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error); return EMPTY; }))),
-      tap(() => systemActionCreators.moduleLoaded(module))
+      concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
+      tap(() => this.dispatch(systemActionCreators.moduleLoaded(module)))
     ));
 
     return this;
@@ -245,8 +245,8 @@ export class Store {
           this.currentState.next(newState);
         }
       }),
-      concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error); return EMPTY; }))),
-      tap(() => systemActionCreators.moduleUnloaded(module))
+      concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
+      tap(() => this.dispatch(systemActionCreators.moduleUnloaded(module)))
     ));
 
     return this;
@@ -460,7 +460,7 @@ export class Store {
         }),
         ignoreElements(),
         catchError((error) => {
-          console.warn(error);
+          console.warn(error.message);
           return EMPTY;
         })
       );
@@ -492,7 +492,7 @@ export class Store {
     const chain = middlewares.map(middleware => middleware(isValidMiddleware(middleware.signature) ? internalAPI : middlewareAPI));
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
-    this.dispatch = dispatch.bind(this);
+    this.dispatch = dispatch;
     return this;
   }
 }
