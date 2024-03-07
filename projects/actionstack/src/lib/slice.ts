@@ -1,7 +1,7 @@
 import { ElementRef, Injectable, OnDestroy } from "@angular/core";
 import { StoreModule } from "./module";
 import { Store } from "./store";
-import { Action, AnyFn, MemoizedFn, Reducer, SideEffect } from "./types";
+import { Action, AnyFn, Reducer, SideEffect } from "./types";
 
 export interface SliceOptions {
   slice?: string;
@@ -35,7 +35,7 @@ export class Slice implements OnDestroy {
     this.store.dispatch(action);
   }
 
-  select(selector: Promise<MemoizedFn<any>> | AnyFn, defaultValue?: any): any {
+  select(selector: Promise<AnyFn> | AnyFn, defaultValue?: any): any {
     return this.store.select(selector, defaultValue);
   }
 

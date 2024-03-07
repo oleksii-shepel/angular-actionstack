@@ -6,7 +6,7 @@ import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects"
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, MemoizedFn, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 export class Store {
   protected mainModule: MainModule;
@@ -153,7 +153,7 @@ export class Store {
     }
   }
 
-  select(selector: Promise<MemoizedFn> | AnyFn, defaultValue?: any): Observable<any> {
+  select(selector: Promise<AnyFn> | AnyFn, defaultValue?: any): Observable<any> {
     return this.currentState.asObservable().pipe(
       concatMap(() => (selector instanceof Promise ? from(selector) : of(selector)).pipe(
       concatMap(async (selector) => await selector(this)),
