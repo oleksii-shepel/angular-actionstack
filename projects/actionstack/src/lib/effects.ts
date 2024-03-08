@@ -6,8 +6,8 @@ export function createEffect(
   actionType: string,
   effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | Observable<Action<any>>
 ): SideEffect {
-  return (action$: Observable<Action<any>>, state$: Observable<any>, dependencies: Record<string, any>) =>
-    action$.pipe(
+  function effectCreator(action$: Observable<Action<any>>, state$: Observable<any>, dependencies: Record<string, any>) {
+    return action$.pipe(
       filter((action) => action.type === actionType),
       withLatestFrom(state$),
       concatMap(([action, state]) => {
@@ -37,6 +37,10 @@ export function createEffect(
         }
       })
     );
+  }
+  
+  return effectCreator;
+    
 }
 
 
