@@ -38,9 +38,12 @@ export function createEffect(
       })
     );
   }
-  
+
+  effectCreator.toString = () => `${actionType}`;
+  effectCreator.trigger = actionType;
+  effectCreator.match = (action: any) => isAction(action) && action.type === actionType;
+
   return effectCreator;
-    
 }
 
 
