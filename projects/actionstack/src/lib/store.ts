@@ -279,23 +279,18 @@ export class Store {
 
       // Combine the main module reducer with the feature module reducers
       const combinedReducer = (state: any = featureState, action: Action<any>) => {
-        let newState = state, stateUpdated = false;
+        let newState = state;
 
         Object.keys(featureReducers).filter(reducer => !errors.has(reducer)).forEach((key) => {
           try {
               const featureState = featureReducers[key](newState[key], action);
               if(featureState !== newState[key]){
-                stateUpdated = true;
-                newState[key] = featureState;
+                newState = {...newState, key: featureState};
               }
           } catch (error) {
             throw new Error(`Error occurred while processing action ${action.type} for ${key}: ${error}`);
           }
         });
-
-        if(stateUpdated) {
-          newState = { ...newState };
-        }
 
         return newState;
       };
@@ -365,23 +360,18 @@ export class Store {
 
     // Combine multiple feature reducers into one
     const combinedReducer = (state: any = {}, action: Action<any>) => {
-      let newState = state, stateUpdated = false;
+      let newState = state;
 
       Object.keys(featureReducers).filter(reducer => !errors.has(reducer)).forEach((key) => {
         try {
             const featureState = featureReducers[key](newState[key], action);
-            if(featureState !== newState[key]){
-              stateUpdated = true;
-              newState[key] = featureState;
+            if (featureState !== newState[key]) {
+              newState = {...newState, key: featureState};
             }
         } catch (error) {
           throw new Error(`Error occurred while processing the action ${action.type} for ${key}: ${error}`);
         }
       });
-
-      if(stateUpdated) {
-        newState = { ...newState };
-      }
 
       return newState;
     };
