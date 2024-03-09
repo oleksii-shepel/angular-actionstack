@@ -84,8 +84,20 @@ export const createStarter = () => {
     'concurrent': concurrent
   };
 
+  function mapStoreToParams(store: Store) {
+    return {
+      getState: () => store.getState(),
+      dispatch: (action: any) => store.dispatch(action),
+      isProcessing: store.isProcessing,
+      actionStack: store.actionStack,
+      dependencies: () => store.pipeline.dependencies,
+      strategy: () => store.pipeline.strategy
+    };
+  }
+  
   // Create a method to select the strategy
-  const selectStrategy = ({ dispatch, getState, dependencies, isProcessing, actionStack, strategy }: any) => (next: Function) => async (action: Action<any>) => {
+  const selectStrategy = (store: Store) => (next: Function) => async (action: Action<any>) => {
+    const { dispatch, getState, dependencies, isProcessing, actionStack, strategy } = mapStoreToParams(store);
     const strategyFunc = strategies[strategy()];
     if (!strategyFunc) {
       throw new Error(`Unknown strategy: ${strategy}`);
