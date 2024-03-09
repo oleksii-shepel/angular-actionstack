@@ -246,16 +246,22 @@ export class Store {
     return this;
   }
 
-  combineReducers(reducers: Record<string, Reducer>): [Reducer, any] {
+  combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, any] {
     let errors = new Map<string, string>();
     let featureReducers = {...reducers};
     let featureState = {} as any;
-    
+  
     // Initialize state
     Object.keys(featureReducers).forEach((key) => {
       try {
         if(featureState[key] === undefined) {
-          featureState[key] = featureReducers[key](undefined, systemActionCreators.initializeState());
+          if(typeof featureReducers[key] === "function") {
+            featureState[key] = featureReducers[key](undefined, systemActionCreators.initializeState());
+          } else {
+            let [nestedReducer, nestedState, nestedErrors] = combineReducers(featureReducers[key]);
+            featureState[key] = nestedState;
+            errors = new Map([...errors, ...nestedErrors]);
+          }
         }
       } catch (error: any) {
         errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
@@ -270,11 +276,20 @@ export class Store {
     const combinedReducer = (state: any = featureState, action: Action<any>) => {
       let newState = state;
 
-      Object.keys(featureReducers).filter(reducer => !errors.has(reducer)).forEach((key) => {
+      Object.keys(featureReducers).forEach((key) => {
         try {
-          const featureState = featureReducers[key](newState[key], action);
-          if(featureState !== newState[key]){
-            newState = {...newState, key: featureState};
+          if(typeof featureReducers[key] === "function") {
+            const featureState = featureReducers[key](state[key], action);
+            if(featureState !== newState[key]){
+              newState = {...newState, key: featureState};
+            }
+          } else {
+            let [nestedReducer, nestedState, nestedErrors] = combineReducers(featureReducers[key]);
+            const featureState = nestedReducer(newState[key], action);
+            if(featureState !== newState[key]){
+              newState = {...newState, key: featureState};
+            }
+            errors = new Map([...errors, ...nestedErrors]);
           }
         } catch (error) {
           throw new Error(`Error occurred while processing action ${action.type} for ${key}: ${error}`);
@@ -286,6 +301,7 @@ export class Store {
 
     return [combinedReducer, featureState, errors];
   }
+
 
   protected hydrateState(state: any, initialState: any): any {
     // Create a new object to avoid mutating the original state
