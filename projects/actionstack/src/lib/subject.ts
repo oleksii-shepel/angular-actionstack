@@ -62,9 +62,8 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
   private _value!: T;
   private _observable!: Observable<T>;
 
-  constructor(initialValue: T) {
+  constructor() {
     super();
-    this._value = initialValue;
   }
 
   asObservable() {
