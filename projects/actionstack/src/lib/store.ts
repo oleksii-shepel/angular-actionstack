@@ -183,6 +183,22 @@ export class Store {
         newEffects.set(effect, dependencies);
       });
 
+      this.currentAction.asObservable().pipe(
+        withLatestFrom(of(this.currentState.value)),
+        concatMap(([action, state]) => runSideEffects(this.pipeline.effects.entries()).pipe(
+          mapMethod((childActions: Action<any>[]) => {
+            if (childActions.length > 0) {
+              return from(childActions).pipe(
+              tap((nextAction: Action<any>) => {
+                this.actionStack.push(nextAction);
+                this.dispatch(nextAction);
+              }));
+            }
+            return EMPTY;
+          })
+        ))
+      )
+
       this.pipeline.effects = newEffects;
       this.systemActions.effectsRegistered(args);
     })));
@@ -436,20 +452,7 @@ export class Store {
           const stateUpdated = this.currentState.next(state);
           const actionHandled = this.currentAction.next(action);
           return combineLatest([
-            from(stateUpdated), from(actionHandled),
-            runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
-              mapMethod((childActions: Action<any>[]) => {
-                if (childActions.length > 0) {
-                  return from(childActions).pipe(
-                    tap((nextAction: Action<any>) => {
-                      this.actionStack.push(nextAction);
-                      this.dispatch(nextAction);
-                    })
-                  );
-                }
-                return EMPTY;
-              })
-            )
+            from(stateUpdated), from(actionHandled)
           ]).pipe(finalize(() => {
             this.actionStack.pop();
             if (this.actionStack.length === 0) {
