@@ -14,7 +14,6 @@ export class Store {
   protected pipeline: {
     middlewares: any[];
     reducer: Reducer;
-    effects: Map<SideEffect, any>;
     dependencies: Record<string, any>;
     strategy: "exclusive" | "concurrent";
   };
@@ -41,7 +40,6 @@ export class Store {
     const PIPELINE_DEFAULT = {
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
-      effects: new Map(),
       dependencies: {},
       strategy: "exclusive" as "exclusive"
     };
