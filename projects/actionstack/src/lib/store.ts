@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { bindActionCreators, systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -167,59 +167,24 @@ export class Store {
   }
 
   extend(...args: [...SideEffect[], any | never]) {
-    firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => {
-      let dependencies = {};
-      let effects: SideEffect[] = [];
+    const effectsSubscription = return this.currentAction.asObservable().pipe(
+      withLatestFrom(of(this.currentState.value)),
+      concatMap(([action, state]) => runSideEffects(...args)(action, state).pipe(
+        mapMethod((childActions: Action<any>[]) => {
+          if (childActions.length > 0) {
+            return from(childActions).pipe(
+            tap((nextAction: Action<any>) => {
+              this.actionStack.push(nextAction);
+              this.dispatch(nextAction);
+            }));
+          }
+          return EMPTY;
+        })
+      ))
+    ).subscribe();
 
-      if (typeof args[args.length - 1] !== "function") {
-        dependencies = args.pop();
-      }
-
-      effects = args;
-
-      let newEffects = new Map(this.pipeline.effects);
-
-      effects.forEach((effect) => {
-        newEffects.set(effect, dependencies);
-      });
-
-      this.currentAction.asObservable().pipe(
-        withLatestFrom(of(this.currentState.value)),
-        concatMap(([action, state]) => runSideEffects(this.pipeline.effects.entries()).pipe(
-          mapMethod((childActions: Action<any>[]) => {
-            if (childActions.length > 0) {
-              return from(childActions).pipe(
-              tap((nextAction: Action<any>) => {
-                this.actionStack.push(nextAction);
-                this.dispatch(nextAction);
-              }));
-            }
-            return EMPTY;
-          })
-        ))
-      )
-
-      this.pipeline.effects = newEffects;
-      this.systemActions.effectsRegistered(args);
-    })));
-
-    return this;
-  }
-
-  revoke(...effects: SideEffect[]) {
-
-    firstValueFrom(this.isProcessing.pipe(filter(value => value === false), tap(() => {
-      let newEffects = new Map(this.pipeline.effects);
-
-      effects.forEach((effect) => {
-        newEffects.delete(effect);
-      });
-
-      this.pipeline.effects = newEffects;
-      this.systemActions.effectsUnregistered(effects);
-    })));
-
-    return this;
+    this.systemActions.effectsRegistered(args);
+    return effectsSubscription;
   }
 
   loadModule(module: FeatureModule, injector: Injector) {
