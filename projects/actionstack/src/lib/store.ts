@@ -248,18 +248,20 @@ export class Store {
 
   combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, any] {
     let errors = new Map<string, string>();
-    let featureReducers = {...reducers};
+    let featureReducers = {};
     let featureState = {} as any;
   
     // Initialize state
-    Object.keys(featureReducers).forEach((key) => {
+    Object.keys(reducers).forEach((key) => {
       try {
         if(featureState[key] === undefined) {
-          if(typeof featureReducers[key] === "function") {
-            featureState[key] = featureReducers[key](undefined, systemActionCreators.initializeState());
+          if(typeof reducers[key] === "function") {
+            featureState[key] = reducers[key](undefined, systemActionCreators.initializeState());
+            featureReducers[key] = reducers[key];
           } else {
             let [nestedReducer, nestedState, nestedErrors] = combineReducers(featureReducers[key]);
             featureState[key] = nestedState;
+            featureReducers[key] = nestedReducer;
             errors = new Map([...errors, ...nestedErrors]);
           }
         }
@@ -278,21 +280,12 @@ export class Store {
 
       Object.keys(featureReducers).forEach((key) => {
         try {
-          if(typeof featureReducers[key] === "function") {
-            const featureState = featureReducers[key](state[key], action);
-            if(featureState !== newState[key]){
-              newState = {...newState, key: featureState};
-            }
-          } else {
-            let [nestedReducer, nestedState, nestedErrors] = combineReducers(featureReducers[key]);
-            const featureState = nestedReducer(newState[key], action);
-            if(featureState !== newState[key]){
-              newState = {...newState, key: featureState};
-            }
-            errors = new Map([...errors, ...nestedErrors]);
+          const featureState = featureReducers[key](state[key], action);
+          if(featureState !== newState[key]){
+            newState = {...newState, key: featureState};
           }
-        } catch (error) {
-          throw new Error(`Error occurred while processing action ${action.type} for ${key}: ${error}`);
+        } catch (error: any) {
+          throw new Error(`Error occurred while processing an action ${action.type} for ${key}: ${error.message}`);
         }
       });
 
