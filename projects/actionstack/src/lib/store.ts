@@ -20,6 +20,7 @@ export class Store {
   };
   protected actionStream: Subject<Action<any>>;
   protected actionStack: ActionStack;
+  protected currentAction: CustomAsyncSubject<any>;
   protected currentState: CustomAsyncSubject<any>;
   protected isProcessing: BehaviorSubject<boolean>;
   protected subscription: Subscription;
@@ -48,7 +49,8 @@ export class Store {
     const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
     const ACTION_STACK_DEFAULT = new ActionStack();
 
-    const CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>({});
+    const CURRENT_ACTION_DEFAULT = new CustomAsyncSubject<any>();
+    const CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>();
 
     const PROCESSING_DEFAULT = new BehaviorSubject(false);
     const SUBSCRIPTION_DEFAULT = Subscription.EMPTY;
@@ -59,6 +61,7 @@ export class Store {
     this.pipeline = PIPELINE_DEFAULT;
     this.actionStream = ACTION_STREAM_DEFAULT;
     this.actionStack = ACTION_STACK_DEFAULT;
+    this.currentAction = CURRENT_ACTION_DEFAULT;
     this.currentState = CURRENT_STATE_DEFAULT;
     this.isProcessing = PROCESSING_DEFAULT;
     this.subscription = SUBSCRIPTION_DEFAULT;
@@ -429,9 +432,11 @@ export class Store {
 
       return source.pipe(
         concatMap((action: Action<any>) => {
-          let state = this.pipeline.reducer(this.currentState.value, action);
+          const state = this.pipeline.reducer(this.currentState.value, action);
+          const stateUpdated = this.currentState.next(state);
+          const actionHandled = this.currentAction.next(action);
           return combineLatest([
-            from(this.currentState.next(state)),
+            from(stateUpdated), from(actionHandled),
             runSideEffects(this.pipeline.effects.entries())([of(action), of(state)]).pipe(
               mapMethod((childActions: Action<any>[]) => {
                 if (childActions.length > 0) {
