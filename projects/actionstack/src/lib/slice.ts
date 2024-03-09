@@ -1,6 +1,7 @@
 import { ElementRef, Injectable, OnDestroy } from "@angular/core";
 import { StoreModule } from "./module";
 import { Store } from "./store";
+import { Subscription } from "rxjs";
 import { Action, AnyFn, Reducer, SideEffect } from "./types";
 
 export interface SliceOptions {
@@ -14,7 +15,8 @@ export interface SliceOptions {
 @Injectable()
 export class Slice implements OnDestroy {
   private _opts: SliceOptions;
-
+  private subscription: Subscription.EMPTY;
+  
   constructor(private store: Store, private elRef: ElementRef) {
     this._opts = {
       slice: elRef.nativeElement.localName,
@@ -27,7 +29,7 @@ export class Slice implements OnDestroy {
 
   setup(opts: SliceOptions): void {
     this._opts = Object.assign(this._opts, opts);
-    opts.effects && opts.effects.length && this.store.extend(...opts.effects as any);
+    opts.effects && opts.effects.length && (this.subscription = this.store.extend(...opts.effects as any));
     opts.slice && opts.reducer && this.store.loadModule({slice: opts.slice, dependencies: opts.dependencies, reducer: opts.reducer}, StoreModule.injector);
   }
 
@@ -40,7 +42,7 @@ export class Slice implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this._opts.effects && this._opts.effects.length && this.store.revoke(...this._opts.effects);
+    this.subscription.unsubscribe();
     this._opts.slice && this._opts.reducer && this.store.unloadModule({slice: this._opts.slice, reducer: this._opts.reducer}, this._opts.strategy === "temporary" ? true : false);
   }
 }
