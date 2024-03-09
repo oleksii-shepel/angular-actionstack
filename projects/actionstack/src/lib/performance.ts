@@ -1,11 +1,14 @@
 import { systemActions } from './actions';
 import { salt } from './hash';
 import { Action } from "./types";
+import { Store } from "./store";
 
 export const createPerformanceLogger = () => {
   let actionGroup: { action: Action<any>, label: string, duration: number, date: Date }[] = [];
 
-  const measurePerformance = ({ isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any>) => {
+  const measurePerformance = (store: Store) => (next: Function) => async (action: Action<any>) => {
+    const { isProcessing, actionStack } = mapStoreToParams(store);
+    
     async function processAction(action: Action<any>) {
       const startTime = performance.now(); // Capture the start time
 
@@ -42,6 +45,13 @@ export const createPerformanceLogger = () => {
     await processAction(action);
   };
 
+  function mapStoreToParams(store: Store) {
+    return {
+      isProcessing: store.isProcessing,
+      actionStack: store.actionStack
+    };
+  }
+  
   measurePerformance.signature = '2.m.z.d.u.x.w.l.v.e';
   return measurePerformance;
 };
