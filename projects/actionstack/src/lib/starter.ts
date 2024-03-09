@@ -2,6 +2,7 @@ import { filter, firstValueFrom } from "rxjs";
 import { ActionQueue } from "./collections";
 import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
+import { Store } from "./store";
 
 export const createStarter = () => {
   const actionQueue = new ActionQueue();
