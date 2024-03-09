@@ -58,8 +58,7 @@ export function ofType(...types: [string, ...string[]]): OperatorFunction<Action
 
 
 export function runSideEffectsSequentially(...sideEffects: [...SideEffect[], any | never]) {
-  const dependencies = typeof sideEffects[sideEffects.length - 1]  === "function" ? {} : sideEffects.pop();
-  return ([action, state]: [Action<any>, any]) =>
+  return ([action, state, dependencies]: [Action<any>, any]) =>
     from(sideEffects).pipe(
       concatMap(([sideEffect, dependencies]) => sideEffect(of(action), of(state), dependencies)),
       toArray()
@@ -68,8 +67,7 @@ export function runSideEffectsSequentially(...sideEffects: [...SideEffect[], any
 
 
 export function runSideEffectsInParallel(sideEffects: IterableIterator<[SideEffect, any]>) {
-  const dependencies = typeof sideEffects[sideEffects.length - 1]  === "function" ? {} : sideEffects.pop();
-  return ([action, state]: [Action<any>, any]) =>
+  return ([action, state, dependencies]: [Action<any>, any]) =>
     from(sideEffects).pipe(
       mergeMap(([sideEffect, dependencies]) => sideEffect(of(action), of(state), dependencies)),
       toArray()
