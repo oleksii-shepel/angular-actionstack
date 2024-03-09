@@ -254,16 +254,14 @@ export class Store {
     // Initialize state
     Object.keys(reducers).forEach((key) => {
       try {
-        if(featureState[key] === undefined) {
-          if(typeof reducers[key] === "function") {
-            featureState[key] = reducers[key](undefined, systemActionCreators.initializeState());
-            featureReducers[key] = reducers[key];
-          } else {
-            let [nestedReducer, nestedState, nestedErrors] = combineReducers(featureReducers[key]);
-            featureState[key] = nestedState;
-            featureReducers[key] = nestedReducer;
-            errors = new Map([...errors, ...nestedErrors]);
-          }
+        if(typeof reducers[key] === "function") {
+          featureState[key] = reducers[key](undefined, systemActionCreators.initializeState());
+          featureReducers[key] = reducers[key];
+        } else {
+          let [nestedReducer, nestedState, nestedErrors] = combineReducers(featureReducers[key]);
+          featureState[key] = nestedState;
+          featureReducers[key] = nestedReducer;
+          errors = new Map([...errors, ...nestedErrors]);
         }
       } catch (error: any) {
         errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
