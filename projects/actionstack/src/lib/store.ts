@@ -167,10 +167,11 @@ export class Store {
   }
 
   extend(...args: [...SideEffect[], any | never]) {
+    const dependencies = typeof sideEffects[sideEffects.length - 1]  === "function" ? {} : sideEffects.pop();
     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const effectsSubscription = return this.currentAction.asObservable().pipe(
       withLatestFrom(of(this.currentState.value)),
-      concatMap(([action, state]) => runSideEffects(...args)(action, state).pipe(
+      concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
         mapMethod((childActions: Action<any>[]) => {
           if (childActions.length > 0) {
             return from(childActions).pipe(
