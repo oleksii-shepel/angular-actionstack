@@ -13,14 +13,15 @@ import { getHeroesRequest, loadHeroes, selectHeroes } from './heroes.slice';
 })
 export class HeroesComponent implements OnInit, OnDestroy {
   heroes: Hero[] = [];
-  subscription!: Subscription;
-
+  subscriptionA!: Subscription;
+  subscriptionB!: Subscription;
+  
   constructor(private store: Store, private heroService: HeroService) { }
 
   ngOnInit(): void {
-    this.store.extend(loadHeroes, { heroService: this.heroService });
+    this.subscriptionA = this.store.extend(loadHeroes, { heroService: this.heroService });
 
-    this.subscription = this.store.select(selectHeroes()).subscribe(value => {
+    this.subscriptionB = this.store.select(selectHeroes()).subscribe(value => {
       this.heroes = value;
     });
 
@@ -32,7 +33,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.store.revoke(loadHeroes);
-    this.subscription.unsubscribe();
+    this.subscriptionA.unsubscribe();
+    this.subscriptionB.unsubscribe();
   }
 }
