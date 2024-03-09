@@ -167,7 +167,7 @@ export class Store {
   }
 
   extend(...args: [...SideEffect[], any | never]) {
-    const dependencies = typeof sideEffects[sideEffects.length - 1]  === "function" ? {} : sideEffects.pop();
+    const dependencies = typeof args[args.length - 1]  === "function" ? {} : args.pop();
     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const effectsSubscription = return this.currentAction.asObservable().pipe(
       withLatestFrom(of(this.currentState.value)),
@@ -184,7 +184,12 @@ export class Store {
         })
       ))
     ).subscribe();
-
+    
+    effectsSubscription.unsubscribe = () => {
+      effectsSubscription.unsubscribe();
+      this.systemActions.effectsUnregistered(args);
+    };
+    
     this.systemActions.effectsRegistered(args);
     return effectsSubscription;
   }
