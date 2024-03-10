@@ -99,7 +99,7 @@ export class Store {
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
         concatMap(({count, action}: any) => {
           return (count === 1)
-          ? from(store.setupReducer()).pipe(
+          ? of(store.setupReducer()).pipe(
               catchError(error => { console.warn(error.message); return EMPTY; }),
               map(() => action),
             )
@@ -349,7 +349,7 @@ export class Store {
     return newState;
   }
 
-  protected setupReducer(state: any): any {
+  protected setupReducer(state: any = {}): any {
     let featureReducers = [{slice: this.mainModule.slice!, reducer: this.mainModule.reducer}, ...this.modules].reduce((reducers, module) => {
       let moduleReducer: any = typeof module.reducer === "function" ? module.reducer : [...module.reducer];
       reducers = {...reducers, [module.slice]: moduleReducer};
