@@ -30,7 +30,8 @@ export class Store {
     let STORE_SETTINGS_DEFAULT =  {
       shouldDispatchSystemActions: true,
       shouldAwaitStatePropagation: true,
-      enableMetaReducers: false
+      enableMetaReducers: false,
+      enableAsyncReducers: false
     };
     
     let MAIN_MODULE_DEFAULT = {
