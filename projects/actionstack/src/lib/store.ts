@@ -97,6 +97,15 @@ export class Store {
 
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
+        concatMap(({count, action}: any) => count === 1 ? convertToObservable(this.getState()).pipe(
+          concatMap((state) => {
+            let state = this.currentState.next(this.setupReducer(state));
+            let action = this.currentAction.next(systemActionCreators.initializeState());
+            return (this.settings.shouldAwaitStatePropagation ? combineLatest([
+              from(state), from(action)
+            ]) : of(action));
+          })
+        ) : of(action)),
         concatMap(({count, action}: any) => {
           return (count === 1)
           ? of(store.setupReducer()).pipe(
@@ -221,14 +230,15 @@ export class Store {
         // Inject dependencies
         this.injectDependencies(injector);
       }),
-      concatMap(() => convertToObservable(this.getState())),
-      concatMap((state) => {
-        let state = this.currentState.next(this.setupReducer(state));
-        let action = this.currentAction.next(systemActionCreators.initializeState());
-        return (this.settings.shouldAwaitStatePropagation ? combineLatest([
+      concatMap(() => convertToObservable(this.getState()).pipe(
+        concatMap((state) => {
+          let state = this.currentState.next(this.setupReducer(state));
+          let action = this.currentAction.next(systemActionCreators.initializeState());
+          return (this.settings.shouldAwaitStatePropagation ? combineLatest([
             from(state), from(action)
           ]) : of(action));
-      }),
+        })
+      )),
       tap(() => this.systemActions.moduleLoaded(module)),
       catchError(error => { console.warn(error.message); return EMPTY; }),
       finalize(() => this.isProcessing.next(false))
@@ -250,22 +260,19 @@ export class Store {
         // Eject dependencies
         this.ejectDependencies(module);
       }),
-      concatMap(() => convertToObservable(this.getState())),
-      map((state) => {
-        let newState = state;
-        if (clearState) {
-          newState = { ...state };
-          delete newState[module.slice];
-        }
-        return newState;
-      }),
-      concatMap((state) => {
-        let state = this.currentState.next(this.setupReducer(state));
-        let action = this.currentAction.next(systemActionCreators.initializeState());
-        return (this.settings.shouldAwaitStatePropagation ? combineLatest([
-            from(state), from(action)
+      concatMap(() => convertToObservable(this.getState()).pipe(
+        concatMap((state) => {
+          if (clearState) {
+            state = { ...state };
+            delete state[module.slice];
+          }
+          let stateUpdated = this.currentState.next(this.setupReducer(state));
+          let action = this.currentAction.next(systemActionCreators.initializeState());
+          return (this.settings.shouldAwaitStatePropagation ? combineLatest([
+            from(stateUpdated), from(action)
           ]) : of(action));
-      }),
+        })
+      )),
       tap(() => this.systemActions.moduleUnloaded(module)),
       catchError(error => { console.warn(error.message); return EMPTY; }),
       finalize(() => this.isProcessing.next(false))
