@@ -216,9 +216,18 @@ export class Store {
         let stateOrPromise = this.getState();
         return stateOrPromise instanceof Promise ? from(stateOrPromise) : of(stateOrPromise);
       }),
-      concatMap((state) => (this.currentState.next(this.setupReducer(state)), this.currentState.asObservable()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
-      tap(() => this.systemActions.moduleLoaded(module))
-    ));
+      concatMap((state) => {
+        let state = this.currentState.next(this.setupReducer(state));
+        let action = this.currentAction.next(systemActionCreators.initializeState());
+        return (this.mainModule.shouldAwaitStatePropagation ? combineLatest([
+            from(state), from(action)
+          ]) : of(action)).pipe(finalize(() => {
+            this.isProcessing.next(false)
+          }));
+      }),
+      tap(() => this.systemActions.moduleLoaded(module)),
+      catchError(error => { console.warn(error.message); return EMPTY; }))
+    );
 
     return this;
   }
@@ -247,8 +256,17 @@ export class Store {
         }
         return newState;
       }),
-      concatMap((state) => (this.currentState.next(this.setupReducer(state)), this.currentState.asObservable()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
-      tap(() => this.systemActions.moduleUnloaded(module))
+      concatMap((state) => {
+        let state = this.currentState.next(this.setupReducer(state));
+        let action = this.currentAction.next(systemActionCreators.initializeState());
+        return (this.mainModule.shouldAwaitStatePropagation ? combineLatest([
+            from(state), from(action)
+          ]) : of(action)).pipe(finalize(() => {
+            this.isProcessing.next(false)
+          }));
+      }),
+      tap(() => this.systemActions.moduleLoaded(module)),
+      catchError(error => { console.warn(error.message); return EMPTY; }))
     ));
 
     return this;
