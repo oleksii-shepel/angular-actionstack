@@ -417,7 +417,7 @@ export class Store {
               concatMap((state) => {
                 const stateUpdated = this.currentState.next(state);
                 const actionHandled = this.currentAction.next(action);
-                return this.settings.shouldAwaitStatePropagation ? combineLatest([
+                return (this.settings.shouldAwaitStatePropagation ? combineLatest([
                   from(stateUpdated), from(actionHandled)
                 ]) : of(state)).pipe(finalize(() => {
                   this.actionStack.pop();
@@ -425,14 +425,16 @@ export class Store {
                     // Set isProcessing to false if there are no more actions in the stack
                     this.isProcessing.next(false);
                   }
-                }));
-              }),
-              ignoreElements(),
-              catchError((error) => {
-                console.warn(error.message);
-                return EMPTY;
-              })))
-        }));
+                }))
+              })
+            })))
+        }),
+        ignoreElements(),
+        catchError((error) => {
+          console.warn(error.message);
+          return EMPTY;
+        })
+      )
     };
   }
 
