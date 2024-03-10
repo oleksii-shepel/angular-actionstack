@@ -2,6 +2,7 @@ import { FeatureModule, SideEffect, isAction, kindOf } from "./types";
 
 export const systemActions = {
   INITIALIZE_STATE: `INITIALIZE_STATE`,
+  UPDATE_STATE: `UPDATE_STATE`,
   STORE_INITIALIZED: `STORE_INITIALIZED`,
   MODULE_LOADED: `MODULE_LOADED`,
   MODULE_UNLOADED: `MODULE_UNLOADED`,
@@ -12,6 +13,7 @@ export const systemActions = {
 // Define the action creators
 export const systemActionCreators = {
   initializeState: createAction(systemActions.INITIALIZE_STATE),
+  updateState: createAction(systemActions.UPDATE_STATE),
   storeInitialized: createAction(systemActions.STORE_INITIALIZED),
   moduleLoaded: createAction(systemActions.MODULE_LOADED, (module: FeatureModule) => ({module})),
   moduleUnloaded: createAction(systemActions.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
