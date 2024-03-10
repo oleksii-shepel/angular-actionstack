@@ -412,7 +412,7 @@ export class Store {
 
       return source.pipe(
         concatMap((action: Action<any>) => {
-          return convertToObservable(this.getState().pipe(concatMap(state) => {
+          return convertToObservable(this.getState().pipe(concatMap((state) => {
             return convertToObservable(this.pipeline.reducer(state, action)).pipe(
               concatMap((state) => {
                 const stateUpdated = this.currentState.next(state);
@@ -426,14 +426,13 @@ export class Store {
                     this.isProcessing.next(false);
                   }
                 }));
-              })
-        }),
-        ignoreElements(),
-        catchError((error) => {
-          console.warn(error.message);
-          return EMPTY;
-        })
-      );
+              }),
+              ignoreElements(),
+              catchError((error) => {
+                console.warn(error.message);
+                return EMPTY;
+              })))
+        }));
     };
   }
 
