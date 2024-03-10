@@ -99,10 +99,10 @@ export class Store {
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
         concatMap(({count, action}: any) => count === 1 ? convertToObservable(this.getState()).pipe(
           concatMap((state) => {
-            let state = this.currentState.next(this.setupReducer());
-            let action = this.currentAction.next(systemActionCreators.initializeState());
+            let stateUpdated = this.currentState.next(this.setupReducer());
+            let actionHandled = this.currentAction.next(systemActionCreators.initializeState());
             return (this.settings.shouldAwaitStatePropagation ? combineLatest([
-              from(state), from(action)
+              from(stateUpdated), from(actionHandled)
             ]) : of(action));
           })
         ) : of(action)),
@@ -224,11 +224,11 @@ export class Store {
       }),
       concatMap(() => convertToObservable(this.getState()).pipe(
         concatMap((state) => {
-          let state = this.currentState.next(this.setupReducer(state));
-          let action = this.currentAction.next(systemActionCreators.initializeState());
+          let stateUpdated = this.currentState.next(this.setupReducer(state));
+          let actionHandled = this.currentAction.next(systemActionCreators.initializeState());
           return (this.settings.shouldAwaitStatePropagation ? combineLatest([
-            from(state), from(action)
-          ]) : of(action));
+            from(stateUpdated), from(actionHandled)
+          ]) : of(state));
         })
       )),
       tap(() => this.systemActions.moduleLoaded(module)),
@@ -259,10 +259,10 @@ export class Store {
             delete state[module.slice];
           }
           let stateUpdated = this.currentState.next(this.setupReducer(state));
-          let action = this.currentAction.next(systemActionCreators.initializeState());
+          let actionHandled = this.currentAction.next(systemActionCreators.initializeState());
           return (this.settings.shouldAwaitStatePropagation ? combineLatest([
-            from(stateUpdated), from(action)
-          ]) : of(action));
+            from(stateUpdated), from(actionHandled)
+          ]) : of(state));
         })
       )),
       tap(() => this.systemActions.moduleUnloaded(module)),
@@ -412,21 +412,21 @@ export class Store {
 
       return source.pipe(
         concatMap((action: Action<any>) => {
-          return convertToObservable(this.pipeline.reducer(this.currentState.value, action)).pipe(
-            concatMap((state) => {
-              const stateUpdated = this.currentState.next(state);
-              const actionHandled = this.currentAction.next(action);
-              return this.settings.shouldAwaitStatePropagation ? combineLatest([
-                from(stateUpdated), from(actionHandled)
-              ]) : of(action)).pipe(finalize(() => {
-                this.actionStack.pop();
-                if (this.actionStack.length === 0) {
-                  // Set isProcessing to false if there are no more actions in the stack
-                  this.isProcessing.next(false);
-                }
-              }));
-            })
-          )
+          return convertToObservable(this.getState().pipe(concatMap(state) => {
+            return convertToObservable(this.pipeline.reducer(state, action)).pipe(
+              concatMap((state) => {
+                const stateUpdated = this.currentState.next(state);
+                const actionHandled = this.currentAction.next(action);
+                return this.settings.shouldAwaitStatePropagation ? combineLatest([
+                  from(stateUpdated), from(actionHandled)
+                ]) : of(state)).pipe(finalize(() => {
+                  this.actionStack.pop();
+                  if (this.actionStack.length === 0) {
+                    // Set isProcessing to false if there are no more actions in the stack
+                    this.isProcessing.next(false);
+                  }
+                }));
+              })
         }),
         ignoreElements(),
         catchError((error) => {
