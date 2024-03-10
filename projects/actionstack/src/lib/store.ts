@@ -32,7 +32,8 @@ export class Store {
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
       strategy: "exclusive" as "exclusive",
-      shouldDispatchSystemActions: true
+      shouldDispatchSystemActions: true,
+      shouldAwaitStatePropagation: true
     };
 
     const MODULES_DEFAULT: FeatureModule[] = [];
@@ -384,9 +385,9 @@ export class Store {
           const state = this.pipeline.reducer(this.currentState.value, action);
           const stateUpdated = this.currentState.next(state);
           const actionHandled = this.currentAction.next(action);
-          return combineLatest([
+          return (shouldAwaitStatePropagation ? combineLatest([
             from(stateUpdated), from(actionHandled)
-          ]).pipe(finalize(() => {
+          ]) : of(action)).pipe(finalize(() => {
             this.actionStack.pop();
             if (this.actionStack.length === 0) {
               // Set isProcessing to false if there are no more actions in the stack
