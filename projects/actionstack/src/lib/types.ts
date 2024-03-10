@@ -51,7 +51,7 @@ export interface MainModule {
   metaReducers?: MetaReducer[];
   dependencies?: Record<string, any>;
   strategy?: "exclusive" | "concurrent";
-  storeSettings: {
+  storeSettings?: {
     shouldDispatchSystemActions?: boolean;
     shouldAwaitStatePropagation?: boolean;
     enableMetaReducers?: boolean;
