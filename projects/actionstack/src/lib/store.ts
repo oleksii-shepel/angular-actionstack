@@ -473,3 +473,7 @@ export function compose(...funcs: AnyFn[]): AnyFn {
 
   return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
 }
+
+export function convertToObservable(obj: any | Promise<any>) {
+  return obj instanceof Promise ? from(obj) : of(obj);
+}
