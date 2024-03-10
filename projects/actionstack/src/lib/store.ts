@@ -212,7 +212,11 @@ export class Store {
         // Inject dependencies
         this.injectDependencies(injector);
       }),
-      concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
+      concatMap(() => {
+        let stateOrPromise = this.getState();
+        return stateOrPromise instanceof Promise ? from(stateOrPromise) : of(stateOrPromise);
+      }),
+      concatMap((state) => (this.currentState.next(this.setupReducer(state)), this.currentState.asObservable()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
       tap(() => this.systemActions.moduleLoaded(module))
     ));
 
@@ -235,14 +239,15 @@ export class Store {
         let stateOrPromise = this.getState();
         return stateOrPromise instanceof Promise ? from(stateOrPromise) : of(stateOrPromise);
       }),
-      tap((state) => {
+      map((state) => {
+        let newState = state;
         if (clearState) {
-          let newState = {...state};
+          newState = { ...state };
           delete newState[module.slice];
-          this.currentState.next(newState);
         }
+        return newState;
       }),
-      concatMap(() => from(this.setupReducer()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
+      concatMap((state) => (this.currentState.next(this.setupReducer(state)), this.currentState.asObservable()).pipe(catchError(error => { console.warn(error.message); return EMPTY; }))),
       tap(() => this.systemActions.moduleUnloaded(module))
     ));
 
@@ -318,7 +323,7 @@ export class Store {
     return newState;
   }
 
-  protected async setupReducer(): Promise<void> {
+  protected setupReducer(state: any): any {
     let featureReducers = [{slice: this.mainModule.slice!, reducer: this.mainModule.reducer}, ...this.modules].reduce((reducers, module) => {
       let moduleReducer: any = typeof module.reducer === "function" ? module.reducer : [...module.reducer];
       reducers = {...reducers, [module.slice]: moduleReducer};
@@ -328,8 +333,7 @@ export class Store {
     let [reducer, initialState, errors] = this.combineReducers(featureReducers);
 
     // Update store state
-    const state = this.hydrateState(await this.getState(), initialState);
-    this.currentState.next(state);
+    const state = this.hydrateState({ ...state }, initialState);
 
     this.mainModule.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
@@ -340,6 +344,8 @@ export class Store {
       let receivedErrors = Array.from(errors.entries()).map((value) => value[1]).join('\n');
       throw new Error(`${errors.size} errors during state initialization.\n${receivedErrors}`);
     }
+
+    return state;
   }
 
   protected injectDependencies(injector: Injector): Store {
