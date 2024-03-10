@@ -221,10 +221,7 @@ export class Store {
         // Inject dependencies
         this.injectDependencies(injector);
       }),
-      concatMap(() => {
-        let stateOrPromise = this.getState();
-        return stateOrPromise instanceof Promise ? from(stateOrPromise) : of(stateOrPromise);
-      }),
+      concatMap(() => convertToObservable(this.getState())),
       concatMap((state) => {
         let state = this.currentState.next(this.setupReducer(state));
         let action = this.currentAction.next(systemActionCreators.initializeState());
@@ -253,10 +250,7 @@ export class Store {
         // Eject dependencies
         this.ejectDependencies(module);
       }),
-      concatMap(() => {
-        let stateOrPromise = this.getState();
-        return stateOrPromise instanceof Promise ? from(stateOrPromise) : of(stateOrPromise);
-      }),
+      concatMap(() => convertToObservable(this.getState())),
       map((state) => {
         let newState = state;
         if (clearState) {
