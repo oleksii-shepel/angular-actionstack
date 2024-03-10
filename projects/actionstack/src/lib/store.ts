@@ -30,10 +30,12 @@ export class Store {
       slice: "main",
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
+      metaReducers: [],
       dependencies: {},
       strategy: "exclusive" as "exclusive",
       shouldDispatchSystemActions: true,
-      shouldAwaitStatePropagation: true
+      shouldAwaitStatePropagation: true,
+      enableMetaReducers: false
     };
 
     const MODULES_DEFAULT: FeatureModule[] = [];
@@ -290,7 +292,7 @@ export class Store {
 
       return newState;
     };
-
+    
     return [combinedReducer, featureState, errors];
   }
 
@@ -329,6 +331,9 @@ export class Store {
     const state = this.hydrateState(await this.getState(), initialState);
     this.currentState.next(state);
 
+    this.mainModule.enableMetaReducers && this.mainModule.metaReducers
+      && this.mainModule.metaReducers.length
+      && (reducer = compose(this.mainModule.metaReducers)(reducer));
     this.pipeline.reducer = reducer;
 
     if(errors.size) {
