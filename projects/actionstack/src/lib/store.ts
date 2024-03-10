@@ -412,18 +412,21 @@ export class Store {
 
       return source.pipe(
         concatMap((action: Action<any>) => {
-          const state = this.pipeline.reducer(this.currentState.value, action);
-          const stateUpdated = this.currentState.next(state);
-          const actionHandled = this.currentAction.next(action);
-          return this.settings.shouldAwaitStatePropagation ? combineLatest([
-            from(stateUpdated), from(actionHandled)
-          ]) : of(action)).pipe(finalize(() => {
-            this.actionStack.pop();
-            if (this.actionStack.length === 0) {
-              // Set isProcessing to false if there are no more actions in the stack
-              this.isProcessing.next(false);
-            }
-          }));
+          return convertToObservable(this.pipeline.reducer(this.currentState.value, action)).pipe(
+            concatMap((state) => {
+              const stateUpdated = this.currentState.next(state);
+              const actionHandled = this.currentAction.next(action);
+              return this.settings.shouldAwaitStatePropagation ? combineLatest([
+                from(stateUpdated), from(actionHandled)
+              ]) : of(action)).pipe(finalize(() => {
+                this.actionStack.pop();
+                if (this.actionStack.length === 0) {
+                  // Set isProcessing to false if there are no more actions in the stack
+                  this.isProcessing.next(false);
+                }
+              }));
+            })
+          )
         }),
         ignoreElements(),
         catchError((error) => {
