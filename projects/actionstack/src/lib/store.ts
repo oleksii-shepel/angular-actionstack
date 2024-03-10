@@ -198,6 +198,7 @@ export class Store {
   loadModule(module: FeatureModule, injector: Injector) {
     firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
       tap(() => {
+        this.isProcessing.next(true);
         // Check if the module already exists in the this's modules
         if (this.modules.some(m => m.slice === module.slice)) {
           // If the module already exists, return the this without changes
@@ -221,13 +222,12 @@ export class Store {
         let action = this.currentAction.next(systemActionCreators.initializeState());
         return (this.mainModule.shouldAwaitStatePropagation ? combineLatest([
             from(state), from(action)
-          ]) : of(action)).pipe(finalize(() => {
-            this.isProcessing.next(false)
-          }));
+          ]) : of(action));
       }),
       tap(() => this.systemActions.moduleLoaded(module)),
-      catchError(error => { console.warn(error.message); return EMPTY; }))
-    );
+      catchError(error => { console.warn(error.message); return EMPTY; }),
+      finalize(() => this.isProcessing.next(false))
+    ));
 
     return this;
   }
@@ -235,6 +235,7 @@ export class Store {
   unloadModule(module: FeatureModule, clearState: boolean = false) {
     firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
       tap(() => {
+        this.isProcessing.next(true);
         // Create a new array with the module removed from the this's modules
         const newModules = this.modules.filter(m => m.slice !== module.slice);
 
@@ -261,12 +262,11 @@ export class Store {
         let action = this.currentAction.next(systemActionCreators.initializeState());
         return (this.mainModule.shouldAwaitStatePropagation ? combineLatest([
             from(state), from(action)
-          ]) : of(action)).pipe(finalize(() => {
-            this.isProcessing.next(false)
-          }));
+          ]) : of(action));
       }),
-      tap(() => this.systemActions.moduleLoaded(module)),
-      catchError(error => { console.warn(error.message); return EMPTY; }))
+      tap(() => this.systemActions.moduleUnloaded(module)),
+      catchError(error => { console.warn(error.message); return EMPTY; }),
+      finalize(() => this.isProcessing.next(false))
     ));
 
     return this;
