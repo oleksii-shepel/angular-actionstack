@@ -385,7 +385,7 @@ export class Store {
           const state = this.pipeline.reducer(this.currentState.value, action);
           const stateUpdated = this.currentState.next(state);
           const actionHandled = this.currentAction.next(action);
-          return (shouldAwaitStatePropagation ? combineLatest([
+          return (this.mainModule.shouldAwaitStatePropagation ? combineLatest([
             from(stateUpdated), from(actionHandled)
           ]) : of(action)).pipe(finalize(() => {
             this.actionStack.pop();
