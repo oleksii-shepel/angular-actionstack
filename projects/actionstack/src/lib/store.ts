@@ -24,8 +24,15 @@ export class Store {
   protected isProcessing: BehaviorSubject<boolean>;
   protected subscription: Subscription;
   protected systemActions: Record<keyof typeof systemActionCreators, any>;
-
+  protected settings: any;
+  
   protected constructor() {
+    const STORE_SETTINGS_DEFAULT =  {
+      shouldDispatchSystemActions: true,
+      shouldAwaitStatePropagation: true,
+      enableMetaReducers: false
+    };
+    
     const MAIN_MODULE_DEFAULT = {
       slice: "main",
       middlewares: [],
@@ -33,9 +40,7 @@ export class Store {
       metaReducers: [],
       dependencies: {},
       strategy: "exclusive" as "exclusive",
-      shouldDispatchSystemActions: true,
-      shouldAwaitStatePropagation: true,
-      enableMetaReducers: false
+      storeSettings: STORE_SETTINGS_DEFAULT
     };
 
     const MODULES_DEFAULT: FeatureModule[] = [];
@@ -67,6 +72,7 @@ export class Store {
     this.isProcessing = PROCESSING_DEFAULT;
     this.subscription = SUBSCRIPTION_DEFAULT;
     this.systemActions = SYSTEM_ACTIONS_DEFAULT;
+    this.settings = STORE_SETTINGS_DEFAULT;
   }
 
   static createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
@@ -100,7 +106,7 @@ export class Store {
         store.processAction()
       ).subscribe();
 
-      store.systemActions = bindActionCreators(systemActionCreators, (action: Action<any>) => store.mainModule.shouldDispatchSystemActions && store.dispatch(action));
+      store.systemActions = bindActionCreators(systemActionCreators, (action: Action<any>) => store.settings.shouldDispatchSystemActions && store.dispatch(action));
 
       store.systemActions.initializeState();
       store.systemActions.storeInitialized();
@@ -220,7 +226,7 @@ export class Store {
       concatMap((state) => {
         let state = this.currentState.next(this.setupReducer(state));
         let action = this.currentAction.next(systemActionCreators.initializeState());
-        return (this.mainModule.shouldAwaitStatePropagation ? combineLatest([
+        return (this.settings.shouldAwaitStatePropagation ? combineLatest([
             from(state), from(action)
           ]) : of(action));
       }),
@@ -260,7 +266,7 @@ export class Store {
       concatMap((state) => {
         let state = this.currentState.next(this.setupReducer(state));
         let action = this.currentAction.next(systemActionCreators.initializeState());
-        return (this.mainModule.shouldAwaitStatePropagation ? combineLatest([
+        return (this.settings.shouldAwaitStatePropagation ? combineLatest([
             from(state), from(action)
           ]) : of(action));
       }),
@@ -353,7 +359,7 @@ export class Store {
     // Update store state
     const state = this.hydrateState({ ...state }, initialState);
 
-    this.mainModule.enableMetaReducers && this.mainModule.metaReducers
+    this.settings.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
       && (reducer = compose(...this.mainModule.metaReducers)(reducer));
     this.pipeline.reducer = reducer;
@@ -414,7 +420,7 @@ export class Store {
           const state = this.pipeline.reducer(this.currentState.value, action);
           const stateUpdated = this.currentState.next(state);
           const actionHandled = this.currentAction.next(action);
-          return (this.mainModule.shouldAwaitStatePropagation ? combineLatest([
+          return this.settings.shouldAwaitStatePropagation ? combineLatest([
             from(stateUpdated), from(actionHandled)
           ]) : of(action)).pipe(finalize(() => {
             this.actionStack.pop();
