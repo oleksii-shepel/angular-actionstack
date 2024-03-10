@@ -27,13 +27,13 @@ export class Store {
   protected settings: any;
   
   protected constructor() {
-    const STORE_SETTINGS_DEFAULT =  {
+    let STORE_SETTINGS_DEFAULT =  {
       shouldDispatchSystemActions: true,
       shouldAwaitStatePropagation: true,
       enableMetaReducers: false
     };
     
-    const MAIN_MODULE_DEFAULT = {
+    let MAIN_MODULE_DEFAULT = {
       slice: "main",
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
@@ -43,24 +43,24 @@ export class Store {
       storeSettings: STORE_SETTINGS_DEFAULT
     };
 
-    const MODULES_DEFAULT: FeatureModule[] = [];
+    let MODULES_DEFAULT: FeatureModule[] = [];
 
-    const PIPELINE_DEFAULT = {
+    let PIPELINE_DEFAULT = {
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
       strategy: "exclusive" as "exclusive"
     };
 
-    const ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
-    const ACTION_STACK_DEFAULT = new ActionStack();
+    let ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
+    let ACTION_STACK_DEFAULT = new ActionStack();
 
-    const CURRENT_ACTION_DEFAULT = new CustomAsyncSubject<any>();
-    const CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>();
+    let CURRENT_ACTION_DEFAULT = new CustomAsyncSubject<any>();
+    let CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>();
 
-    const PROCESSING_DEFAULT = new BehaviorSubject(false);
-    const SUBSCRIPTION_DEFAULT = Subscription.EMPTY;
-    const SYSTEM_ACTIONS_DEFAULT = { ...systemActionCreators };
+    let PROCESSING_DEFAULT = new BehaviorSubject(false);
+    let SUBSCRIPTION_DEFAULT = Subscription.EMPTY;
+    let SYSTEM_ACTIONS_DEFAULT = { ...systemActionCreators };
 
     this.mainModule = MAIN_MODULE_DEFAULT;
     this.modules = MODULES_DEFAULT;
