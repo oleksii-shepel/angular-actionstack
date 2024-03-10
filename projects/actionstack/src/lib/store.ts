@@ -333,7 +333,7 @@ export class Store {
 
     this.mainModule.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
-      && (reducer = compose(this.mainModule.metaReducers)(reducer));
+      && (reducer = compose(...this.mainModule.metaReducers)(reducer));
     this.pipeline.reducer = reducer;
 
     if(errors.size) {
