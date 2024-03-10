@@ -154,6 +154,31 @@ export class Store {
     }
   }
 
+  protected setState<T = any>(slice?: keyof T | string[]): any {
+    if (slice === undefined || typeof slice === "string" && slice == "@global") {
+      return this.currentState.value as T;
+    } else if (typeof slice === "string") {
+      return this.currentState.value[slice] as T;
+    } else if (Array.isArray(slice)) {
+      return slice.reduce((acc, key) => (acc && Array.isArray(acc) ? acc[parseInt(key)] : acc[key]) || undefined, this.currentState.value) as T;
+    } else {
+      throw new Error("Unsupported type of slice parameter");
+    }
+  }
+  
+  protected updateState<T = any>(slice?: keyof T | string[], callback: Function): Observable<any> {
+    return convertToObservable(this.getState(slice)).pipe(
+      concatMap((state) => {
+        state = callback(state);
+        let stateUpdated = this.currentState.next(state);
+        let actionHandled = this.currentAction.next(systemActionCreators.updateState());
+        return (this.settings.shouldAwaitStatePropagation ? combineLatest([
+          from(stateUpdated), from(actionHandled)
+        ]) : of(action));
+      })
+    );
+  }
+
   subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
     const stateObservable = this.currentState.asObservable().pipe(
       filter(value => value !== undefined),
