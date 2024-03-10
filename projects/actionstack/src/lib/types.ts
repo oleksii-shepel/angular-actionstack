@@ -51,6 +51,7 @@ export interface MainModule {
   dependencies?: Record<string, any>;
   strategy?: "exclusive" | "concurrent";
   shouldDispatchSystemActions?: boolean;
+  shouldAwaitStatePropagation?: boolean;
 }
 
 export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;
