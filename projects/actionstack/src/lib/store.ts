@@ -99,21 +99,13 @@ export class Store {
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
         concatMap(({count, action}: any) => count === 1 ? convertToObservable(this.getState()).pipe(
           concatMap((state) => {
-            let state = this.currentState.next(this.setupReducer(state));
+            let state = this.currentState.next(this.setupReducer());
             let action = this.currentAction.next(systemActionCreators.initializeState());
             return (this.settings.shouldAwaitStatePropagation ? combineLatest([
               from(state), from(action)
             ]) : of(action));
           })
         ) : of(action)),
-        concatMap(({count, action}: any) => {
-          return (count === 1)
-          ? of(store.setupReducer()).pipe(
-              catchError(error => { console.warn(error.message); return EMPTY; }),
-              map(() => action),
-            )
-          : of(action)
-        }),
         store.processAction()
       ).subscribe();
 
