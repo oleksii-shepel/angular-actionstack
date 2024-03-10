@@ -55,6 +55,7 @@ export interface MainModule {
     shouldDispatchSystemActions?: boolean;
     shouldAwaitStatePropagation?: boolean;
     enableMetaReducers?: boolean;
+    enableAsyncReducers?: boolean;
   };
 }
 
