@@ -48,10 +48,12 @@ export interface MainModule {
   slice?: string;
   middlewares?: Middleware[];
   reducer: Reducer | Record<string, Reducer>;
+  metaReducers?: MetaReducer[];
   dependencies?: Record<string, any>;
   strategy?: "exclusive" | "concurrent";
   shouldDispatchSystemActions?: boolean;
   shouldAwaitStatePropagation?: boolean;
+  enableMetaReducers?: boolean;
 }
 
 export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;
