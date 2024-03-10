@@ -249,7 +249,7 @@ export class Store {
     return this;
   }
 
-  combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, any] {
+  protected combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, any] {
     let errors = new Map<string, string>();
     let featureReducers = {};
     let featureState = {} as any;
