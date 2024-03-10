@@ -154,27 +154,34 @@ export class Store {
     }
   }
 
-  protected setState<T = any>(slice?: keyof T | string[]): any {
+  protected setState<T = any>(slice?: keyof T | string[], value: any): any {
     if (slice === undefined || typeof slice === "string" && slice == "@global") {
-      return this.currentState.value as T;
+      // update the whole state with a shallow copy of the value
+      return ({...value});
     } else if (typeof slice === "string") {
-      return this.currentState.value[slice] as T;
+      // update the state property with the given key with a shallow copy of the value
+      return ({...this.currentState.value, [slice]: {...value}});
     } else if (Array.isArray(slice)) {
-      return slice.reduce((acc, key) => (acc && Array.isArray(acc) ? acc[parseInt(key)] : acc[key]) || undefined, this.currentState.value) as T;
+      // update the nested state property with the given path with a shallow copy of the value
+      // use a helper function to recursively clone and update the object
+      return cloneAndUpdate(this.currentState.value, slice, value));
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
   }
-  
+
   protected updateState<T = any>(slice?: keyof T | string[], callback: Function): Observable<any> {
     return convertToObservable(this.getState(slice)).pipe(
       concatMap((state) => {
-        state = callback(state);
-        let stateUpdated = this.currentState.next(state);
-        let actionHandled = this.currentAction.next(systemActionCreators.updateState());
-        return (this.settings.shouldAwaitStatePropagation ? combineLatest([
-          from(stateUpdated), from(actionHandled)
-        ]) : of(action));
+        return convertToObservable(this.setState(slice, callback(state))).pipe(
+          concatMap((state) => {
+            let stateUpdated = this.currentState.next(state);
+            let actionHandled = this.currentAction.next(systemActionCreators.updateState());
+            return (this.settings.shouldAwaitStatePropagation ? combineLatest([
+              from(stateUpdated), from(actionHandled)
+            ]) : of(action));
+          })
+        );
       })
     );
   }
@@ -498,4 +505,27 @@ export function compose(...funcs: AnyFn[]): AnyFn {
 
 export function convertToObservable(obj: any | Promise<any>) {
   return obj instanceof Promise ? from(obj) : of(obj);
+}
+
+// a helper function to recursively clone and update an object with a given path and value
+export function cloneAndUpdate(obj: any, path: string[], value: any): any {
+  // base case: if the path is empty, return the value
+  if (path.length === 0) {
+    return value;
+  }
+  // recursive case: clone the current object and update the property with the first element of the path
+  const key = path[0];
+  const rest = path.slice(1);
+  const clonedObj = {...obj};
+  if (Array.isArray(obj[key])) {
+    // if the property is an array, clone and update the element with the next element of the path
+    const index = parseInt(rest[0]);
+    const restRest = rest.slice(1);
+    clonedObj[key] = [...obj[key]];
+    clonedObj[key][index] = cloneAndUpdate(obj[key][index], restRest, value);
+  } else {
+    // if the property is an object, clone and update the nested property with the rest of the path
+    clonedObj[key] = cloneAndUpdate(obj[key], rest, value);
+  }
+  return clonedObj;
 }
