@@ -20,20 +20,20 @@ export const createStarter = () => {
       }
     }
 
+    if(typeof action !== 'function' && !actionStack.length) {
+      actionStack.push(action);
+      isProcessing.next(true);
+    }
+
+    // If there's an action being processed, enqueue the new action and return
+    if (actionStack.length > 0 && actionStack.peek() !== action) {
+      actionQueue.enqueue(action as any);
+      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
+      actionQueue.dequeue();
+    }
+
     await lock.acquire()
     try {
-      if(isProcessing.value === false) {
-        actionStack.push(action);
-        isProcessing.next(true);
-      }
-
-      // If there's an action being processed, enqueue the new action and return
-      if (actionStack.length > 0 && actionStack.peek() !== action) {
-        actionQueue.enqueue(action as any);
-        await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-        actionQueue.dequeue();
-      }
-
       await processAction(action);
     } finally {
       lock.release();
@@ -58,19 +58,20 @@ export const createStarter = () => {
       }
     }
 
+    if(typeof action !== 'function' && !actionStack.length) {
+      actionStack.push(action);
+      isProcessing.next(true);
+    }
+
+    // If there's an action being processed, enqueue the new action and return
+    if (actionStack.length > 0 && actionStack.peek() !== action) {
+      actionQueue.enqueue(action as any);
+      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
+      actionQueue.dequeue();
+    }
+
+    await lock.acquire()
     try {
-      if(isProcessing.value === false) {
-        actionStack.push(action);
-        isProcessing.next(true);
-      }
-
-      // If there's an action being processed, enqueue the new action and return
-      if (actionStack.length > 0 && actionStack.peek() !== action) {
-        actionQueue.enqueue(action as any);
-        await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-        actionQueue.dequeue();
-      }
-
       await processAction(action);
     } finally {
       lock.release();
