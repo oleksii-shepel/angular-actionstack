@@ -231,13 +231,9 @@ export class Store {
           }
           return EMPTY;
         })
-      ))
+      )),
+      finalize(() => this.systemActions.effectsUnregistered(args))
     ).subscribe();
-
-    effectsSubscription.unsubscribe = () => {
-      effectsSubscription.unsubscribe();
-      this.systemActions.effectsUnregistered(args);
-    };
 
     this.systemActions.effectsRegistered(args);
     return effectsSubscription;
