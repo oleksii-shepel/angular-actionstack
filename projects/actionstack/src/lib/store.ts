@@ -219,7 +219,8 @@ export class Store {
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
     const effectsSubscription = this.currentAction.asObservable().pipe(
-      withLatestFrom(of(this.currentState.value)),
+      withLatestFrom(this.currentState.asObservable()),
+      filter(([action, state]) => action !== undefined && state !== undefined),
       concatMap(([action, state]) => runSideEffects(args)(action, state, dependencies).pipe(
         mapMethod((childActions: Action<any>[]) => {
           if (childActions.length > 0) {
@@ -335,7 +336,7 @@ export class Store {
     });
 
     // Combine the main module reducer with the feature module reducers
-    const combinedReducer = (state: any = featureState, action: Action<any>) => {
+    const combinedReducer = (state: any = {}, action: Action<any>) => {
       let newState = state;
 
       Object.keys(featureReducers).forEach((key) => {
