@@ -341,9 +341,9 @@ export class Store {
 
       Object.keys(featureReducers).forEach((key) => {
         try {
-          const featureState = featureReducers[key](state[key], action);
+          const featureState = featureReducers[key](newState[key], action);
           if(featureState !== newState[key]){
-            newState = {...newState, key: featureState};
+            newState = {...newState, [key]: featureState};
           }
         } catch (error: any) {
           throw new Error(`Error occurred while processing an action ${action.type} for ${key}: ${error.message}`);
