@@ -7,7 +7,9 @@ import { loadHeroes, selectTopHeroes } from './dashboard.slice';
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
-  styleUrls: [ './dashboard.component.css' ]
+  styleUrls: [ './dashboard.component.css' ],
+  standalone: true,
+  imports: [Slice]
 })
 export class DashboardComponent implements OnInit {
   heroes$: Observable<Hero[]> = this.store.select(selectTopHeroes());
