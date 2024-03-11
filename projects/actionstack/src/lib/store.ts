@@ -1,5 +1,5 @@
 import { Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { bindActionCreators, systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -203,7 +203,7 @@ export class Store {
               let actionHandled = this.currentAction.next(action);
               return (this.settings.shouldAwaitStatePropagation ? combineLatest([
                 from(stateUpdated), from(actionHandled)
-              ]) : of(state));
+              ]).pipe(map(() => action)) : of(action));
             }))
           }))
         );
@@ -240,7 +240,6 @@ export class Store {
 
     const effectsSubscription = this.currentAction.asObservable().pipe(
       withLatestFrom(this.currentState.asObservable()),
-      filter(([action, state]) => action !== undefined && state !== undefined),
       concatMap(([action, state]) => runSideEffects(args)(action, state, dependencies).pipe(
         mapMethod((childActions: Action<any>[]) => {
           if (childActions.length > 0) {
