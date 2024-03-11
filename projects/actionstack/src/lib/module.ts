@@ -1,6 +1,6 @@
 import { Injector, ModuleWithProviders, NgModule } from "@angular/core";
 import { asapScheduler } from "rxjs";
-import { Store } from "./store";
+import { Store, StoreSettings } from "./store";
 import { FeatureModule, MainModule } from "./types";
 
 @NgModule({})
@@ -17,6 +17,10 @@ export class StoreModule {
     return {
       ngModule: StoreModule,
       providers: [
+        {
+          provide: StoreSettings,
+          useValue: StoreSettings
+        },
         {
           provide: Store,
           useFactory: () => {

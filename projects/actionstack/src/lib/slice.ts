@@ -1,7 +1,7 @@
-import { ElementRef, Injectable, OnDestroy } from "@angular/core";
+import { ElementRef, Injectable, OnDestroy, inject } from "@angular/core";
+import { Subscription } from "rxjs";
 import { StoreModule } from "./module";
 import { Store } from "./store";
-import { Subscription } from "rxjs";
 import { Action, AnyFn, Reducer, SideEffect } from "./types";
 
 export interface SliceOptions {
@@ -14,12 +14,19 @@ export interface SliceOptions {
 
 @Injectable()
 export class Slice implements OnDestroy {
-  private _opts: SliceOptions;
-  private subscription: Subscription.EMPTY;
-  
-  constructor(private store: Store, private elRef: ElementRef) {
-    this._opts = {
-      slice: elRef.nativeElement.localName,
+  private opts: SliceOptions;
+  private subscription = Subscription.EMPTY;
+  private elRef!: ElementRef<HTMLElement>;
+
+  constructor(private store: Store) {
+    try {
+      this.elRef = inject(ElementRef);
+    } catch {
+      throw new Error('Injection failed. The Slice is provided in the module providers list, but it is suitable to use within component provider list.')
+    }
+
+    this.opts = {
+      slice: this.elRef.nativeElement.localName,
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [],
       dependencies: {},
@@ -28,7 +35,7 @@ export class Slice implements OnDestroy {
   }
 
   setup(opts: SliceOptions): void {
-    this._opts = Object.assign(this._opts, opts);
+    this.opts = Object.assign(this.opts, opts);
     opts.effects && opts.effects.length && (this.subscription = this.store.extend(...opts.effects as any));
     opts.slice && opts.reducer && this.store.loadModule({slice: opts.slice, dependencies: opts.dependencies, reducer: opts.reducer}, StoreModule.injector);
   }
@@ -43,6 +50,6 @@ export class Slice implements OnDestroy {
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
-    this._opts.slice && this._opts.reducer && this.store.unloadModule({slice: this._opts.slice, reducer: this._opts.reducer}, this._opts.strategy === "temporary" ? true : false);
+    this.opts.slice && this.opts.reducer && this.store.unloadModule({slice: this.opts.slice, reducer: this.opts.reducer}, this.opts.strategy === "temporary" ? true : false);
   }
 }

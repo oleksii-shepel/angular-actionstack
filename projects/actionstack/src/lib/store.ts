@@ -1,4 +1,4 @@
-import { Injector, Type } from "@angular/core";
+import { Injector, Type, inject } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { bindActionCreators, systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
@@ -68,6 +68,13 @@ export class Store {
     let PROCESSING_DEFAULT = new BehaviorSubject(false);
     let SUBSCRIPTION_DEFAULT = Subscription.EMPTY;
     let SYSTEM_ACTIONS_DEFAULT = { ...systemActionCreators };
+
+    try {
+      STORE_SETTINGS_DEFAULT = Object.assign(STORE_SETTINGS_DEFAULT, inject(StoreSettings));
+    } catch {
+      console.warn("Failed to inject StoreSettings. Please check your configuration and try again.");
+      STORE_SETTINGS_DEFAULT = STORE_SETTINGS_DEFAULT;
+    }
 
     this.mainModule = MAIN_MODULE_DEFAULT;
     this.modules = MODULES_DEFAULT;
