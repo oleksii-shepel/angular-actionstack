@@ -19,7 +19,7 @@ export class StoreModule {
       providers: [
         {
           provide: StoreSettings,
-          useValue: StoreSettings
+          useValue: StoreSettings.default
         },
         {
           provide: Store,

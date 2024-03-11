@@ -9,10 +9,23 @@ import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 export class StoreSettings {
-  shouldDispatchSystemActions: boolean = true;
-  shouldAwaitStatePropagation: boolean = true;
-  enableMetaReducers: boolean = false;
-  enableAsyncReducers: boolean = false;
+  shouldDispatchSystemActions!: boolean;
+  shouldAwaitStatePropagation!: boolean;
+  enableMetaReducers!: boolean;
+  enableAsyncReducers!: boolean;
+
+  constructor() {
+    Object.assign(this, StoreSettings.default);
+  }
+
+  static get default(): StoreSettings {
+    return {
+      shouldDispatchSystemActions: true,
+      shouldAwaitStatePropagation: true,
+      enableMetaReducers: false,
+      enableAsyncReducers: false,
+    };
+  }
 }
 
 export class Store {
@@ -75,6 +88,8 @@ export class Store {
       console.warn("Failed to inject StoreSettings. Please check your configuration and try again.");
       STORE_SETTINGS_DEFAULT = STORE_SETTINGS_DEFAULT;
     }
+
+    let ns = new StoreSettings();
 
     this.mainModule = MAIN_MODULE_DEFAULT;
     this.modules = MODULES_DEFAULT;
