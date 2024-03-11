@@ -89,8 +89,6 @@ export class Store {
       STORE_SETTINGS_DEFAULT = STORE_SETTINGS_DEFAULT;
     }
 
-    let ns = new StoreSettings();
-
     this.mainModule = MAIN_MODULE_DEFAULT;
     this.modules = MODULES_DEFAULT;
     this.pipeline = PIPELINE_DEFAULT;
