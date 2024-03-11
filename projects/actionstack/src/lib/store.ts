@@ -487,11 +487,29 @@ export class Store {
 
     const middlewares = [starter, ...this.pipeline.middlewares];
 
-    const chain = middlewares.map(middleware => middleware(isValidMiddleware(middleware.signature) ? this : middlewareAPI));
+    const chain = middlewares.map(middleware => middleware(isValidMiddleware(middleware.signature) ? this.mapStoreToMiddlewareParams(middleware.signature) : middlewareAPI));
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
     return this;
+  }
+
+  mapStoreToMiddlewareParams(signature: string): any {
+    if(signature == 'i.p.5.j.7.0.2.1.8.b') {
+      return {
+        getState: () => this.getState(),
+        dispatch: (action: any) => this.dispatch(action),
+        isProcessing: this.isProcessing,
+        actionStack: this.actionStack,
+        dependencies: () => this.pipeline.dependencies,
+        strategy: () => this.pipeline.strategy
+      };
+    } else {
+      return {
+        getState: () => this.getState(),
+        dispatch: (action: any) => this.dispatch(action)
+      }
+    }
   }
 }
 

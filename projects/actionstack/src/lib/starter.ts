@@ -2,7 +2,6 @@ import { filter, firstValueFrom } from "rxjs";
 import { ActionQueue } from "./collections";
 import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
-import { Store } from "./store";
 
 export const createStarter = () => {
   const actionQueue = new ActionQueue();
@@ -20,7 +19,7 @@ export const createStarter = () => {
         return await next(action);
       }
     }
-    
+
     await lock.acquire()
     try {
       if(isProcessing.value === false) {
@@ -71,7 +70,7 @@ export const createStarter = () => {
         await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
         actionQueue.dequeue();
       }
-      
+
       await processAction(action);
     } finally {
       lock.release();
@@ -84,20 +83,8 @@ export const createStarter = () => {
     'concurrent': concurrent
   };
 
-  function mapStoreToParams(store: Store) {
-    return {
-      getState: () => store.getState(),
-      dispatch: (action: any) => store.dispatch(action),
-      isProcessing: store.isProcessing,
-      actionStack: store.actionStack,
-      dependencies: () => store.pipeline.dependencies,
-      strategy: () => store.pipeline.strategy
-    };
-  }
-  
   // Create a method to select the strategy
-  const selectStrategy = (store: Store) => (next: Function) => async (action: Action<any>) => {
-    const { dispatch, getState, dependencies, isProcessing, actionStack, strategy } = mapStoreToParams(store);
+  const selectStrategy = ({ dispatch, getState, dependencies, isProcessing, actionStack, strategy }: any) => (next: Function) => async (action: Action<any>) => {
     const strategyFunc = strategies[strategy()];
     if (!strategyFunc) {
       throw new Error(`Unknown strategy: ${strategy}`);
