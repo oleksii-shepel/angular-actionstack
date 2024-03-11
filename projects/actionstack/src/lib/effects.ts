@@ -58,18 +58,18 @@ export function ofType(...types: [string, ...string[]]): OperatorFunction<Action
 
 
 export function runSideEffectsSequentially(...sideEffects: [...SideEffect[], any | never]) {
-  return ([action, state, dependencies]: [Action<any>, any]) =>
+  return (action: Action<any>, state: any, dependencies: any) =>
     from(sideEffects).pipe(
-      concatMap(([sideEffect, dependencies]) => sideEffect(of(action), of(state), dependencies)),
+      concatMap(sideEffect => sideEffect(of(action), of(state), dependencies) as Observable<Action<any>>),
       toArray()
     );
 }
 
 
-export function runSideEffectsInParallel(sideEffects: IterableIterator<[SideEffect, any]>) {
-  return ([action, state, dependencies]: [Action<any>, any]) =>
+export function runSideEffectsInParallel(sideEffects: [...SideEffect[], any | never]) {
+  return (action: Action<any>, state: any, dependencies: any) =>
     from(sideEffects).pipe(
-      mergeMap(([sideEffect, dependencies]) => sideEffect(of(action), of(state), dependencies)),
+      mergeMap(sideEffect => sideEffect(of(action), of(state), dependencies) as Observable<Action<any>>),
       toArray()
     );
 }

@@ -51,12 +51,6 @@ export interface MainModule {
   metaReducers?: MetaReducer[];
   dependencies?: Record<string, any>;
   strategy?: "exclusive" | "concurrent";
-  storeSettings?: {
-    shouldDispatchSystemActions?: boolean;
-    shouldAwaitStatePropagation?: boolean;
-    enableMetaReducers?: boolean;
-    enableAsyncReducers?: boolean;
-  };
 }
 
 export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;

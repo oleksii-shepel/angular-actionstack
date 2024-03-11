@@ -28,7 +28,6 @@ export function getBaseHref(platformLocation: PlatformLocation): string {
     FormsModule,
     AppRoutingModule,
     StoreModule.forRoot({
-      preloadedState: {},
       middlewares: [measure],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},

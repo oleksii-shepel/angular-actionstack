@@ -1,5 +1,5 @@
 import { Injector, Type } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { bindActionCreators, systemActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -7,6 +7,13 @@ import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
+
+export class StoreSettings {
+  shouldDispatchSystemActions: boolean = true;
+  shouldAwaitStatePropagation: boolean = true;
+  enableMetaReducers: boolean = false;
+  enableAsyncReducers: boolean = false;
+}
 
 export class Store {
   protected mainModule: MainModule;
@@ -24,8 +31,8 @@ export class Store {
   protected isProcessing: BehaviorSubject<boolean>;
   protected subscription: Subscription;
   protected systemActions: Record<keyof typeof systemActionCreators, any>;
-  protected settings: any;
-  
+  protected settings: StoreSettings;
+
   protected constructor() {
     let STORE_SETTINGS_DEFAULT =  {
       shouldDispatchSystemActions: true,
@@ -33,15 +40,14 @@ export class Store {
       enableMetaReducers: false,
       enableAsyncReducers: false
     };
-    
+
     let MAIN_MODULE_DEFAULT = {
       slice: "main",
       middlewares: [],
       reducer: (state: any = {}, action: Action<any>) => state,
       metaReducers: [],
       dependencies: {},
-      strategy: "exclusive" as "exclusive",
-      storeSettings: STORE_SETTINGS_DEFAULT
+      strategy: "exclusive" as "exclusive"
     };
 
     let MODULES_DEFAULT: FeatureModule[] = [];
@@ -83,7 +89,6 @@ export class Store {
       let store = new Store();
 
       store.mainModule = Object.assign({ ...store.mainModule }, mainModule);
-      store.settings = Object.assign({ ...store.settings }, store.mainModule.settings)
       store.pipeline = Object.assign({ ...store.pipeline }, {
         middlewares: Array.from(mainModule.middlewares ?? store.pipeline.middlewares),
         reducer: (state: any, action: any) => state,
@@ -97,11 +102,11 @@ export class Store {
 
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        concatMap(({count, action}: any) => count === 1 ? convertToObservable(this.getState()).pipe(
+        concatMap(({count, action}: any) => count === 1 ? convertToObservable(store.getState()).pipe(
           concatMap((state) => {
-            let stateUpdated = this.currentState.next(this.setupReducer());
-            let actionHandled = this.currentAction.next(systemActionCreators.initializeState());
-            return (this.settings.shouldAwaitStatePropagation ? combineLatest([
+            let stateUpdated = store.currentState.next(store.setupReducer());
+            let actionHandled = store.currentAction.next(systemActionCreators.initializeState());
+            return (store.settings.shouldAwaitStatePropagation ? combineLatest([
               from(stateUpdated), from(actionHandled)
             ]) : of(action));
           })
@@ -154,7 +159,7 @@ export class Store {
     }
   }
 
-  protected setState<T = any>(slice?: keyof T | string[], value: any): any {
+  protected setState<T = any>(slice?: keyof T | string[], value?: any): any {
     if (slice === undefined || typeof slice === "string" && slice == "@global") {
       // update the whole state with a shallow copy of the value
       return ({...value});
@@ -164,22 +169,22 @@ export class Store {
     } else if (Array.isArray(slice)) {
       // update the nested state property with the given path with a shallow copy of the value
       // use a helper function to recursively clone and update the object
-      return cloneAndUpdate(this.currentState.value, slice, value));
+      return cloneAndUpdate(this.currentState.value, slice, value);
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
   }
 
-  protected updateState<T = any>(slice?: keyof T | string[], callback: Function): Observable<any> {
+  protected updateState<T = any>(slice?: keyof T | string[], callback?: Function): Observable<any> {
     return convertToObservable(this.getState(slice)).pipe(
       concatMap((state) => {
-        return convertToObservable(this.setState(slice, callback(state))).pipe(
+        return convertToObservable(this.setState(slice, callback!(state))).pipe(
           concatMap((state) => {
             let stateUpdated = this.currentState.next(state);
             let actionHandled = this.currentAction.next(systemActionCreators.updateState());
             return (this.settings.shouldAwaitStatePropagation ? combineLatest([
               from(stateUpdated), from(actionHandled)
-            ]) : of(action));
+            ]) : of(state));
           })
         );
       })
@@ -211,9 +216,11 @@ export class Store {
   extend(...args: [...SideEffect[], any | never]) {
     const dependencies = typeof args[args.length - 1]  === "function" ? {} : args.pop();
     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
-    const effectsSubscription = return this.currentAction.asObservable().pipe(
+    const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
+
+    const effectsSubscription = this.currentAction.asObservable().pipe(
       withLatestFrom(of(this.currentState.value)),
-      concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
+      concatMap(([action, state]) => runSideEffects(args)(action, state, dependencies).pipe(
         mapMethod((childActions: Action<any>[]) => {
           if (childActions.length > 0) {
             return from(childActions).pipe(
@@ -226,12 +233,12 @@ export class Store {
         })
       ))
     ).subscribe();
-    
+
     effectsSubscription.unsubscribe = () => {
       effectsSubscription.unsubscribe();
       this.systemActions.effectsUnregistered(args);
     };
-    
+
     this.systemActions.effectsRegistered(args);
     return effectsSubscription;
   }
@@ -305,19 +312,19 @@ export class Store {
     return this;
   }
 
-  protected combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, any] {
+  protected combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, Map<string, string>] {
     let errors = new Map<string, string>();
-    let featureReducers = {};
+    let featureReducers = {} as any;
     let featureState = {} as any;
-  
+
     // Initialize state
     Object.keys(reducers).forEach((key) => {
       try {
-        if(typeof reducers[key] === "function") {
-          featureState[key] = reducers[key](undefined, systemActionCreators.initializeState());
+        if(reducers[key] instanceof Function) {
+          featureState[key] = (reducers[key] as Function)(undefined, systemActionCreators.initializeState());
           featureReducers[key] = reducers[key];
         } else {
-          let [nestedReducer, nestedState, nestedErrors] = combineReducers(featureReducers[key]);
+          let [nestedReducer, nestedState, nestedErrors] = this.combineReducers(featureReducers[key]);
           featureState[key] = nestedState;
           featureReducers[key] = nestedReducer;
           errors = new Map([...errors, ...nestedErrors]);
@@ -348,7 +355,7 @@ export class Store {
 
       return newState;
     };
-    
+
     return [combinedReducer, featureState, errors];
   }
 
@@ -376,7 +383,7 @@ export class Store {
 
   protected setupReducer(state: any = {}): any {
     let featureReducers = [{slice: this.mainModule.slice!, reducer: this.mainModule.reducer}, ...this.modules].reduce((reducers, module) => {
-      let moduleReducer: any = typeof module.reducer === "function" ? module.reducer : [...module.reducer];
+      let moduleReducer: any = module.reducer instanceof Function ? module.reducer : {...module.reducer};
       reducers = {...reducers, [module.slice]: moduleReducer};
       return reducers;
     }, {} as Record<string, Reducer>);
@@ -384,7 +391,7 @@ export class Store {
     let [reducer, initialState, errors] = this.combineReducers(featureReducers);
 
     // Update store state
-    const state = this.hydrateState({ ...state }, initialState);
+    state = this.hydrateState({ ...state }, initialState);
 
     this.settings.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
@@ -439,9 +446,6 @@ export class Store {
 
   protected processAction() {
     return (source: Observable<Action<any>>) => {
-      const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
-      const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-
       return source.pipe(
         concatMap((action: Action<any>) => {
           return convertToObservable(this.getState()).pipe(concatMap((state) => {
@@ -483,7 +487,7 @@ export class Store {
 
     const middlewares = [starter, ...this.pipeline.middlewares];
 
-    const chain = middlewares.map(middleware => middleware(isValidMiddleware(middleware.signature) ? store : middlewareAPI));
+    const chain = middlewares.map(middleware => middleware(isValidMiddleware(middleware.signature) ? this : middlewareAPI));
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
