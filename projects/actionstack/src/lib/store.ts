@@ -231,14 +231,14 @@ export class Store {
     return obs;
   }
 
-  extend(...args: [...SideEffect[], any | never]) {
-    const dependencies = typeof args[args.length - 1]  === "function" ? {} : args.pop();
+  extend(...args: SideEffect[]) {
+    const dependencies = this.pipeline.dependencies;
     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
     const effectsSubscription = this.currentAction.asObservable().pipe(
       withLatestFrom(this.currentState.asObservable()),
-      concatMap(([action, state]) => runSideEffects(args)(action, state, dependencies).pipe(
+      concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
         mapMethod((childActions: Action<any>[]) => {
           if (childActions.length > 0) {
             return from(childActions).pipe(

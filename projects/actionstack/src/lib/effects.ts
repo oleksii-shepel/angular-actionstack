@@ -5,7 +5,7 @@ import { Action, SideEffect, isAction } from "./types";
 export function createEffect(
   actionType: string,
   effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | Observable<Action<any>>
-): SideEffect {
+): () => SideEffect {
   function effectCreator(action$: Observable<Action<any>>, state$: Observable<any>, dependencies: Record<string, any>) {
     return action$.pipe(
       filter((action) => action.type === actionType),
@@ -43,7 +43,7 @@ export function createEffect(
   effectCreator.trigger = actionType;
   effectCreator.match = (action: any) => isAction(action) && action.type === actionType;
 
-  return effectCreator;
+  return () => effectCreator;
 }
 
 
@@ -56,8 +56,7 @@ export function ofType(...types: [string, ...string[]]): OperatorFunction<Action
   });
 }
 
-
-export function runSideEffectsSequentially(...sideEffects: [...SideEffect[], any | never]) {
+export function runSideEffectsSequentially(...sideEffects: SideEffect[]) {
   return (action: Action<any>, state: any, dependencies: any) =>
     from(sideEffects).pipe(
       concatMap(sideEffect => sideEffect(of(action), of(state), dependencies) as Observable<Action<any>>),
@@ -65,8 +64,7 @@ export function runSideEffectsSequentially(...sideEffects: [...SideEffect[], any
     );
 }
 
-
-export function runSideEffectsInParallel(sideEffects: [...SideEffect[], any | never]) {
+export function runSideEffectsInParallel(...sideEffects: SideEffect[]) {
   return (action: Action<any>, state: any, dependencies: any) =>
     from(sideEffects).pipe(
       mergeMap(sideEffect => sideEffect(of(action), of(state), dependencies) as Observable<Action<any>>),

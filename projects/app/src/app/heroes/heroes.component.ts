@@ -15,11 +15,11 @@ export class HeroesComponent implements OnInit, OnDestroy {
   heroes: Hero[] = [];
   subscriptionA!: Subscription;
   subscriptionB!: Subscription;
-  
+
   constructor(private store: Store, private heroService: HeroService) { }
 
   ngOnInit(): void {
-    this.subscriptionA = this.store.extend(loadHeroes, { heroService: this.heroService });
+    this.subscriptionA = this.store.extend(loadHeroes());
 
     this.subscriptionB = this.store.select(selectHeroes()).subscribe(value => {
       this.heroes = value;
