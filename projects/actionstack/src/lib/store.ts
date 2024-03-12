@@ -6,7 +6,7 @@ import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects"
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, Reducer, SideEffect, StoreEnhancer, convertToObservable, isPlainObject, kindOf } from "./types";
 
 export class StoreSettings {
   shouldDispatchSystemActions!: boolean;
@@ -504,10 +504,6 @@ export function compose(...funcs: AnyFn[]): AnyFn {
   }
 
   return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
-}
-
-export function convertToObservable(obj: any | Promise<any>) {
-  return obj instanceof Promise ? from(obj) : of(obj);
 }
 
 // a helper function to recursively clone and update an object with a given path and value
