@@ -1,4 +1,4 @@
-import { Action, createAction, createSelector } from "actionstack";
+import { Action, createAction, createFeatureSelector, createSelector } from "actionstack";
 
 export const slice = "messages";
 
@@ -28,6 +28,7 @@ export function reducer(state = initialState, action: Action<any>) {
   }
 }
 
-export const selectMessages = createSelector(slice, state => state.messages);
-export const selectMessageCount = createSelector(slice, state => state.messages.length);
+export const featureSelector = createFeatureSelector(slice);
+export const selectMessages = createSelector(featureSelector, state => state.messages);
+export const selectMessageCount = createSelector(featureSelector, state => state.messages.length);
 

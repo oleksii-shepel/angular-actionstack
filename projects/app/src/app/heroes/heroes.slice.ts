@@ -1,4 +1,4 @@
-import { Action, createAction, createEffect, createSelector } from "actionstack";
+import { Action, createAction, createEffect, createFeatureSelector, createSelector } from "actionstack";
 import { map } from "rxjs";
 import { Hero } from "../hero";
 
@@ -29,4 +29,5 @@ export function reducer(state = initialState, action: Action<any>) {
   }
 }
 
-export const selectHeroes = createSelector(slice, state => state.heroes);
+export const featureSelector = createFeatureSelector(slice);
+export const selectHeroes = createSelector(featureSelector, state => state.heroes);

@@ -1,20 +1,23 @@
-import { EMPTY, Observable, concatMap, distinctUntilChanged, of, shareReplay } from "rxjs";
+import { EMPTY, Observable, concatMap, distinctUntilChanged, map, of, shareReplay } from "rxjs";
 import { Store } from './store';
-import { AnyFn, ProjectionFunction, convertToObservable } from "./types";
+import { AnyFn, ProjectionFunction } from "./types";
 
 export function createFeatureSelector<U = any, T = any> (
-  slice: keyof T | string[]): (store: Store) => Observable<U> {
-  return (store: Store) => convertToObservable(store.getState(slice)).pipe(
+  slice: keyof T | string[]): (state$: Observable<T>) => Observable<U> {
+  return (state$: Observable<T>) => state$.pipe(
+    map(state => (Array.isArray(slice))
+      ? slice.reduce((acc, key) => (acc && Array.isArray(acc) ? acc[parseInt(key)] : (acc as any)[key]) || undefined, state)
+      : state[slice]),
     concatMap(state => state === undefined ? EMPTY: of(state)),
     distinctUntilChanged(),
     shareReplay({bufferSize: 1, refCount: false})
-  );
+  ) as Observable<U>;
 }
 
 export function createSelector<U = any, T = any> (
-  slice: keyof T | string[],
+  featureSelector$: (store: Observable<T>) => Observable<U>,
   selectors: AnyFn | AnyFn[],
-  projectionOrOptions?: ProjectionFunction): (props?: any[] | any, projectionProps?: any) => AnyFn {
+  projectionOrOptions?: ProjectionFunction): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
 
   const isSelectorArray = Array.isArray(selectors);
   const projection = typeof projectionOrOptions === "function" ? projectionOrOptions : undefined;
@@ -23,36 +26,29 @@ export function createSelector<U = any, T = any> (
     throw new Error("Invalid parameters: When 'selectors' is an array, 'projection' function should be provided.");
   }
 
-  // The createSelector function will return a function that takes some arguments and returns combined result of selection and projection
   return (props?: any[] | any, projectionProps?: any) => {
     if(Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
-    // The memoizedSelector function will return a function that executes the selectors and projection
-    const fn = (store: Store): U => {
-      let sliceState = store.getState(slice);
-      if (sliceState instanceof Promise) {
-        throw new Error("getState method returned a promise. Please use async selector instead.")
-      }
-      if (sliceState === undefined) {
-        return undefined as U;
-      }
 
-      let selectorResults;
-      if (Array.isArray(selectors)) {
-        selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]))
-        return (selectorResults.some(result => typeof result === 'undefined'))
-          ? undefined as U
-          : projection ? projection(selectorResults, projectionProps) : selectorResults;
-      } else {
-        selectorResults = selectors && selectors(sliceState, props);
-        return (typeof selectorResults === 'undefined')
-          ? undefined as U
-          : projection ? projection(selectorResults, projectionProps) : selectorResults;
-      }
+    return (state$: Observable<T>) => {
+      return featureSelector$(state$).pipe(
+        concatMap(sliceState => {
+          let selectorResults;
+          if (Array.isArray(selectors)) {
+            selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]))
+            return of((selectorResults.some(result => typeof result === 'undefined'))
+              ? undefined as U
+              : projection ? projection(selectorResults, projectionProps) : selectorResults)
+          } else {
+            selectorResults = selectors && selectors(sliceState, props);
+            return of((typeof selectorResults === 'undefined')
+              ? undefined as U
+              : projection ? projection(selectorResults, projectionProps) : selectorResults)
+          }
+        })
+      );
     };
-
-    return fn;
   };
 }
 

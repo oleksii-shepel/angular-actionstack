@@ -1,8 +1,8 @@
 import { ElementRef, Injectable, OnDestroy, inject } from "@angular/core";
-import { Subscription } from "rxjs";
+import { Observable, Subscription } from "rxjs";
 import { StoreModule } from "./module";
 import { Store } from "./store";
-import { Action, AnyFn, Reducer, SideEffect } from "./types";
+import { Action, Reducer, SideEffect } from "./types";
 
 export interface SliceOptions {
   slice?: string;
@@ -48,7 +48,7 @@ export class Slice implements OnDestroy {
     this.store.dispatch(action);
   }
 
-  select(selector: Promise<AnyFn> | AnyFn, defaultValue?: any): any {
+  select<U = any, T = any>(selector: (obs: Observable<T>) => Observable<U>, defaultValue?: any): any {
     return this.store.select(selector, defaultValue);
   }
 

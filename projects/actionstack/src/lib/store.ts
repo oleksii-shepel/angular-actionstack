@@ -160,7 +160,7 @@ export class Store {
   }
 
   getState<T = any>(slice?: keyof T | string[]): any {
-    if (slice === undefined || typeof slice === "string" && slice == "@global") {
+    if (this.currentState.value === undefined || slice === undefined || typeof slice === "string" && slice == "@global") {
       return this.currentState.value as T;
     } else if (typeof slice === "string") {
       return this.currentState.value[slice] as T;
@@ -198,8 +198,8 @@ export class Store {
         return convertToObservable(callback!(state)).pipe(
           (concatMap((result) => {
             return convertToObservable(this.setState(slice, result)).pipe(
-              concatMap((state) => {
-              let stateUpdated = this.currentState.next(state);
+              concatMap((newState) => {
+              let stateUpdated = this.currentState.next(newState);
               let actionHandled = this.currentAction.next(action);
               return (this.settings.shouldAwaitStatePropagation ? combineLatest([
                 from(stateUpdated), from(actionHandled)
@@ -223,14 +223,12 @@ export class Store {
     }
   }
 
-  select(selector: Promise<AnyFn> | AnyFn, defaultValue?: any): Observable<any> {
-    return this.currentState.asObservable().pipe(
-      concatMap(() => (selector instanceof Promise ? from(selector) : of(selector)).pipe(
-      concatMap(async (selector) => await selector(this)),
-      filter(value => value !== undefined),
-      distinctUntilChanged(),
-      defaultValue !== undefined ? defaultIfEmpty(defaultValue) : (value => value)
-    )));
+  select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
+    let obs = selector(this.currentState.asObservable()).pipe(distinctUntilChanged());
+    if (defaultValue !== undefined) {
+      obs = obs.pipe(defaultIfEmpty(defaultValue));
+    }
+    return obs;
   }
 
   extend(...args: [...SideEffect[], any | never]) {
@@ -516,15 +514,17 @@ export function cloneAndUpdate(obj: any, path: string[], value: any): any {
   const key = path[0];
   const rest = path.slice(1);
   const clonedObj = {...obj};
-  if (Array.isArray(obj[key])) {
-    // if the property is an array, clone and update the element with the next element of the path
-    const index = parseInt(rest[0]);
-    const restRest = rest.slice(1);
-    clonedObj[key] = [...obj[key]];
-    clonedObj[key][index] = cloneAndUpdate(obj[key][index], restRest, value);
-  } else {
-    // if the property is an object, clone and update the nested property with the rest of the path
-    clonedObj[key] = cloneAndUpdate(obj[key], rest, value);
+  if(obj !== undefined) {
+    if (Array.isArray(obj[key])) {
+      // if the property is an array, clone and update the element with the next element of the path
+      const index = parseInt(rest[0]);
+      const restRest = rest.slice(1);
+      clonedObj[key] = [...obj[key]];
+      clonedObj[key][index] = cloneAndUpdate(obj[key][index], restRest, value);
+    } else {
+      // if the property is an object, clone and update the nested property with the rest of the path
+      clonedObj[key] = cloneAndUpdate(obj[key], rest, value);
+    }
   }
   return clonedObj;
 }
