@@ -29,7 +29,7 @@ export class StoreSettings {
 }
 
 
-export const systemActions = {
+export const systemActionTypes = {
   INITIALIZE_STATE: `INITIALIZE_STATE`,
   UPDATE_STATE: `UPDATE_STATE`,
   STORE_INITIALIZED: `STORE_INITIALIZED`,
@@ -40,14 +40,14 @@ export const systemActions = {
 };
 
 // Define the action creators
-export const systemActionCreators = {
-  initializeState: action(systemActions.INITIALIZE_STATE),
-  updateState: action(systemActions.UPDATE_STATE),
-  storeInitialized: action(systemActions.STORE_INITIALIZED),
-  moduleLoaded: action(systemActions.MODULE_LOADED, (module: FeatureModule) => ({module})),
-  moduleUnloaded: action(systemActions.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
-  effectsRegistered: action(systemActions.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
-  effectsUnregistered: action(systemActions.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
+export const systemActions = {
+  initializeState: action(systemActionTypes.INITIALIZE_STATE),
+  updateState: action(systemActionTypes.UPDATE_STATE),
+  storeInitialized: action(systemActionTypes.STORE_INITIALIZED),
+  moduleLoaded: action(systemActionTypes.MODULE_LOADED, (module: FeatureModule) => ({module})),
+  moduleUnloaded: action(systemActionTypes.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
+  effectsRegistered: action(systemActionTypes.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
+  effectsUnregistered: action(systemActionTypes.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
 };
 
 
@@ -66,7 +66,7 @@ export class Store {
   protected currentState: CustomAsyncSubject<any>;
   protected isProcessing: BehaviorSubject<boolean>;
   protected subscription: Subscription;
-  protected systemActions: Record<keyof typeof systemActionCreators, any>;
+  protected systemActions: Record<keyof typeof systemActions, any>;
   protected settings: StoreSettings;
 
   protected constructor() {
@@ -103,7 +103,7 @@ export class Store {
 
     let PROCESSING_DEFAULT = new BehaviorSubject(false);
     let SUBSCRIPTION_DEFAULT = Subscription.EMPTY;
-    let SYSTEM_ACTIONS_DEFAULT = { ...systemActionCreators };
+    let SYSTEM_ACTIONS_DEFAULT = { ...systemActions };
 
     try {
       STORE_SETTINGS_DEFAULT = Object.assign(STORE_SETTINGS_DEFAULT, inject(StoreSettings));
@@ -145,11 +145,11 @@ export class Store {
 
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        concatMap(({count, action}: any) => (count === 1) ? store.updateState("@global", () => store.setupReducer(), systemActionCreators.initializeState()) : of(action)),
+        concatMap(({count, action}: any) => (count === 1) ? store.updateState("@global", () => store.setupReducer(), systemActions.initializeState()) : of(action)),
         store.processAction()
       ).subscribe();
 
-      store.systemActions = bindActionCreators(systemActionCreators, (action: Action<any>) => store.settings.shouldDispatchSystemActions && store.dispatch(action));
+      store.systemActions = bindActionCreators(systemActions, (action: Action<any>) => store.settings.shouldDispatchSystemActions && store.dispatch(action));
 
       store.systemActions.initializeState();
       store.systemActions.storeInitialized();
@@ -210,7 +210,7 @@ export class Store {
     }
   }
 
-  protected updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActionCreators.updateState()): Observable<any> {
+  protected updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActions.updateState()): Observable<any> {
 
     if(callback === undefined) {
       throw new Error('Callback function is missing. State will not be updated.')
@@ -298,7 +298,7 @@ export class Store {
         // Inject dependencies
         this.injectDependencies(injector);
       }),
-      concatMap(() => this.updateState("@global", state => this.setupReducer(state), systemActionCreators.updateState())),
+      concatMap(() => this.updateState("@global", state => this.setupReducer(state), systemActions.updateState())),
       tap(() => this.systemActions.moduleLoaded(module)),
       catchError(error => { console.warn(error.message); return EMPTY; }),
       finalize(() => this.isProcessing.next(false))
@@ -326,7 +326,7 @@ export class Store {
           delete state[module.slice];
         }
         return this.setupReducer(state);
-      }, systemActionCreators.initializeState())),
+      }, systemActions.initializeState())),
       tap(() => this.systemActions.moduleUnloaded(module)),
       catchError(error => { console.warn(error.message); return EMPTY; }),
       finalize(() => this.isProcessing.next(false))
@@ -344,7 +344,7 @@ export class Store {
     Object.keys(reducers).forEach((key) => {
       try {
         if(reducers[key] instanceof Function) {
-          featureState[key] = (reducers[key] as Function)(undefined, systemActionCreators.initializeState());
+          featureState[key] = (reducers[key] as Function)(undefined, systemActions.initializeState());
           featureReducers[key] = reducers[key];
         } else {
           let [nestedReducer, nestedState, nestedErrors] = this.combineReducers(featureReducers[key]);
@@ -512,7 +512,6 @@ export class Store {
     this.dispatch = dispatch;
     return this;
   }
-
 }
 
 export function compose(...funcs: AnyFn[]): AnyFn {

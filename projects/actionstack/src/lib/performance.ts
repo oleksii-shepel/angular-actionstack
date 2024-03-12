@@ -1,5 +1,5 @@
 import { salt } from './hash';
-import { systemActions } from './store';
+import { systemActionTypes } from './store';
 import { Action } from "./types";
 
 export const createPerformanceLogger = () => {
@@ -22,7 +22,7 @@ export const createPerformanceLogger = () => {
 
       if(actionGroup.length > 0) {
         const totalDuration = actionGroup.reduce((total, ad) => total + ad.duration, 0);
-        const uniqueId = (action.type in systemActions)
+        const uniqueId = (action.type in systemActionTypes)
           ? `[⚙️ ${salt(5).split('').join('.')}]`
           : `[🤹 ${salt(5).split('').join('.')}]`;
 
