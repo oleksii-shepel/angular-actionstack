@@ -1,6 +1,6 @@
+import { EMPTY, Observable, distinctUntilChanged, of, shareReplay } from "rxjs";
 import { Store } from './store';
 import { AnyFn, ProjectionFunction, convertToObservable } from "./types";
-import { Observable, EMPTY, distinctUntilChanged, of, shareReplay } from "rxjs";
 
 export function createFeatureSelector<U = any, T = any> (
   slice: keyof T | string[]): (store: Store) => Observable<U> {
@@ -12,7 +12,7 @@ export function createFeatureSelector<U = any, T = any> (
 }
 
 export function createSelector<U = any, T = any> (
-  featureSelector: Observable<U>,
+  slice: keyof T | string[],
   selectors: AnyFn | AnyFn[],
   projectionOrOptions?: ProjectionFunction): (props?: any[] | any, projectionProps?: any) => AnyFn {
 
@@ -28,24 +28,31 @@ export function createSelector<U = any, T = any> (
     if(Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
+    // The memoizedSelector function will return a function that executes the selectors and projection
+    const fn = (store: Store): U => {
+      let sliceState = store.getState(slice);
+      if (sliceState instanceof Promise) {
+        throw new Error("getState method returned a promise. Please use async selector instead.")
+      }
+      if (sliceState === undefined) {
+        return undefined as U;
+      }
 
-    return featureSelector.pipe(
-      concatMap(slice => {
-        let selectorResults;
-        if (Array.isArray(selectors)) {
-          selectorResults = selectors.map((selector, index) => selector(slice, props[index]))
-          return (selectorResults.some(result => typeof result === 'undefined'))
-            ? EMPTY
-            : convertToObservable(selectorResults);
-        } else {
-          selectorResults = selectors && selectors(slice, props);
-          return (typeof selectorResults === 'undefined')
-            ? EMPTY
-            : convertToObservable(selectorResults);
-        }
-      }),
-      concatMap(selectorsResult => projection ? convertToObservable(projection(selectorResults, projectionProps)) : EMPTY)
-    );
+      let selectorResults;
+      if (Array.isArray(selectors)) {
+        selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]))
+        return (selectorResults.some(result => typeof result === 'undefined'))
+          ? undefined as U
+          : projection ? projection(selectorResults, projectionProps) : selectorResults;
+      } else {
+        selectorResults = selectors && selectors(sliceState, props);
+        return (typeof selectorResults === 'undefined')
+          ? undefined as U
+          : projection ? projection(selectorResults, projectionProps) : selectorResults;
+      }
+    };
+
+    return fn;
   };
 }
 
@@ -83,7 +90,7 @@ export function createSelectorAsync<U = any, T = any> (
           ? undefined as U
           : projection ? projection(selectorResults, projectionProps) : undefined;
       } else {
-        selectorResults = selectors && selectors(sliceState, props);
+        selectorResults = selectors && await selectors(sliceState, props);
         return (typeof selectorResults === 'undefined')
           ? undefined as U
           : projection ? projection(selectorResults, projectionProps) : selectorResults;

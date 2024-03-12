@@ -1,4 +1,4 @@
-import { Observable } from "rxjs";
+import { Observable, from, of } from "rxjs";
 import { Store } from "./store";
 
 export interface Action<T = any> {
