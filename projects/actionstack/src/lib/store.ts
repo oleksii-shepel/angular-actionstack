@@ -108,11 +108,11 @@ export class Store {
 
       let store = new Store();
 
-      store.mainModule = Object.assign({ ...store.mainModule }, mainModule);
-      store.pipeline = Object.assign({ ...store.pipeline }, {
+      store.mainModule = Object.assign(store.mainModule, { ...mainModule });
+      store.pipeline = Object.assign(store.pipeline, {
         middlewares: Array.from(mainModule.middlewares ?? store.pipeline.middlewares),
         reducer: (state: any, action: any) => state,
-        dependencies: Object.assign(store.pipeline.dependencies, {...mainModule.dependencies}),
+        dependencies: Object.assign(store.pipeline.dependencies, { ...mainModule.dependencies }),
         strategy: mainModule.strategy ?? store.pipeline.strategy,
       });
 
