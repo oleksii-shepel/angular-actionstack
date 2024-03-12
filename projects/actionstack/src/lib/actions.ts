@@ -1,27 +1,8 @@
-import { FeatureModule, SideEffect, isAction, kindOf } from "./types";
+import { isAction, kindOf } from "./types";
 
-export const systemActions = {
-  INITIALIZE_STATE: `INITIALIZE_STATE`,
-  UPDATE_STATE: `UPDATE_STATE`,
-  STORE_INITIALIZED: `STORE_INITIALIZED`,
-  MODULE_LOADED: `MODULE_LOADED`,
-  MODULE_UNLOADED: `MODULE_UNLOADED`,
-  EFFECTS_REGISTERED: `EFFECTS_REGISTERED`,
-  EFFECTS_UNREGISTERED: `EFFECTS_UNREGISTERED`
-};
+export { createAction as action };
 
-// Define the action creators
-export const systemActionCreators = {
-  initializeState: createAction(systemActions.INITIALIZE_STATE),
-  updateState: createAction(systemActions.UPDATE_STATE),
-  storeInitialized: createAction(systemActions.STORE_INITIALIZED),
-  moduleLoaded: createAction(systemActions.MODULE_LOADED, (module: FeatureModule) => ({module})),
-  moduleUnloaded: createAction(systemActions.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
-  effectsRegistered: createAction(systemActions.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
-  effectsUnregistered: createAction(systemActions.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
-};
-
-export function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
+function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
   function actionCreator(...args: any[]) {
     let action: any = {
       type: typeOrThunk,

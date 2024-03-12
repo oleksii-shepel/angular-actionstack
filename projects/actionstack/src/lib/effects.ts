@@ -1,8 +1,9 @@
 import { EMPTY, Observable, OperatorFunction, concatMap, filter, from, isObservable, mergeMap, of, toArray, withLatestFrom } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
+export { createEffect as effect };
 
-export function createEffect(
+function createEffect(
   actionType: string,
   effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | Observable<Action<any>>
 ): () => SideEffect {

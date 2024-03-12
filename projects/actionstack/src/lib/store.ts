@@ -1,6 +1,6 @@
 import { Injector, Type, inject } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
-import { bindActionCreators, systemActionCreators } from "./actions";
+import { action, bindActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { isValidMiddleware } from "./hash";
@@ -27,6 +27,29 @@ export class StoreSettings {
     };
   }
 }
+
+
+export const systemActions = {
+  INITIALIZE_STATE: `INITIALIZE_STATE`,
+  UPDATE_STATE: `UPDATE_STATE`,
+  STORE_INITIALIZED: `STORE_INITIALIZED`,
+  MODULE_LOADED: `MODULE_LOADED`,
+  MODULE_UNLOADED: `MODULE_UNLOADED`,
+  EFFECTS_REGISTERED: `EFFECTS_REGISTERED`,
+  EFFECTS_UNREGISTERED: `EFFECTS_UNREGISTERED`
+};
+
+// Define the action creators
+export const systemActionCreators = {
+  initializeState: action(systemActions.INITIALIZE_STATE),
+  updateState: action(systemActions.UPDATE_STATE),
+  storeInitialized: action(systemActions.STORE_INITIALIZED),
+  moduleLoaded: action(systemActions.MODULE_LOADED, (module: FeatureModule) => ({module})),
+  moduleUnloaded: action(systemActions.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
+  effectsRegistered: action(systemActions.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
+  effectsUnregistered: action(systemActions.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
+};
+
 
 export class Store {
   protected mainModule: MainModule;

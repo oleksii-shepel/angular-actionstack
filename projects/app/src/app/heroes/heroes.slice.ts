@@ -1,13 +1,13 @@
-import { Action, createAction, createEffect, createFeatureSelector, createSelector } from "actionstack";
+import { Action, action, effect, featureSelector, selector } from "actionstack";
 import { map } from "rxjs";
 import { Hero } from "../hero";
 
 export const slice = "heroes";
 
-export const getHeroesRequest = createAction("GET_HEROES_REQUEST", (heroes: Hero[]) => ({heroes}));
-export const getHeroesSuccess = createAction("GET_HEROES_SUCCESS", (heroes: Hero[]) => ({heroes}));
+export const getHeroesRequest = action("GET_HEROES_REQUEST", (heroes: Hero[]) => ({heroes}));
+export const getHeroesSuccess = action("GET_HEROES_SUCCESS", (heroes: Hero[]) => ({heroes}));
 
-export const loadHeroes = createEffect(getHeroesRequest.type, (action, state, { [slice]: {heroService} }: any) => {
+export const loadHeroes = effect(getHeroesRequest.type, (action, state, { [slice]: {heroService} }: any) => {
   return heroService.getHeroes().pipe(map(heroes => getHeroesSuccess(heroes)));
 });
 
@@ -29,5 +29,5 @@ export function reducer(state = initialState, action: Action<any>) {
   }
 }
 
-export const featureSelector = createFeatureSelector(slice);
-export const selectHeroes = createSelector(featureSelector, state => state.heroes);
+export const feature = featureSelector(slice);
+export const selectHeroes = selector(feature, state => state.heroes);

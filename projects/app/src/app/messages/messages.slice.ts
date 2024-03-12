@@ -1,10 +1,10 @@
-import { Action, createAction, createFeatureSelector, createSelector } from "actionstack";
+import { Action, action, featureSelector, selector } from "actionstack";
 
 export const slice = "messages";
 
-// Define the actions using createAction
-export const addMessage = createAction("ADD_MESSAGE", (message: string) => ({ message }));
-export const clearMessages = createAction('CLEAR_MESSAGES');
+// Define the actions using action
+export const addMessage = action("ADD_MESSAGE", (message: string) => ({ message }));
+export const clearMessages = action('CLEAR_MESSAGES');
 
 // Define the initial state
 const initialState = {
@@ -28,7 +28,7 @@ export function reducer(state = initialState, action: Action<any>) {
   }
 }
 
-export const featureSelector = createFeatureSelector(slice);
-export const selectMessages = createSelector(featureSelector, state => state.messages);
-export const selectMessageCount = createSelector(featureSelector, state => state.messages.length);
+export const feature = featureSelector(slice);
+export const selectMessages = selector(feature, state => state.messages);
+export const selectMessageCount = selector(feature, state => state.messages.length);
 

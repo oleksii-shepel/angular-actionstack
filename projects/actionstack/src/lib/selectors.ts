@@ -1,7 +1,13 @@
 import { EMPTY, Observable, concatMap, distinctUntilChanged, filter, map, of, shareReplay, switchMap } from "rxjs";
 import { AnyFn, ProjectionFunction } from "./types";
 
-export function createFeatureSelector<U = any, T = any> (
+export {
+  createFeatureSelector as featureSelector,
+  createSelector as selector,
+  createSelectorAsync as selectorAsync
+};
+
+function createFeatureSelector<U = any, T = any> (
   slice: keyof T | string[]): (state$: Observable<T>) => Observable<U> {
   return (state$: Observable<T>) => state$.pipe(
     filter(state => state !== undefined),
@@ -14,7 +20,7 @@ export function createFeatureSelector<U = any, T = any> (
   ) as Observable<U>;
 }
 
-export function createSelector<U = any, T = any> (
+function createSelector<U = any, T = any> (
   featureSelector$: (store: Observable<T>) => Observable<U>,
   selectors: AnyFn | AnyFn[],
   projectionOrOptions?: ProjectionFunction): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
@@ -52,7 +58,7 @@ export function createSelector<U = any, T = any> (
   };
 }
 
-export function createSelectorAsync<U = any, T = any> (
+function createSelectorAsync<U = any, T = any> (
   featureSelector$: (store: Observable<T>) => Observable<U>,
   selectors: ((...args: any) => any | Promise<any>) | ((...args: any) => any | Promise<any>)[],
   projectionOrOptions?: ProjectionFunction

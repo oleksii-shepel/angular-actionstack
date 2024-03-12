@@ -1,14 +1,14 @@
-import { createAction, createFeatureSelector, createSelector } from "actionstack";
+import { action, featureSelector, selector } from "actionstack";
 import { firstValueFrom } from 'rxjs';
 import { Hero } from "../hero";
 
 export const slice = "dashboard";
 
-export const loadHeroesRequest = createAction('LOAD_HEROES_REQUEST');
-export const loadHeroesSuccess = createAction('LOAD_HEROES_SUCCESS', (heroes: Hero[]) => ({ heroes }));
-export const loadHeroesFailure = createAction('LOAD_HEROES_FAILURE', (error: Error) => ({ error }));
+export const loadHeroesRequest = action('LOAD_HEROES_REQUEST');
+export const loadHeroesSuccess = action('LOAD_HEROES_SUCCESS', (heroes: Hero[]) => ({ heroes }));
+export const loadHeroesFailure = action('LOAD_HEROES_FAILURE', (error: Error) => ({ error }));
 
-export const loadHeroes = createAction(() => async (dispatch: Function, getState: Function, dependencies: any) => {
+export const loadHeroes = action(() => async (dispatch: Function, getState: Function, dependencies: any) => {
   dispatch(loadHeroesRequest());
   try {
     const heroService = dependencies[slice].heroService;
@@ -35,5 +35,5 @@ export function reducer(state = initialState, action: any): any {
   }
 }
 
-export const featureSelector = createFeatureSelector(slice);
-export const selectTopHeroes = createSelector<typeof initialState>(featureSelector, state => state.heroes.slice(1, 5));
+export const feature = featureSelector(slice);
+export const selectTopHeroes = selector<typeof initialState>(feature, state => state.heroes.slice(1, 5));

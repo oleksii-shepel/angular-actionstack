@@ -1,14 +1,14 @@
-import { Action, createAction, createFeatureSelector, createSelector } from "actionstack";
+import { Action, action, featureSelector, selector } from "actionstack";
 import { firstValueFrom } from "rxjs";
 import { Hero } from "../hero";
 
 export const slice = "hero-details";
 
-export const loadHeroRequest = createAction('LOAD_HERO_REQUEST');
-export const loadHeroSuccess = createAction('LOAD_HERO_SUCCESS', (hero: Hero) => ({ hero }));
-export const loadHeroFailure = createAction('LOAD_HERO_FAILURE', (error: Error) => ({ error }));
+export const loadHeroRequest = action('LOAD_HERO_REQUEST');
+export const loadHeroSuccess = action('LOAD_HERO_SUCCESS', (hero: Hero) => ({ hero }));
+export const loadHeroFailure = action('LOAD_HERO_FAILURE', (error: Error) => ({ error }));
 
-export const loadHero = createAction((id: number) => async (dispatch: Function, getState: Function, dependencies: any) => {
+export const loadHero = action((id: number) => async (dispatch: Function, getState: Function, dependencies: any) => {
   dispatch(loadHeroRequest(id));
   try {
     const heroService = dependencies[slice].heroService;
@@ -34,5 +34,5 @@ export const reducer = (state = initialState, action: Action<any>) => {
   }
 };
 
-export const featureSelector = createFeatureSelector(slice);
-export const heroSelector = createSelector(featureSelector, state => state.hero);
+export const feature = featureSelector(slice);
+export const heroSelector = selector(feature, state => state.hero);

@@ -1,5 +1,5 @@
-import { systemActions } from './actions';
 import { salt } from './hash';
+import { systemActions } from './store';
 import { Action } from "./types";
 
 export const createPerformanceLogger = () => {
