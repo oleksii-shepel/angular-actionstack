@@ -1,5 +1,15 @@
 import { Store } from './store';
-import { AnyFn, ProjectionFunction } from "./types";
+import { AnyFn, ProjectionFunction, convertToObservable } from "./types";
+import { Observable, EMPTY, distinctUntilChanged, of, shareReplay } from "rxjs";
+
+export function createFeatureSelector<U = any, T = any> (
+  slice: keyof T | string[]): (store: Store) => Observable<U> {
+  return (store: Store) => convertToObservable(store.getState(slice)).pipe(
+    concatMap(state => state === undefined ? EMPTY: of(state)),
+    distinctUntilChanged(),
+    shareReplay({bufferSize: 1, refCount: 1})
+  );
+}
 
 export function createSelector<U = any, T = any> (
   slice: keyof T | string[],
