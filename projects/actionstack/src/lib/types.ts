@@ -56,6 +56,10 @@ export interface MainModule {
 export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;
 export type StoreEnhancer = (next: StoreCreator) => StoreCreator;
 
+export function convertToObservable(obj: any | Promise<any>) {
+  return obj instanceof Promise ? from(obj) : of(obj);
+}
+
 function isAction(action: any): boolean {
   return isPlainObject(action) && "type" in action && typeof action.type === "string";
 }
