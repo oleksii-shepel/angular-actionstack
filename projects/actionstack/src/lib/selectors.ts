@@ -1,4 +1,4 @@
-import { EMPTY, Observable, distinctUntilChanged, of, shareReplay } from "rxjs";
+import { EMPTY, Observable, concatMap, distinctUntilChanged, of, shareReplay } from "rxjs";
 import { Store } from './store';
 import { AnyFn, ProjectionFunction, convertToObservable } from "./types";
 
@@ -7,7 +7,7 @@ export function createFeatureSelector<U = any, T = any> (
   return (store: Store) => convertToObservable(store.getState(slice)).pipe(
     concatMap(state => state === undefined ? EMPTY: of(state)),
     distinctUntilChanged(),
-    shareReplay({bufferSize: 1, refCount: 1})
+    shareReplay({bufferSize: 1, refCount: false})
   );
 }
 
