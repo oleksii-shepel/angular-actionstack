@@ -32,7 +32,7 @@ export function createAction(typeOrThunk: string | Function, payloadCreator?: Fu
         try {
           return await typeOrThunk(...args)(dispatch, getState, dependencies);
         } catch (error: any) {
-          console.warn(`Error in action: ${error.message}`);
+          console.warn(`Error in action: ${error.message}. If dependencies object provided does not contain required property, it is possible that the slice name obtained from the tag name does not match the one declared in the slice file.`);
         }
       }
     } else if (payloadCreator) {
