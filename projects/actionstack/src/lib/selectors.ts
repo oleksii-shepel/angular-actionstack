@@ -1,9 +1,10 @@
-import { EMPTY, Observable, concatMap, distinctUntilChanged, map, of, shareReplay, switchMap } from "rxjs";
+import { EMPTY, Observable, concatMap, distinctUntilChanged, filter, map, of, shareReplay, switchMap } from "rxjs";
 import { AnyFn, ProjectionFunction } from "./types";
 
 export function createFeatureSelector<U = any, T = any> (
   slice: keyof T | string[]): (state$: Observable<T>) => Observable<U> {
   return (state$: Observable<T>) => state$.pipe(
+    filter(state => state !== undefined),
     map(state => (Array.isArray(slice))
       ? slice.reduce((acc, key) => (acc && Array.isArray(acc) ? acc[parseInt(key)] : (acc as any)[key]) || undefined, state)
       : state[slice]),
