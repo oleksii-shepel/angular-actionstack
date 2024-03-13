@@ -472,7 +472,7 @@ export class Store {
       return source.pipe(
         concatMap(async (action: Action<any>) => {
           this.updateState("@global", (state) => {
-            const reducerResult = this.pipeline.reducer("@global", state, action);
+            const reducerResult = this.pipeline.reducer(state, action);
             // Check if enableAsyncReducers is false and reducer is an async function
             if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
               throw new Error("Async reducers are disabled.");
