@@ -466,21 +466,28 @@ export class Store {
     }
     return this;
   }
-
+  
   protected processAction() {
     return (source: Observable<Action<any>>) => {
       return source.pipe(
-        concatMap((action: Action<any>) =>
-          this.updateState("@global", state => this.pipeline.reducer(state, action), action).pipe(
+        concatMap(async (action: Action<any>) => {
+          this.updateState("@global", (state) => {
+            const reducerResult = this.pipeline.reducer("@global", state, action);
+            // Check if enableAsyncReducers is false and reducer is an async function
+            if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
+              throw new Error("Async reducers are disabled.");
+            }
+            return reducerResult;
+          }, action).pipe(
             finalize(() => (this.actionStack.pop(), this.actionStack.length === 0 && this.isProcessing.next(false)))
-          )
-        ),
+          );
+        }),
         ignoreElements(),
         catchError((error) => {
           console.warn(error.message);
           return EMPTY;
         })
-      )
+      );
     };
   }
 
