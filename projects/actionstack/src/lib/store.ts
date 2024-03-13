@@ -341,11 +341,18 @@ export class Store {
     let featureState = {} as any;
 
     // Initialize state
-    Object.keys(reducers).forEach(async (key) => {
+    for (let key of Object.keys(reducers)) {
       try {
         if(reducers[key] instanceof Function) {
-          featureState[key] = await (reducers[key] as Function)(undefined, systemActions.initializeState());
-          featureReducers[key] = reducers[key];
+          let reducer = reducers[key] as Function;
+          let reducerResult = reducer(undefined, systemActions.initializeState());
+
+          featureState[key] = await reducerResult;
+          featureReducers[key] = reducer;
+
+          if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
+            throw new Error("Async reducers are disabled.");
+          }
         } else {
           let [nestedReducer, nestedState, nestedErrors] = await this.combineReducers(featureReducers[key]);
           featureState[key] = nestedState;
@@ -355,7 +362,7 @@ export class Store {
       } catch (error: any) {
         errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
       }
-    });
+    }
 
     Object.keys(featureReducers).filter((key) => errors.has(key)).forEach(key => {
       delete featureReducers[key];
@@ -365,16 +372,17 @@ export class Store {
     const combinedReducer = async (state: any = {}, action: Action<any>) => {
       let newState = state;
 
-      Object.keys(featureReducers).forEach(async (key) => {
+      for (let key of Object.keys(featureReducers)) {
         try {
           const featureState = await featureReducers[key](newState[key], action);
+
           if(featureState !== newState[key]){
             newState = {...newState, [key]: featureState};
           }
         } catch (error: any) {
           throw new Error(`Error occurred while processing an action ${action.type} for ${key}: ${error.message}`);
         }
-      });
+      }
 
       return newState;
     };
@@ -423,7 +431,6 @@ export class Store {
       }
       return reducer;
     };
-
 
     this.settings.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
@@ -479,13 +486,13 @@ export class Store {
   protected processAction() {
     return (source: Observable<Action<any>>) => {
       return source.pipe(
-        concatMap(async (action: Action<any>) => {
-          this.updateState("@global", (state) => {
+        concatMap((action: Action<any>) => {
+          return this.updateState("@global", (state) => {
             const reducerResult = this.pipeline.reducer(state, action);
             // Check if enableAsyncReducers is false and reducer is an async function
-            if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
-              throw new Error("Async reducers are disabled.");
-            }
+            // if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
+            //   throw new Error("Async reducers are disabled.");
+            // }
             return reducerResult;
           }, action).pipe(
             finalize(() => (this.actionStack.pop(), this.actionStack.length === 0 && this.isProcessing.next(false)))

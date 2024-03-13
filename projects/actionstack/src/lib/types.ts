@@ -56,26 +56,6 @@ export interface MainModule {
 export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;
 export type StoreEnhancer = (next: StoreCreator) => StoreCreator;
 
-export function convertToObservable(obj: any | Promise<any>) {
-  return obj instanceof Promise ? from(obj) : of(obj);
-}
-
-function isAction(action: any): boolean {
-  return isPlainObject(action) && "type" in action && typeof action.type === "string";
-}
-
-function isPlainObject(obj: any): boolean {
-  if (typeof obj !== "object" || obj === null)
-    return false;
-
-  let proto = obj;
-  while (Object.getPrototypeOf(proto) !== null) {
-    proto = Object.getPrototypeOf(proto);
-  }
-
-  return Object.getPrototypeOf(obj) === proto;
-}
-
 function kindOf(val: any): string {
   if (val === undefined)
     return "undefined";
@@ -139,5 +119,29 @@ function isPrimitive(value: any) {
   return value === undefined || value === null || typeof value !== 'object';
 }
 
-export { isAction, isBoxed, isPlainObject, isPrimitive, kindOf };
+function isAction(action: any): boolean {
+  return isPlainObject(action) && "type" in action && typeof action.type === "string";
+}
+
+function isAsync(func: Function) {
+  return func.constructor.name === "AsyncFunction";
+}
+
+function isPlainObject(obj: any): boolean {
+  if (typeof obj !== "object" || obj === null)
+    return false;
+
+  let proto = obj;
+  while (Object.getPrototypeOf(proto) !== null) {
+    proto = Object.getPrototypeOf(proto);
+  }
+
+  return Object.getPrototypeOf(obj) === proto;
+}
+
+export function convertToObservable(obj: any | Promise<any>) {
+  return obj instanceof Promise ? from(obj) : of(obj);
+}
+
+export { isAction, isAsync, isBoxed, isPlainObject, isPrimitive, kindOf };
 
