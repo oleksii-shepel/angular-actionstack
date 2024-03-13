@@ -8,6 +8,7 @@ import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, convertToObservable, isPlainObject, kindOf } from "./types";
 
+export { createStore as store };
 export class StoreSettings {
   shouldDispatchSystemActions!: boolean;
   shouldAwaitStatePropagation!: boolean;
@@ -535,6 +536,10 @@ export class Store {
     this.dispatch = dispatch;
     return this;
   }
+}
+
+export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
+  return Store.createStore(mainModule, enhancer);
 }
 
 export function compose(...funcs: AnyFn[]): AnyFn {
