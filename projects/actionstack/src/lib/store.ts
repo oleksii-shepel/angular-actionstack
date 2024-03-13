@@ -418,7 +418,7 @@ export class Store {
 
     this.settings.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
-      && (reducer = this.mainModule.metaReducers.reduce((a, b) => async (...args: any[]) => await a(await b(...args)))(reducer));
+      && (reducer = this.mainModule.metaReducers.reduce((a, b) => async (...args: any[]) => a(await b(...args)))(reducer));
     this.pipeline.reducer = reducer;
 
     if(errors.size) {
