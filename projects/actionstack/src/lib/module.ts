@@ -30,7 +30,8 @@ export class StoreModule {
 
             asapScheduler.schedule(() => StoreModule.modulesFn.forEach(fn => fn()));
             return StoreModule.store;
-          }
+          },
+          deps: [StoreSettings]
         }
       ]
     };
