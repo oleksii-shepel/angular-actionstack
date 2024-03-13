@@ -3,7 +3,6 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Store } from 'actionstack';
 import { Subscription } from 'rxjs';
 import { Hero } from '../hero';
-import { HeroService } from '../hero.service';
 import { getHeroesRequest, loadHeroes, selectHeroes } from './heroes.slice';
 
 @Component({
@@ -16,7 +15,7 @@ export class HeroesComponent implements OnInit, OnDestroy {
   subscriptionA!: Subscription;
   subscriptionB!: Subscription;
 
-  constructor(private store: Store, private heroService: HeroService) { }
+  constructor(private store: Store) { }
 
   ngOnInit(): void {
     this.subscriptionA = this.store.extend(loadHeroes());
