@@ -335,7 +335,7 @@ export class Store {
     return this;
   }
 
-  protected combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, Map<string, string>] {
+  protected async combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, Map<string, string>] {
     let errors = new Map<string, string>();
     let featureReducers = {} as any;
     let featureState = {} as any;
@@ -344,7 +344,7 @@ export class Store {
     Object.keys(reducers).forEach((key) => {
       try {
         if(reducers[key] instanceof Function) {
-          featureState[key] = (reducers[key] as Function)(undefined, systemActions.initializeState());
+          featureState[key] = await (reducers[key] as Function)(undefined, systemActions.initializeState());
           featureReducers[key] = reducers[key];
         } else {
           let [nestedReducer, nestedState, nestedErrors] = this.combineReducers(featureReducers[key]);
@@ -362,12 +362,12 @@ export class Store {
     });
 
     // Combine the main module reducer with the feature module reducers
-    const combinedReducer = (state: any = {}, action: Action<any>) => {
+    const combinedReducer = async (state: any = {}, action: Action<any>) => {
       let newState = state;
 
       Object.keys(featureReducers).forEach((key) => {
         try {
-          const featureState = featureReducers[key](newState[key], action);
+          const featureState = await featureReducers[key](newState[key], action);
           if(featureState !== newState[key]){
             newState = {...newState, [key]: featureState};
           }
@@ -404,14 +404,14 @@ export class Store {
     return newState;
   }
 
-  protected setupReducer(state: any = {}): any {
+  protected async setupReducer(state: any = {}): any {
     let featureReducers = [{slice: this.mainModule.slice!, reducer: this.mainModule.reducer}, ...this.modules].reduce((reducers, module) => {
       let moduleReducer: any = module.reducer instanceof Function ? module.reducer : {...module.reducer};
       reducers = {...reducers, [module.slice]: moduleReducer};
       return reducers;
     }, {} as Record<string, Reducer>);
 
-    let [reducer, initialState, errors] = this.combineReducers(featureReducers);
+    let [reducer, initialState, errors] = await this.combineReducers(featureReducers);
 
     // Update store state
     state = this.hydrateState({ ...state }, initialState);
