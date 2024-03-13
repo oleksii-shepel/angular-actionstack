@@ -6,7 +6,7 @@ import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects"
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, Reducer, SideEffect, StoreEnhancer, convertToObservable, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, convertToObservable, isPlainObject, kindOf } from "./types";
 
 export class StoreSettings {
   shouldDispatchSystemActions!: boolean;
@@ -335,19 +335,19 @@ export class Store {
     return this;
   }
 
-  protected async combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): [Reducer, any, Map<string, string>] {
+  protected async combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): Promise<[Reducer, any, Map<string, string>]> {
     let errors = new Map<string, string>();
     let featureReducers = {} as any;
     let featureState = {} as any;
 
     // Initialize state
-    Object.keys(reducers).forEach((key) => {
+    Object.keys(reducers).forEach(async (key) => {
       try {
         if(reducers[key] instanceof Function) {
           featureState[key] = await (reducers[key] as Function)(undefined, systemActions.initializeState());
           featureReducers[key] = reducers[key];
         } else {
-          let [nestedReducer, nestedState, nestedErrors] = this.combineReducers(featureReducers[key]);
+          let [nestedReducer, nestedState, nestedErrors] = await this.combineReducers(featureReducers[key]);
           featureState[key] = nestedState;
           featureReducers[key] = nestedReducer;
           errors = new Map([...errors, ...nestedErrors]);
@@ -365,7 +365,7 @@ export class Store {
     const combinedReducer = async (state: any = {}, action: Action<any>) => {
       let newState = state;
 
-      Object.keys(featureReducers).forEach((key) => {
+      Object.keys(featureReducers).forEach(async (key) => {
         try {
           const featureState = await featureReducers[key](newState[key], action);
           if(featureState !== newState[key]){
@@ -404,7 +404,8 @@ export class Store {
     return newState;
   }
 
-  protected async setupReducer(state: any = {}): any {
+  protected async setupReducer(state: any = {}): Promise<any> {
+
     let featureReducers = [{slice: this.mainModule.slice!, reducer: this.mainModule.reducer}, ...this.modules].reduce((reducers, module) => {
       let moduleReducer: any = module.reducer instanceof Function ? module.reducer : {...module.reducer};
       reducers = {...reducers, [module.slice]: moduleReducer};
@@ -416,9 +417,17 @@ export class Store {
     // Update store state
     state = this.hydrateState({ ...state }, initialState);
 
+    const asyncCompose = (...fns: MetaReducer[]) => async (reducer: Reducer) => {
+      for (let i = fns.length - 1; i >= 0; i--) {
+          reducer = await fns[i](reducer);
+      }
+      return reducer;
+    };
+
+
     this.settings.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
-      && (reducer = this.mainModule.metaReducers.length > 1 ? this.mainModule.metaReducers.reduce((a, b) => async (...args: any[]) => a(await b(...args)))(reducer)) : async (state: any, action: Action<any>) => await this.mainModule.metaReducers[0](reducer)(state, action));
+      && (reducer = await asyncCompose(...this.mainModule.metaReducers)(reducer));
     this.pipeline.reducer = reducer;
 
     if(errors.size) {
@@ -466,7 +475,7 @@ export class Store {
     }
     return this;
   }
-  
+
   protected processAction() {
     return (source: Observable<Action<any>>) => {
       return source.pipe(
