@@ -7,13 +7,6 @@ ActionStack is a powerful Angular library designed to simplify and enhance state
 - Angular Integration: Seamlessly integrates with Angular concepts like components, directives, and services, providing a familiar development workflow.
 - Community-Driven: Backed by an active community and comprehensive documentation, ensuring ongoing support and learning opportunities.
 
-## Features
-- Unleash Modular Agility: Ditch clunky module management and embrace flexibility of ActionStack. Build organized, scalable apps with ease, keeping your code clean and maintainable.
-
-- Master Asynchronous Serenity: ActionStack takes the reins on async operations, streamlining them for predictable outcomes. Leave complexity behind and focus on crafting amazing user experiences.
-
-- Evolve Beyond Redux: Don't just revisit Redux, transcend it! ActionStack offers modern features like instant updates and reactive state management. Witness real-time UI-state synchronization magic for streamlined development.
-
 ## Benefits
 Are you an Angular developer battling against unpredictable state management and tangled asynchronous operations? ActionStack comes to the rescue, offering a powerful arsenal of features to conquer your state management woes.
 
