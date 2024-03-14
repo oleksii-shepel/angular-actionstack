@@ -6,9 +6,10 @@ import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects"
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, convertToObservable, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
+
 export class StoreSettings {
   shouldDispatchSystemActions!: boolean;
   shouldAwaitStatePropagation!: boolean;
@@ -41,7 +42,7 @@ export const systemActionTypes = {
 };
 
 // Define the action creators
-export const systemActions = {
+const systemActions = {
   initializeState: action(systemActionTypes.INITIALIZE_STATE),
   updateState: action(systemActionTypes.UPDATE_STATE),
   storeInitialized: action(systemActionTypes.STORE_INITIALIZED),
@@ -126,7 +127,7 @@ export class Store {
     this.settings = STORE_SETTINGS_DEFAULT;
   }
 
-  static createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
+  static create(mainModule: MainModule, enhancer?: StoreEnhancer) {
 
     let storeCreator = (mainModule: MainModule) => {
 
@@ -539,10 +540,14 @@ export class Store {
 }
 
 export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
-  return Store.createStore(mainModule, enhancer);
+  return Store.create(mainModule, enhancer);
 }
 
-export function compose(...funcs: AnyFn[]): AnyFn {
+function convertToObservable(obj: any | Promise<any>) {
+  return obj instanceof Promise ? from(obj) : of(obj);
+}
+
+function compose(...funcs: AnyFn[]): AnyFn {
   if (funcs.length === 0) {
     return (arg: any): any => arg;
   }
@@ -555,7 +560,7 @@ export function compose(...funcs: AnyFn[]): AnyFn {
 }
 
 // a helper function to recursively clone and update an object with a given path and value
-export function cloneAndUpdate(obj: any, path: string[], value: any): any {
+function cloneAndUpdate(obj: any, path: string[], value: any): any {
   // base case: if the path is empty, return the value
   if (path.length === 0) {
     return value;

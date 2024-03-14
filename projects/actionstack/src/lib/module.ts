@@ -25,7 +25,7 @@ export class StoreModule {
           provide: Store,
           useFactory: () => {
             if (!StoreModule.store) {
-              StoreModule.store = Store.createStore(module) as Store;
+              StoreModule.store = Store.create(module) as Store;
             }
 
             asapScheduler.schedule(() => StoreModule.modulesFn.forEach(fn => fn()));

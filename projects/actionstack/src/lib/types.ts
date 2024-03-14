@@ -1,4 +1,4 @@
-import { Observable, from, of } from "rxjs";
+import { Observable } from "rxjs";
 import { Store } from "./store";
 
 export interface Action<T = any> {
@@ -137,10 +137,6 @@ function isPlainObject(obj: any): boolean {
   }
 
   return Object.getPrototypeOf(obj) === proto;
-}
-
-export function convertToObservable(obj: any | Promise<any>) {
-  return obj instanceof Promise ? from(obj) : of(obj);
 }
 
 export { isAction, isAsync, isBoxed, isPlainObject, isPrimitive, kindOf };
