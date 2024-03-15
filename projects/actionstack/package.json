@@ -1,12 +1,35 @@
 {
-  "name": "@oleksii-shepel/actionstack",
+  "name": "@actioncrew/actionstack",
   "version": "1.0.1",
+  "description": "State management library",
+  "license": "MIT",
+  "keywords": [
+    "RxJS",
+    "ActionStack",
+    "NgRx",
+    "Redux",
+    "Angular",
+    "state management",
+    "store"
+  ],
   "peerDependencies": {
-    "@angular/common": "^16.2.0",
-    "@angular/core": "^16.2.0"
+    "@angular/core": ">=14.0.0",
+    "@angular/forms": ">=14.0.0",
+    "rxjs": ">=7.5.0"
   },
-  "dependencies": {
-    "tslib": "^2.3.0"
+  "devDependencies": {
+    "tslib": ">=2.3.0"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "main": "public-api.ts",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oleksii-shepel/angular-actionstack.git"
+  },
+  "author": "Oleksii Shepel",
+  "bugs": {
+    "url": "https://github.com/oleksii-shepel/angular-actionstack/issues"
+  },
+  "homepage": "https://github.com/oleksii-shepel/angular-actionstack#readme"
 }
