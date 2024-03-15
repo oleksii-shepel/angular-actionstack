@@ -7,7 +7,7 @@ export const slice = "heroes";
 export const getHeroesRequest = action("GET_HEROES_REQUEST", (heroes: Hero[]) => ({heroes}));
 export const getHeroesSuccess = action("GET_HEROES_SUCCESS", (heroes: Hero[]) => ({heroes}));
 
-export const loadHeroes = effect(getHeroesRequest.type, (action, state, { [slice]: {heroService} }: any) => {
+export const loadHeroes = effect(getHeroesRequest.type, (action, state, { heroService }: any) => {
   return heroService.getHeroes().pipe(map(heroes => getHeroesSuccess(heroes)));
 });
 

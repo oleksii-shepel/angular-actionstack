@@ -11,7 +11,7 @@ export const loadHeroesFailure = action('LOAD_HEROES_FAILURE', (error: Error) =>
 export const loadHeroes = action(() => async (dispatch: Function, getState: Function, dependencies: any) => {
   dispatch(loadHeroesRequest());
   try {
-    const heroService = dependencies[slice].heroService;
+    const heroService = dependencies.heroService;
     const heroes = await firstValueFrom(heroService.getHeroes());
     dispatch(loadHeroesSuccess(heroes));
   } catch (error: any) {

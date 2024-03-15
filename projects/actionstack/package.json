@@ -1,5 +1,5 @@
 {
-  "name": "actionstack",
+  "name": "@oleksii-shepel/actionstack",
   "version": "1.0.1",
   "peerDependencies": {
     "@angular/common": "^16.2.0",

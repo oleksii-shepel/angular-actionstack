@@ -448,40 +448,38 @@ export class Store {
   }
 
   protected injectDependencies(injector: Injector): Store {
+    let dependencies = this.modules.map(module => module.dependencies ?? {});
+    dependencies.unshift(this.mainModule.dependencies ?? {})
 
-    // Handle dependencies for MainModule
-    let mainDependencies = this.mainModule.dependencies ? {...this.mainModule.dependencies} : {};
-    if(!this.pipeline.dependencies[this.mainModule.slice!]) {
-      this.pipeline.dependencies[this.mainModule.slice!] = {};
-    }
-    for (const key in mainDependencies) {
-      const DependencyType = mainDependencies[key] as Type<any>;
-      this.pipeline.dependencies[this.mainModule.slice!][key] = injector.get(DependencyType);
-    }
+    this.pipeline.dependencies = {};
+    dependencies = Object.assign({}, ...dependencies);
 
-    // Handle dependencies for each FeatureModule
-    for (const module of this.modules) {
-      let dependencies = module.dependencies ? {...module.dependencies} : {};
-      if(!this.pipeline.dependencies[module.slice]) {
-        this.pipeline.dependencies[module.slice] = {};
-      }
-
-      for (const key in dependencies) {
-        if (!this.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
-          const DependencyType = dependencies[key] as Type<any>;
-          this.pipeline.dependencies[module.slice][key] = injector.get(DependencyType);
-        }
+    for (const key in dependencies) {
+      if (!this.pipeline.dependencies.hasOwnProperty(key)) {
+        const DependencyType = dependencies[key] as Type<any>;
+        this.pipeline.dependencies[key] = injector.get(DependencyType);
       }
     }
     return this;
   }
 
+
   protected ejectDependencies(module: FeatureModule): Store {
-    for (const key in module.dependencies) {
-      if(this.pipeline.dependencies[module.slice].hasOwnProperty(key)) {
-        delete this.pipeline.dependencies[module.slice][key];
+    let propertiesToDelete = Object.keys(module.dependencies ?? {});
+
+    let dependencies = this.modules.map(module => module.dependencies ?? {});
+    dependencies.unshift(this.mainModule.dependencies ?? {})
+    for (const key in dependencies) {
+      let index = propertiesToDelete.findIndex(property => property === key);
+      if (index > -1) {
+        propertiesToDelete.splice(index);
       }
     }
+
+    propertiesToDelete.forEach(property => {
+      delete this.pipeline.dependencies[property];
+    })
+
     return this;
   }
 
