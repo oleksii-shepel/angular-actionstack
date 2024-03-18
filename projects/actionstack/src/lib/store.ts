@@ -446,7 +446,6 @@ export class Store {
   }
 
   protected injectDependencies(injector: Injector): Store {
-    let protected injectDependencies(injector: Injector): Store {
     let dependencies = this.modules.map(module => module.dependencies ?? {}) as any;
     dependencies.unshift(this.mainModule.dependencies ?? {});
 
