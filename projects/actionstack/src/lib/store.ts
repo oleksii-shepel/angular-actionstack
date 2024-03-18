@@ -446,25 +446,33 @@ export class Store {
   }
 
   protected injectDependencies(injector: Injector): Store {
+    let protected injectDependencies(injector: Injector): Store {
     let dependencies = this.modules.map(module => module.dependencies ?? {}) as any;
     dependencies.unshift(this.mainModule.dependencies ?? {});
 
     this.pipeline.dependencies = {};
-    dependencies = Object.assign({}, ...dependencies);
 
-    let stack = Object.keys(dependencies);
+    // Recursively clone and update dependencies
+    dependencies.forEach(dep => {
+      Object.keys(dep).forEach(key => {
+        this.pipeline.dependencies = cloneAndUpdate(this.pipeline.dependencies, [key], dep[key]);
+      });
+    });
+
+    let stack = Object.keys(this.pipeline.dependencies);
     while (stack.length > 0) {
       const key = stack.pop()!;
-      if (typeof dependencies[key]  !== 'function' && !(dependencies[key] instanceof InjectionToken)) {
-        stack.push(...Object.keys(dependencies[key]));
+      if (typeof this.pipeline.dependencies[key] !== 'function' && !(this.pipeline.dependencies[key] instanceof InjectionToken)) {
+        stack.push(...Object.keys(this.pipeline.dependencies[key]));
         this.pipeline.dependencies[key] = {};
       } else {
-          const Dependency = dependencies[key] as Type<any> | InjectionToken<any>;
-          this.pipeline.dependencies[key] = injector.get(Dependency);
+        const Dependency = this.pipeline.dependencies[key] as Type<any> | InjectionToken<any>;
+        this.pipeline.dependencies[key] = injector.get(Dependency);
       }
     }
     return this;
   }
+
 
   protected ejectDependencies(module: FeatureModule): Store {
     let dependencies = this.modules.filter(m => m !== module).map(m => m.dependencies ?? {}) as any;
