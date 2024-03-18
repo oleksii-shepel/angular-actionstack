@@ -454,10 +454,9 @@ export class Store {
     // Recursively clone and update dependencies
     dependencies.forEach(dep => {
       Object.keys(dep).forEach(key => {
-        this.pipeline.dependencies = cloneAndUpdate(this.pipeline.dependencies, [key], dep[key]);
+        this.pipeline.dependencies[key] = structuredClone(dep[key]);
       });
     });
-
     let stack = Object.keys(this.pipeline.dependencies);
     while (stack.length > 0) {
       const key = stack.pop()!;
@@ -482,7 +481,7 @@ export class Store {
     // Recursively clone and update dependencies
     dependencies.forEach(dep => {
       Object.keys(dep).forEach(key => {
-        newDependencies = cloneAndUpdate(newDependencies, [key], dep[key]);
+        newDependencies[key] = structuredClone(dep[key]);
       });
     });
 
