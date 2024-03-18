@@ -28,6 +28,7 @@ export class DashboardComponent implements OnInit {
       dependencies: { heroService: HeroService },
       strategy: "persistent"
     });
+
     this.slice.dispatch(loadHeroes());
   }
 

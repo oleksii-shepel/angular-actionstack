@@ -1,4 +1,4 @@
-import { Injector, Type, inject } from "@angular/core";
+import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { ActionStack } from "./collections";
@@ -448,40 +448,50 @@ export class Store {
   }
 
   protected injectDependencies(injector: Injector): Store {
-    let dependencies = this.modules.map(module => module.dependencies ?? {});
-    dependencies.unshift(this.mainModule.dependencies ?? {})
+    let dependencies = this.modules.map(module => module.dependencies ?? {}) as any;
+    dependencies.unshift(this.mainModule.dependencies ?? {});
 
     this.pipeline.dependencies = {};
     dependencies = Object.assign({}, ...dependencies);
 
-    for (const key in dependencies) {
-      if (!this.pipeline.dependencies.hasOwnProperty(key)) {
-        const DependencyType = dependencies[key] as Type<any>;
-        this.pipeline.dependencies[key] = injector.get(DependencyType);
+    let stack = Object.keys(dependencies);
+    while (stack.length > 0) {
+      const key = stack.pop()!;
+      if (typeof dependencies[key]  !== 'function' && !(dependencies[key] instanceof InjectionToken)) {
+        stack.push(...Object.keys(dependencies[key]));
+        this.pipeline.dependencies[key] = {};
+      } else {
+          const Dependency = dependencies[key] as Type<any> | InjectionToken<any>;
+          this.pipeline.dependencies[key] = injector.get(Dependency);
       }
     }
     return this;
   }
-
 
   protected ejectDependencies(module: FeatureModule): Store {
-    let propertiesToDelete = Object.keys(module.dependencies ?? {});
+    let dependencies = this.modules.filter(m => m !== module).map(m => m.dependencies ?? {}) as any;
+    dependencies.unshift(this.mainModule.dependencies ?? {});
+    dependencies = Object.assign({}, ...dependencies);
 
-    let dependencies = this.modules.map(module => module.dependencies ?? {});
-    dependencies.unshift(this.mainModule.dependencies ?? {})
-    for (const key in dependencies) {
-      let index = propertiesToDelete.findIndex(property => property === key);
-      if (index > -1) {
-        propertiesToDelete.splice(index);
+    // Create a stack for the DFS traversal
+    let stack = [{ source: this.pipeline.dependencies, target: dependencies }];
+
+    while (stack.length > 0) {
+      const { source, target } = stack.pop()!;
+      for (const key in target) {
+        if (typeof target[key] !== 'function' && !(target[key] instanceof InjectionToken)) {
+          stack.push({ source: source[key], target: target[key] });
+        } else {
+          target[key] = source[key];
+        }
       }
     }
 
-    propertiesToDelete.forEach(property => {
-      delete this.pipeline.dependencies[property];
-    })
+    this.pipeline.dependencies = dependencies;
 
     return this;
   }
+
 
   protected processAction() {
     return (source: Observable<Action<any>>) => {
