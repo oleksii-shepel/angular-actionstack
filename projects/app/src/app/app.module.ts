@@ -1,9 +1,9 @@
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
-import { AppComponent } from './app.component';
-import { Action, StoreModule, measure } from 'actionstack';
+import { Action, measure, provideStore } from 'actionstack';
 import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
 import { MessagesModule } from './messages/messages.module';
 
 @NgModule({
@@ -11,7 +11,7 @@ import { MessagesModule } from './messages/messages.module';
     BrowserModule,
     FormsModule,
     AppRoutingModule,
-    StoreModule.forRoot({
+    provideStore({
       middlewares: [measure],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},

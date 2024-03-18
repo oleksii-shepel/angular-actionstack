@@ -52,3 +52,12 @@ export class StoreModule {
     };
   }
 }
+
+
+export function provideStore(module: MainModule): ModuleWithProviders<StoreModule> {
+  return StoreModule.forRoot(module);
+}
+
+export function loadModule(module: FeatureModule): ModuleWithProviders<StoreModule> {
+  return StoreModule.forFeature(module);
+}

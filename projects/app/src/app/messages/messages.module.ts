@@ -2,13 +2,13 @@ import { CommonModule } from "@angular/common";
 import { NgModule } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterModule } from '@angular/router';
-import { StoreModule } from "actionstack";
+import { loadModule } from "actionstack";
 import { MessagesComponent } from "./messages.component";
 import { reducer, slice } from "./messages.slice";
 
 
 @NgModule({
-  imports: [CommonModule, FormsModule, RouterModule, StoreModule.forFeature({
+  imports: [CommonModule, FormsModule, RouterModule, loadModule({
     slice: slice,
     reducer: reducer
   })],
