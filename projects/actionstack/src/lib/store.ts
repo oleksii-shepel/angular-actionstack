@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, combineLatest, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { ActionStack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -213,28 +213,26 @@ export class Store {
   }
 
   protected updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActions.updateState()): Observable<any> {
+    return from((async () => {
+      if(callback === undefined) {
+        throw new Error('Callback function is missing. State will not be updated.')
+      }
 
-    if(callback === undefined) {
-      throw new Error('Callback function is missing. State will not be updated.')
-    }
+      let state = await this.getState(slice);
+      let result = await callback(state);
+      let newState = await this.setState(slice, result);
 
-    return convertToObservable(this.getState(slice)).pipe(
-      concatMap((state) => {
-        return convertToObservable(callback!(state)).pipe(
-          (concatMap((result) => {
-            return convertToObservable(this.setState(slice, result)).pipe(
-              concatMap((newState) => {
-              let stateUpdated = this.currentState.next(newState);
-              let actionHandled = this.currentAction.next(action);
-              return (this.settings.shouldAwaitStatePropagation ? combineLatest([
-                from(stateUpdated), from(actionHandled)
-              ]).pipe(map(() => action)) : of(action));
-            }))
-          }))
-        );
-      })
-    );
+      let stateUpdated = this.currentState.next(newState);
+      let actionHandled = this.currentAction.next(action);
+
+      if (this.settings.shouldAwaitStatePropagation) {
+        await Promise.allSettled([stateUpdated, actionHandled]);
+      }
+
+      return action;
+    })());
   }
+
 
   subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
     const stateObservable = this.currentState.asObservable().pipe(
