@@ -472,14 +472,22 @@ export class Store {
     return this;
   }
 
-
   protected ejectDependencies(module: FeatureModule): Store {
     let dependencies = this.modules.filter(m => m !== module).map(m => m.dependencies ?? {}) as any;
     dependencies.unshift(this.mainModule.dependencies ?? {});
-    dependencies = Object.assign({}, ...dependencies);
+
+    // Initialize the new dependencies object
+    let newDependencies = {};
+
+    // Recursively clone and update dependencies
+    dependencies.forEach(dep => {
+      Object.keys(dep).forEach(key => {
+        newDependencies = cloneAndUpdate(newDependencies, [key], dep[key]);
+      });
+    });
 
     // Create a stack for the DFS traversal
-    let stack = [{ source: this.pipeline.dependencies, target: dependencies }];
+    let stack = [{ source: this.pipeline.dependencies, target: newDependencies }];
 
     while (stack.length > 0) {
       const { source, target } = stack.pop()!;
@@ -492,10 +500,12 @@ export class Store {
       }
     }
 
-    this.pipeline.dependencies = dependencies;
+    // Assign the newly formed dependencies object
+    this.pipeline.dependencies = newDependencies;
 
     return this;
   }
+
 
 
   protected processAction() {
