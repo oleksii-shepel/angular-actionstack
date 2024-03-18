@@ -14,7 +14,7 @@ Are you an Angular developer battling against unpredictable state management and
 
 - Queue Up Actions for Orderly Execution: Take full command of the action workflow with queueing. Subsequent actions patiently wait their turn, guaranteeing they only fire after their predecessors have completed, leading to a well-organized and predictable state update journey.
 
-- Chain Reactions: Cascading Side Effects Made Easy: Unleash the power of chained side effects! Actions can trigger additional actions, creating a streamlined and organized flow that simplifies complex logic. Forget about messy code - embrace the elegance of cascading side effects.
+- Chain Reactions, Cascading Side Effects Made Easy: Unleash the power of chained side effects! Actions can trigger additional actions, creating a streamlined and organized flow that simplifies complex logic. Forget about messy code - embrace the elegance of cascading side effects.
 
 - Action Defusion, Ordering Chaos: ActionStack guarantees the exclusive execution of actions and their descendants within a dedicated context, preventing interference from concurrent actions. This ensures predictable outcomes and eliminates unintended side effects, particularly crucial for actions interacting with shared resources or performing sensitive operations. This exclusive execution approach significantly enhances the reliability and control over state updates compared to simple action merging!
 

@@ -1,6 +1,6 @@
 {
   "name": "@actioncrew/actionstack",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "State management library",
   "license": "MIT",
   "keywords": [
@@ -25,11 +25,11 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oleksii-shepel/angular-actionstack.git"
+    "url": "git+https://github.com/actioncrew/actionstack.git"
   },
   "author": "Oleksii Shepel",
   "bugs": {
-    "url": "https://github.com/oleksii-shepel/angular-actionstack/issues"
+    "url": "https://github.com/actioncrew/actionstack/issues"
   },
-  "homepage": "https://actionstack-21598.web.app"
+  "homepage": "https://actionstacklib.web.app"
 }
