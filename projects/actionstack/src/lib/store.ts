@@ -583,25 +583,28 @@ function compose(...funcs: AnyFn[]): AnyFn {
 
 // a helper function to recursively clone and update an object with a given path and value
 function cloneAndUpdate(obj: any, path: string[], value: any, clone: boolean = true): any {
+  // function cloneAndUpdate(obj, path, value, clone = true) {
   // base case: if the path is empty, return the value
   if (path.length === 0) {
     return clone ? structuredClone(value) : value;
   }
+  // ensure obj is an object if it's undefined
+  obj = obj !== undefined ? obj : {};
   // recursive case: clone the current object and update the property with the first element of the path
   const key = path[0];
   const rest = path.slice(1);
-  const clonedObj = {...obj};
-  if(obj !== undefined) {
-    if (Array.isArray(obj[key])) {
-      // if the property is an array, clone and update the element with the next element of the path
-      const index = parseInt(rest[0]);
-      const restRest = rest.slice(1);
-      clonedObj[key] = [...obj[key]];
-      clonedObj[key][index] = cloneAndUpdate(obj[key][index], restRest, value);
-    } else {
-      // if the property is an object, clone and update the nested property with the rest of the path
-      clonedObj[key] = cloneAndUpdate(obj[key], rest, value);
-    }
+  const clonedObj = { ...obj };
+  // initialize obj[key] if it's undefined
+  clonedObj[key] = obj[key] !== undefined ? obj[key] : (rest.length && !isNaN(parseInt(rest[0], 10)) ? [] : {});
+  if (Array.isArray(clonedObj[key])) {
+    // if the property is an array, clone and update the element with the next element of the path
+    const index = parseInt(rest[0], 10);
+    const restRest = rest.slice(1);
+    clonedObj[key][index] = cloneAndUpdate(clonedObj[key][index], restRest, value, clone);
+  } else {
+    // if the property is an object, clone and update the nested property with the rest of the path
+    clonedObj[key] = cloneAndUpdate(clonedObj[key], rest, value, clone);
   }
   return clonedObj;
 }
+
