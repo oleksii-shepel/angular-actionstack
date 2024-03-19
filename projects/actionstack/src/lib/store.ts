@@ -452,11 +452,12 @@ export class Store {
     this.pipeline.dependencies = {};
 
     // Recursively clone and update dependencies
-    dependencies.forEach(dep => {
+    dependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        this.pipeline.dependencies[key] = structuredClone(dep[key]);
+        this.pipeline.dependencies[key] = dep[key];
       });
     });
+
     let stack = Object.keys(this.pipeline.dependencies);
     while (stack.length > 0) {
       const key = stack.pop()!;
@@ -476,12 +477,12 @@ export class Store {
     dependencies.unshift(this.mainModule.dependencies ?? {});
 
     // Initialize the new dependencies object
-    let newDependencies = {};
+    let newDependencies = {} as any;
 
     // Recursively clone and update dependencies
-    dependencies.forEach(dep => {
+    dependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        newDependencies[key] = structuredClone(dep[key]);
+        newDependencies[key] = dep[key];
       });
     });
 
@@ -565,10 +566,6 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
   return Store.create(mainModule, enhancer);
 }
 
-function convertToObservable(obj: any | Promise<any>) {
-  return obj instanceof Promise ? from(obj) : of(obj);
-}
-
 function compose(...funcs: AnyFn[]): AnyFn {
   if (funcs.length === 0) {
     return (arg: any): any => arg;
@@ -581,30 +578,25 @@ function compose(...funcs: AnyFn[]): AnyFn {
   return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
 }
 
-// a helper function to recursively clone and update an object with a given path and value
 function cloneAndUpdate(obj: any, path: string[], value: any, clone: boolean = true): any {
-  // function cloneAndUpdate(obj, path, value, clone = true) {
-  // base case: if the path is empty, return the value
   if (path.length === 0) {
     return clone ? structuredClone(value) : value;
   }
-  // ensure obj is an object if it's undefined
-  obj = obj !== undefined ? obj : {};
-  // recursive case: clone the current object and update the property with the first element of the path
-  const key = path[0];
+
+  const index = parseInt(path[0], 10);
+  const key = !isNaN(index) ? index : path[0]
   const rest = path.slice(1);
-  const clonedObj = { ...obj };
-  // initialize obj[key] if it's undefined
-  clonedObj[key] = obj[key] !== undefined ? obj[key] : (rest.length && !isNaN(parseInt(rest[0], 10)) ? [] : {});
-  if (Array.isArray(clonedObj[key])) {
-    // if the property is an array, clone and update the element with the next element of the path
-    const index = parseInt(rest[0], 10);
-    const restRest = rest.slice(1);
-    clonedObj[key][index] = cloneAndUpdate(clonedObj[key][index], restRest, value, clone);
-  } else {
-    // if the property is an object, clone and update the nested property with the rest of the path
-    clonedObj[key] = cloneAndUpdate(clonedObj[key], rest, value, clone);
-  }
+
+  // Check if the key is a numeric index and if so, initialize obj as an array
+  obj = obj !== undefined ? obj : (!isNaN(index)) ? [] : {};
+
+  const clonedObj = Array.isArray(obj) ? [...obj] : {...obj};
+
+  // Initialize obj[key] if it's undefined
+  clonedObj[key] = obj[key] !== undefined ? (Array.isArray(obj[key]) ? [...obj[key]] : {...obj[key]}) : (rest.length && !isNaN(parseInt(rest[0], 10)) ? [] : {});
+
+  // Recursively update the nested property with the rest of the path
+  clonedObj[key] = cloneAndUpdate(clonedObj[key], rest, value, clone);
+
   return clonedObj;
 }
-
