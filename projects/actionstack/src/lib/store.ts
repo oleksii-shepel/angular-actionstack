@@ -449,28 +449,42 @@ export class Store {
     let dependencies = this.modules.map(module => module.dependencies ?? {}) as any;
     dependencies.unshift(this.mainModule.dependencies ?? {});
 
-    this.pipeline.dependencies = {};
+    // Initialize the new dependencies object
+    let newDependencies = {} as any;
 
     // Recursively clone and update dependencies
     dependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        this.pipeline.dependencies[key] = deepCopy(dep[key]);
+        newDependencies[key] = deepCopy(dep[key]);
       });
     });
 
-    let stack = Object.keys(this.pipeline.dependencies);
+    this.pipeline.dependencies = {};
+
+    // Create a stack for depth-first traversal of newDependencies
+    let stack: { path: string[], value: any }[] = Object.keys(newDependencies).map(key => ({ path: [key], value: newDependencies[key] }));
+
     while (stack.length > 0) {
-      const key = stack.pop()!;
-      if (typeof this.pipeline.dependencies[key] !== 'function' && !(this.pipeline.dependencies[key] instanceof InjectionToken)) {
-        stack.push(...Object.keys(this.pipeline.dependencies[key]));
-        this.pipeline.dependencies[key] = {};
+      const { path, value } = stack.pop()!;
+      if (typeof value !== 'function' && !(value instanceof InjectionToken)) {
+        // If value is an object, add its children to the stack
+        Object.keys(value).forEach(key => {
+          stack.push({ path: [...path, key], value: value[key] });
+        });
       } else {
-        const Dependency = this.pipeline.dependencies[key] as Type<any> | InjectionToken<any>;
-        this.pipeline.dependencies[key] = injector.get(Dependency);
+        // If value is a function or an instance of InjectionToken, get the dependency from the injector
+        let current = this.pipeline.dependencies;
+        for (let i = 0; i < path.length - 1; i++) {
+          current = current[path[i]] = current[path[i]] || {};
+        }
+        const Dependency = value as Type<any> | InjectionToken<any>;
+        current[path[path.length - 1]] = injector.get(Dependency);
       }
     }
+
     return this;
   }
+
 
   protected ejectDependencies(module: FeatureModule): Store {
     let dependencies = this.modules.filter(m => m !== module).map(m => m.dependencies ?? {}) as any;
