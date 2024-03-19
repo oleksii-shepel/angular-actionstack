@@ -454,7 +454,7 @@ export class Store {
     // Recursively clone and update dependencies
     dependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        this.pipeline.dependencies[key] = dep[key];
+        this.pipeline.dependencies[key] = cloneAndUpdate(this.pipeline.dependencies[key], [], dep[key], false);
       });
     });
 
@@ -482,7 +482,7 @@ export class Store {
     // Recursively clone and update dependencies
     dependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        newDependencies[key] = dep[key];
+        newDependencies[key] = cloneAndUpdate(newDependencies[key], dep[key], false);
       });
     });
 
