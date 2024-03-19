@@ -446,14 +446,14 @@ export class Store {
   }
 
   protected injectDependencies(injector: Injector): Store {
-    let dependencies = this.modules.map(module => module.dependencies ?? {}) as any;
-    dependencies.unshift(this.mainModule.dependencies ?? {});
-
     // Initialize the new dependencies object
     let newDependencies = {} as any;
 
+    // Combine all dependencies into one object
+    let allDependencies = [this.mainModule.dependencies, ...this.modules.map(module => module.dependencies)].filter(Boolean);
+
     // Recursively clone and update dependencies
-    dependencies.forEach((dep: any) => {
+    allDependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
         newDependencies[key] = deepCopy(dep[key]);
       });
@@ -462,29 +462,22 @@ export class Store {
     this.pipeline.dependencies = {};
 
     // Create a stack for depth-first traversal of newDependencies
-    let stack: { path: string[], value: any }[] = Object.keys(newDependencies).map(key => ({ path: [key], value: newDependencies[key] }));
+    let stack: { parent: any, key: string }[] = Object.keys(newDependencies).map(key => ({ parent: newDependencies, key }));
 
     while (stack.length > 0) {
-      const { path, value } = stack.pop()!;
+      const { parent, key } = stack.pop()!;
+      const value = parent[key];
       if (typeof value !== 'function' && !(value instanceof InjectionToken)) {
         // If value is an object, add its children to the stack
-        Object.keys(value).forEach(key => {
-          stack.push({ path: [...path, key], value: value[key] });
-        });
+        stack.push(...Object.keys(value).map(childKey => ({ parent: value, key: childKey })));
       } else {
         // If value is a function or an instance of InjectionToken, get the dependency from the injector
-        let current = this.pipeline.dependencies;
-        for (let i = 0; i < path.length - 1; i++) {
-          current = current[path[i]] = current[path[i]] || {};
-        }
         const Dependency = value as Type<any> | InjectionToken<any>;
-        current[path[path.length - 1]] = injector.get(Dependency);
+        parent[key] = injector.get(Dependency);
       }
     }
-
     return this;
   }
-
 
   protected ejectDependencies(module: FeatureModule): Store {
     let dependencies = this.modules.filter(m => m !== module).map(m => m.dependencies ?? {}) as any;
