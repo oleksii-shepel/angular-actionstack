@@ -454,7 +454,7 @@ export class Store {
     // Recursively clone and update dependencies
     dependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        this.pipeline.dependencies[key] = cloneAndUpdate(this.pipeline.dependencies[key], [], dep[key], false);
+        this.pipeline.dependencies[key] = deepCopy(dep[key]);
       });
     });
 
@@ -482,7 +482,7 @@ export class Store {
     // Recursively clone and update dependencies
     dependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        newDependencies[key] = cloneAndUpdate(newDependencies[key], dep[key], false);
+        newDependencies[key] = deepCopy(dep[key]);
       });
     });
 
@@ -578,9 +578,25 @@ function compose(...funcs: AnyFn[]): AnyFn {
   return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
 }
 
+function deepCopy(obj: any) {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  let copy: any = Array.isArray(obj) ? [] : {};
+
+  for (let key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      copy[key] = deepCopy(obj[key]);
+    }
+  }
+
+  return copy;
+}
+
 function cloneAndUpdate(obj: any, path: string[], value: any, clone: boolean = true): any {
   if (path.length === 0) {
-    return clone ? structuredClone(value) : value;
+    return clone ? deepCopy(value) : value;
   }
 
   const index = parseInt(path[0], 10);
