@@ -480,14 +480,15 @@ export class Store {
   }
 
   protected ejectDependencies(module: FeatureModule): Store {
-    let dependencies = this.modules.filter(m => m !== module).map(m => m.dependencies ?? {}) as any;
-    dependencies.unshift(this.mainModule.dependencies ?? {});
+    let protected ejectDependencies(module: FeatureModule): Store {
+    // Combine all dependencies into one object, excluding the module to eject
+    let allDependencies = [this.mainModule.dependencies, ...this.modules.filter(m => m !== module).map(m => m.dependencies)].filter(Boolean);
 
     // Initialize the new dependencies object
     let newDependencies = {} as any;
 
     // Recursively clone and update dependencies
-    dependencies.forEach((dep: any) => {
+    allDependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
         newDependencies[key] = deepCopy(dep[key]);
       });
@@ -512,8 +513,6 @@ export class Store {
 
     return this;
   }
-
-
 
   protected processAction() {
     return (source: Observable<Action<any>>) => {
