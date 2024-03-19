@@ -582,10 +582,10 @@ function compose(...funcs: AnyFn[]): AnyFn {
 }
 
 // a helper function to recursively clone and update an object with a given path and value
-function cloneAndUpdate(obj: any, path: string[], value: any): any {
+function cloneAndUpdate(obj: any, path: string[], value: any, clone: boolean = true): any {
   // base case: if the path is empty, return the value
   if (path.length === 0) {
-    return value;
+    return clone ? structuredClone(value) : value;
   }
   // recursive case: clone the current object and update the property with the first element of the path
   const key = path[0];
