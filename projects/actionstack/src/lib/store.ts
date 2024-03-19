@@ -390,7 +390,6 @@ export class Store {
     return [combinedReducer, featureState, errors];
   }
 
-
   protected hydrateState(state: any, initialState: any): any {
     // Create a new object to avoid mutating the original state
     let newState = {...state};
@@ -480,7 +479,6 @@ export class Store {
   }
 
   protected ejectDependencies(module: FeatureModule): Store {
-    let protected ejectDependencies(module: FeatureModule): Store {
     // Combine all dependencies into one object, excluding the module to eject
     let allDependencies = [this.mainModule.dependencies, ...this.modules.filter(m => m !== module).map(m => m.dependencies)].filter(Boolean);
 
