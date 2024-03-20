@@ -462,16 +462,20 @@ export class Store {
     this.pipeline.dependencies = {} as any;
 
     // Create a stack for depth-first traversal of newDependencies
-    let stack: { parent: any, key: string, subtree: any }[] = Object.keys(newDependencies).map(key => ({ parent: newDependencies, key, subtree: this.pipeline.dependencies }));
+    let stack: { parent: any, key: string | number, subtree: any }[] = Object.keys(newDependencies).map(key => ({ parent: newDependencies, key, subtree: this.pipeline.dependencies }));
 
     while (stack.length > 0) {
       const { parent, key, subtree } = stack.pop()!;
       const value = parent[key];
-      if (typeof value !== 'function' && !(value instanceof InjectionToken)) {
+      if (Array.isArray(value)) {
+        // If value is an array, add its elements to the stack
+        subtree[key] = [];
+        stack.push(...value.map((v, i) => ({ parent: value, key: i, subtree: subtree[key] })));
+      } else if (typeof value === 'object' && value !== null) {
         // If value is an object, add its children to the stack
         subtree[key] = {};
         stack.push(...Object.keys(value).map(childKey => ({ parent: value, key: childKey, subtree: subtree[key] })));
-      } else {
+      } else if (typeof value === 'function' || value instanceof InjectionToken) {
         // If value is a function or an instance of InjectionToken, get the dependency from the injector
         const Dependency = value as Type<any> | InjectionToken<any>;
         subtree[key] = injector.get(Dependency);
@@ -480,6 +484,7 @@ export class Store {
 
     return this;
   }
+
 
 
   protected ejectDependencies(module: FeatureModule): Store {
