@@ -485,8 +485,6 @@ export class Store {
     return this;
   }
 
-
-
   protected ejectDependencies(module: FeatureModule): Store {
     // Combine all dependencies into one object, excluding the module to eject
     let allDependencies = [this.mainModule.dependencies, ...this.modules.filter(m => m !== module).map(m => m.dependencies)].filter(Boolean);
@@ -507,7 +505,16 @@ export class Store {
     while (stack.length > 0) {
       const { source, target } = stack.pop()!;
       for (const key in target) {
-        if (typeof target[key] !== 'function' && !(target[key] instanceof InjectionToken)) {
+        if (Array.isArray(target[key])) {
+          // If target[key] is an array, iterate over its elements
+          for (let i = 0; i < target[key].length; i++) {
+            if (typeof target[key][i] !== 'function' && !(target[key][i] instanceof InjectionToken)) {
+              stack.push({ source: source[key][i], target: target[key][i] });
+            } else {
+              target[key][i] = source[key][i];
+            }
+          }
+        } else if (typeof target[key] !== 'function' && !(target[key] instanceof InjectionToken)) {
           stack.push({ source: source[key], target: target[key] });
         } else {
           target[key] = source[key];
@@ -520,6 +527,7 @@ export class Store {
 
     return this;
   }
+
 
   protected processAction() {
     return (source: Observable<Action<any>>) => {
