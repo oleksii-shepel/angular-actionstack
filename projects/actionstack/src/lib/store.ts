@@ -458,25 +458,29 @@ export class Store {
       });
     });
 
-    this.pipeline.dependencies = {};
+    // Initialize the pipeline dependencies object
+    this.pipeline.dependencies = {} as any;
 
     // Create a stack for depth-first traversal of newDependencies
-    let stack: { parent: any, key: string }[] = Object.keys(newDependencies).map(key => ({ parent: newDependencies, key }));
+    let stack: { parent: any, key: string, subtree: any }[] = Object.keys(newDependencies).map(key => ({ parent: newDependencies, key, subtree: this.pipeline.dependencies }));
 
     while (stack.length > 0) {
-      const { parent, key } = stack.pop()!;
+      const { parent, key, subtree } = stack.pop()!;
       const value = parent[key];
       if (typeof value !== 'function' && !(value instanceof InjectionToken)) {
         // If value is an object, add its children to the stack
-        stack.push(...Object.keys(value).map(childKey => ({ parent: value, key: childKey })));
+        subtree[key] = {};
+        stack.push(...Object.keys(value).map(childKey => ({ parent: value, key: childKey, subtree: subtree[key] })));
       } else {
         // If value is a function or an instance of InjectionToken, get the dependency from the injector
         const Dependency = value as Type<any> | InjectionToken<any>;
-        parent[key] = injector.get(Dependency);
+        subtree[key] = injector.get(Dependency);
       }
     }
+
     return this;
   }
+
 
   protected ejectDependencies(module: FeatureModule): Store {
     // Combine all dependencies into one object, excluding the module to eject
