@@ -1,10 +1,10 @@
 import { filter, firstValueFrom } from "rxjs";
-import { ActionQueue } from "./collections";
+import { Queue } from "./collections";
 import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
 
 export const createStarter = () => {
-  const actionQueue = new ActionQueue();
+  const actionQueue = new Queue();
   let asyncActions: Promise<any>[] = [];
   let lock = new Lock();
 

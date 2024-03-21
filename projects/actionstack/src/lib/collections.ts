@@ -1,21 +1,21 @@
 import { Action } from "./types";
 
-export class ActionStack {
-  private stack: Action<any>[] = [];
+export class Stack<T = Action<any>> {
+  private stack: T[] = [];
 
   get length(): number {
     return this.stack.length;
   }
 
-  push(action: Action<any>): void {
+  push(action: T): void {
     this.stack.push(action);
   }
 
-  peek(): Action<any> | undefined {
+  peek(): T | undefined {
     return this.stack[this.stack.length - 1];
   }
 
-  pop(): Action<any> | undefined {
+  pop(): T | undefined {
     return this.stack.pop();
   }
 
@@ -23,44 +23,44 @@ export class ActionStack {
     this.stack = [];
   }
 
-  toArray(): Action<any>[] {
+  toArray(): T[] {
     return [...this.stack];
   }
 }
 
-export class ActionQueue {
-  private inbox: ActionStack = new ActionStack();
-  private outbox: ActionStack = new ActionStack();
+export class Queue<T = Action<any>> {
+  private inbox: Stack<T> = new Stack();
+  private outbox: Stack<T> = new Stack();
 
   get length(): number {
     return this.inbox.length + this.outbox.length;
   }
 
-  enqueue(action: Action<any>): void {
+  enqueue(action: T): void {
     this.inbox.push(action);
   }
 
-  dequeue(): Action<any> | undefined {
+  dequeue(): T | undefined {
     if (this.outbox.length === 0) {
       while (this.inbox.length > 0) {
-        this.outbox.push(this.inbox.pop() as Action<any>);
+        this.outbox.push(this.inbox.pop() as T);
       }
     }
     return this.outbox.pop();
   }
 
-  peek(): Action<any> | undefined {
+  peek(): T | undefined {
     if (this.outbox.length === 0) {
       while (this.inbox.length > 0) {
-        this.outbox.push(this.inbox.pop() as Action<any>);
+        this.outbox.push(this.inbox.pop() as T);
       }
     }
     return this.outbox.peek();
   }
 
-  toArray(): Action<any>[] {
+  toArray(): T[] {
     while (this.inbox.length > 0) {
-      this.outbox.push(this.inbox.pop() as Action<any>);
+      this.outbox.push(this.inbox.pop() as T);
     }
     return this.outbox.toArray();
   }

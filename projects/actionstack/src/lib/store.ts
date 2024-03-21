@@ -1,7 +1,7 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
-import { ActionStack } from "./collections";
+import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
@@ -63,7 +63,7 @@ export class Store {
     strategy: "exclusive" | "concurrent";
   };
   protected actionStream: Subject<Action<any>>;
-  protected actionStack: ActionStack;
+  protected actionStack: Stack;
   protected currentAction: CustomAsyncSubject<any>;
   protected currentState: CustomAsyncSubject<any>;
   protected isProcessing: BehaviorSubject<boolean>;
@@ -98,7 +98,7 @@ export class Store {
     };
 
     let ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
-    let ACTION_STACK_DEFAULT = new ActionStack();
+    let ACTION_STACK_DEFAULT = new Stack();
 
     let CURRENT_ACTION_DEFAULT = new CustomAsyncSubject<any>();
     let CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>();
