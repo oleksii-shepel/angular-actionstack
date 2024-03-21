@@ -11,8 +11,8 @@ import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEff
 export { createStore as store };
 
 export class StoreSettings {
-  shouldDispatchSystemActions!: boolean;
-  shouldAwaitStatePropagation!: boolean;
+  dispatchSystemActions!: boolean;
+  awaitStatePropagation!: boolean;
   enableMetaReducers!: boolean;
   enableAsyncReducers!: boolean;
 
@@ -22,8 +22,8 @@ export class StoreSettings {
 
   static get default(): StoreSettings {
     return {
-      shouldDispatchSystemActions: true,
-      shouldAwaitStatePropagation: true,
+      dispatchSystemActions: false,
+      awaitStatePropagation: true,
       enableMetaReducers: false,
       enableAsyncReducers: false,
     };
@@ -72,12 +72,7 @@ export class Store {
   protected settings: StoreSettings;
 
   protected constructor() {
-    let STORE_SETTINGS_DEFAULT =  {
-      shouldDispatchSystemActions: true,
-      shouldAwaitStatePropagation: true,
-      enableMetaReducers: false,
-      enableAsyncReducers: false
-    };
+    let STORE_SETTINGS_DEFAULT = StoreSettings.default;
 
     let MAIN_MODULE_DEFAULT = {
       slice: "main",
@@ -151,7 +146,7 @@ export class Store {
         store.processAction()
       ).subscribe();
 
-      store.systemActions = bindActionCreators(systemActions, (action: Action<any>) => store.settings.shouldDispatchSystemActions && store.dispatch(action));
+      store.systemActions = bindActionCreators(systemActions, (action: Action<any>) => store.settings.dispatchSystemActions && store.dispatch(action));
 
       store.systemActions.initializeState();
       store.systemActions.storeInitialized();
@@ -225,7 +220,7 @@ export class Store {
       let stateUpdated = this.currentState.next(newState);
       let actionHandled = this.currentAction.next(action);
 
-      if (this.settings.shouldAwaitStatePropagation) {
+      if (this.settings.awaitStatePropagation) {
         await Promise.allSettled([stateUpdated, actionHandled]);
       }
 
