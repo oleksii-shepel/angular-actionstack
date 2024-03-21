@@ -528,14 +528,7 @@ export class Store {
     return (source: Observable<Action<any>>) => {
       return source.pipe(
         concatMap((action: Action<any>) => {
-          return this.updateState("@global", (state) => {
-            const reducerResult = this.pipeline.reducer(state, action);
-            // Check if enableAsyncReducers is false and reducer is an async function
-            // if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
-            //   throw new Error("Async reducers are disabled.");
-            // }
-            return reducerResult;
-          }, action).pipe(
+          return this.updateState("@global", (state) => this.pipeline.reducer(state, action), action).pipe(
             finalize(() => (this.actionStack.pop(), this.actionStack.length === 0 && this.isProcessing.next(false)))
           );
         }),
