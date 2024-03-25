@@ -58,6 +58,6 @@ export function provideStore(module: MainModule): ModuleWithProviders<StoreModul
   return StoreModule.forRoot(module);
 }
 
-export function loadModule(module: FeatureModule): ModuleWithProviders<StoreModule> {
+export function provideModule(module: FeatureModule): ModuleWithProviders<StoreModule> {
   return StoreModule.forFeature(module);
 }

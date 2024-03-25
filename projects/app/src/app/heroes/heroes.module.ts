@@ -2,7 +2,7 @@ import { CommonModule } from "@angular/common";
 import { NgModule } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterModule, Routes } from "@angular/router";
-import { loadModule } from "actionstack";
+import { provideModule } from "actionstack";
 import { HeroService } from "../hero.service";
 import { HeroesComponent } from "./heroes.component";
 import { reducer, slice } from "./heroes.slice";
@@ -12,7 +12,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  imports: [CommonModule, FormsModule, RouterModule.forChild(routes), loadModule({
+  imports: [CommonModule, FormsModule, RouterModule.forChild(routes), provideModule({
     slice: slice,
     reducer: reducer,
     dependencies: {heroService: HeroService}
