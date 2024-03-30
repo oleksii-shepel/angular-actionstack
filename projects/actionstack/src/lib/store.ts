@@ -561,9 +561,7 @@ export class Store {
       dispatch: (action: any) => dispatch(action),
     };
 
-    const middlewares = [starter, ...this.pipeline.middlewares];
-
-    const chain = middlewares.map((middleware, index) => middleware(isValidMiddleware(middleware.signature) && index === 0 ? starterAPI : middlewareAPI));
+    const chain = [starter(isValidMiddleware(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middlewares.map(middleware => middleware(middlewareAPI))];
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
