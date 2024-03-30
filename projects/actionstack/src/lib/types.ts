@@ -32,6 +32,10 @@ export interface ProjectionFunction {
 
 export type SideEffect = (action: Observable<Action<any>>, state: Observable<any>, dependencies: Record<string, any>) => Observable<Action<any>>;
 
+export type Tree<T = any, LeafType> = {
+  [K in keyof T]: T[K] extends object ? Tree<T[K], LeafType> : LeafType;
+};
+
 export interface FeatureModule {
   slice: string;
   reducer: Reducer | Record<string, Reducer>;
