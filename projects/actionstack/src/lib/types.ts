@@ -38,16 +38,16 @@ export type Tree<T = any, LeafType> = {
 
 export interface FeatureModule {
   slice: string;
-  reducer: Reducer | Record<string, Reducer>;
-  dependencies?: Record<string, any>;
+  reducer: Reducer | Tree<Reducer>;
+  dependencies?: Tree<Type<any> | InjectionToken<any>>;
 }
 
 export interface MainModule {
   slice?: string;
   middlewares?: Middleware[];
-  reducer: Reducer | Record<string, Reducer>;
+  reducer: Reducer | Tree<Reducer>;
   metaReducers?: MetaReducer[];
-  dependencies?: Record<string, any>;
+  dependencies?: Tree<Type<any> | InjectionToken<any>>;
   strategy?: "exclusive" | "concurrent";
 }
 
