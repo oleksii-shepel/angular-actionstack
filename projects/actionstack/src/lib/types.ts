@@ -12,9 +12,6 @@ export interface AsyncAction<T = any> {
   (...args: any[]): Promise<T>;
 }
 
-export type SyncFunction<T> = (...args: any[]) => T;
-export type AsyncFunction<T> = (...args: any[]) => Promise<T>;
-
 export type Reducer = (state: any, action: Action<any>) => any | Promise<any>;
 export type MetaReducer = (reducer: Reducer) => Reducer | Promise<Reducer>;
 
