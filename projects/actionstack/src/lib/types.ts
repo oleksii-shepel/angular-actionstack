@@ -15,15 +15,12 @@ export interface AsyncAction<T = any> {
 export type SyncFunction<T> = (...args: any[]) => T;
 export type AsyncFunction<T> = (...args: any[]) => Promise<T>;
 
-export type SyncActionCreator<T> = (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => T;
-export type AsyncActionCreator<T> = (...args: any[]) => (dispatch: Function, getState?: Function, dependencies?: Record<string, any>) => Promise<T>;
-
 export type Reducer = (state: any, action: Action<any>) => any | Promise<any>;
 export type MetaReducer = (reducer: Reducer) => Reducer | Promise<Reducer>;
 
 export interface Middleware {
   (store: any): (next: (action: any) => any) => Promise<(action: any) => any> | any;
-  internal?: boolean;
+  signature?: string;
 }
 
 export type AnyFn = (...args: any[]) => any;
