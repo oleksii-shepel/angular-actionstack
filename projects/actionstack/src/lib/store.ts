@@ -6,7 +6,7 @@ import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects"
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, Tree, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
 
@@ -330,7 +330,7 @@ export class Store {
     return this;
   }
 
-  protected async combineReducers(reducers: Record<string, Reducer | Record<string, Reducer>>): Promise<[Reducer, any, Map<string, string>]> {
+  protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, any, Map<string, string>]> {
     let errors = new Map<string, string>();
     let featureReducers = {} as any;
     let featureState = {} as any;
@@ -358,10 +358,6 @@ export class Store {
         errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
       }
     }
-
-    Object.keys(featureReducers).filter((key) => errors.has(key)).forEach(key => {
-      delete featureReducers[key];
-    });
 
     // Combine the main module reducer with the feature module reducers
     const combinedReducer = async (state: any = {}, action: Action<any>) => {
@@ -412,7 +408,7 @@ export class Store {
       let moduleReducer: any = module.reducer instanceof Function ? module.reducer : {...module.reducer};
       reducers = {...reducers, [module.slice]: moduleReducer};
       return reducers;
-    }, {} as Record<string, Reducer>);
+    }, {} as Tree<Reducer>);
 
     let [reducer, initialState, errors] = await this.combineReducers(featureReducers);
 
