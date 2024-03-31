@@ -203,7 +203,7 @@ export class Store {
 
   // Function to apply a single change to the state and accumulate edges
   protected applyChange(initialState: any, {path, value}: {path: string[], value: any}, edges: Tree<boolean>): any {
-    let currentState: any = { ...initialState };
+    let currentState: any = initialState;
     let currentObj: any = currentState;
     let currentEdges: Tree<boolean> = edges;
 
@@ -211,11 +211,11 @@ export class Store {
       const key = path[i];
       if (i === path.length - 1) {
         // Reached the leaf node, update its value
-        currentObj[key] = value;
+        currentObj[key] = {...currentObj, [key]: value};
         currentEdges[key] = true;
       } else {
         // Continue traversal
-        currentObj = currentObj[key] = currentEdges[key] ? currentObj[key]: { ...currentObj[key] };
+        currentObj = currentObj[key] = currentEdges[key] ? currentObj[key] : { ...currentObj[key] };
         currentEdges = currentEdges[key] = currentEdges[key] ?? {};
       }
     }
