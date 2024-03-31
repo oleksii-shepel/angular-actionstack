@@ -228,31 +228,11 @@ export class Store {
       return { ...value };
     } else if (typeof slice === "string") {
       // Update the state property with the given key, tracking modifications
-      const updatedState = {
-        ...this.currentState.value,
-        [slice]: { ...value },
-      };
-            
+      const updatedState = {...this.currentState.value, [slice]: { ...value }}; 
       modified[slice] = true; // Mark this property as modified
       return updatedState;
     } else if (Array.isArray(slice)) {
       return this.applyChange(this.currentState.value, {path: slice, value}, modified);
-    } else {
-      throw new Error("Unsupported type of slice parameter");
-    }
-  }
-
-  protected setState<T = any>(slice?: keyof T | string[], value?: any): any {
-    if (slice === undefined || typeof slice === "string" && slice == "@global") {
-      // update the whole state with a shallow copy of the value
-      return ({...value});
-    } else if (typeof slice === "string") {
-      // update the state property with the given key with a shallow copy of the value
-      return ({...this.currentState.value, [slice]: {...value}});
-    } else if (Array.isArray(slice)) {
-      // update the nested state property with the given path with a shallow copy of the value
-      // use a helper function to recursively clone and update the object
-      return cloneAndUpdate(this.currentState.value, slice, value);
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
@@ -692,25 +672,3 @@ function deepCopy(obj: any) {
   return copy;
 }
 
-function cloneAndUpdate(obj: any, path: string[], value: any, clone: boolean = true): any {
-  if (path.length === 0) {
-    return clone ? deepCopy(value) : value;
-  }
-
-  const index = parseInt(path[0], 10);
-  const key = !isNaN(index) ? index : path[0]
-  const rest = path.slice(1);
-
-  // Check if the key is a numeric index and if so, initialize obj as an array
-  obj = obj !== undefined ? obj : (!isNaN(index)) ? [] : {};
-
-  const clonedObj = Array.isArray(obj) ? [...obj] : {...obj};
-
-  // Initialize obj[key] if it's undefined
-  clonedObj[key] = obj[key] !== undefined ? (Array.isArray(obj[key]) ? [...obj[key]] : {...obj[key]}) : (rest.length && !isNaN(parseInt(rest[0], 10)) ? [] : {});
-
-  // Recursively update the nested property with the rest of the path
-  clonedObj[key] = cloneAndUpdate(clonedObj[key], rest, value, clone);
-
-  return clonedObj;
-}
