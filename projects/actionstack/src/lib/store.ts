@@ -203,7 +203,7 @@ export class Store {
 
   // Function to apply a single change to the state and accumulate edges
   protected applyChange(initialState: any, {path, value}: {path: string[], value: any}, edges: Tree<boolean>): any {
-    let currentState: any = {...initialState};
+    let currentState: any = Object.keys(edges).length > 0 ? initialState: {...initialState};
     let currentObj: any = currentState;
     let currentEdges: Tree<boolean> = edges;
 
