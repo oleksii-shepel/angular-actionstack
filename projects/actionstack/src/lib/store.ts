@@ -211,7 +211,7 @@ export class Store {
       const key = path[i];
       if (i === path.length - 1) {
         // Reached the leaf node, update its value
-        currentObj[key] = {...currentObj, [key]: value};
+        currentObj = {...currentObj, [key]: value};
         currentEdges[key] = true;
       } else {
         // Continue traversal
