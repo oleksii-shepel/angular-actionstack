@@ -393,16 +393,18 @@ export class Store {
         }
       }
 
-      let modified = {}; 
+      let modified = {}; let state = this.currentState.value;
       // Apply changes to source state
       for (const [reducer, change] of changesMap) {
         try {
           const path = reducerMap.get(reducer);
-          this.setState(path, change, modified);
+          state = await this.setState(path, change, modified);
         } catch (error: any) {
           throw new Error(`Error occurred while applying changes for ${path}: ${error.message}`);
         }
       }
+
+      return state;
     };
   }
   
