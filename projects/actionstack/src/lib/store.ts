@@ -200,6 +200,34 @@ export class Store {
       throw new Error("Unsupported type of slice parameter");
     }
   }
+    
+  protected setState(slice?: keyof T | string[], value?: any, modified?: Tree<boolean> = {}): any {
+    if (slice === undefined || (typeof slice === "string" && slice === "@global")) {
+      // Update the whole state with a shallow copy of the value
+      return { ...value };
+    } else if (typeof slice === "string") {
+      // Update the state property with the given key, tracking modifications
+      const updatedState = {
+        ...this.currentState.value,
+        [slice]: { ...value },
+      };
+            
+      modified[slice] = true; // Mark this property as modified
+      return updatedState;
+    } else if (Array.isArray(slice)) {
+      // Update the nested state property with the given path using reduce
+      const updatedState = slice.reduce((currentObj, key) => {
+        if (!currentObj[key]) {
+          currentObj[key] = {}; // Create a new node
+        }  
+        modified[key] = true; // Mark this property as modified
+        return currentObj[key];
+      }, { ...this.currentState.value });
+      return updatedState;
+    } else {
+      throw new Error("Unsupported type of slice parameter");
+    }
+  }
 
   protected setState<T = any>(slice?: keyof T | string[], value?: any): any {
     if (slice === undefined || typeof slice === "string" && slice == "@global") {
