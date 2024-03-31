@@ -334,9 +334,9 @@ export class Store {
 
   protected async combineReducersNew(reducers: Tree<Reducer>): Promise<[Reducer, Tree<any>, Map<string, string>]> {
     // Create a map for reducers
-    const reducerMap = new Map();
+    const reducerMap = new Map<Reducer, string[]>();
 
-    const buildReducerMap = (tree, path = []) => {
+    const buildReducerMap = (tree: Tree<Reducer>, path: string[] = []) => {
       for (const key in tree) {
         const reducer = tree[key];
         const newPath = [...path, key]; // Add current key to the path
