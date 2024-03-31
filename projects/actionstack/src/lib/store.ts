@@ -209,18 +209,15 @@ export class Store {
 
     for (let i = 0; i < path.length; i++) {
       const key = path[i];
-      if (!currentEdges[key]) {
-        // Edge not found in the edges object, mark it as reached
-        currentEdges[key] = {};
-      }
       if (i === path.length - 1) {
-         // Reached the leaf node, update its value
-         currentObj[key] = value;
+        // Reached the leaf node, update its value
+        currentObj[key] = value;
+        currentEdges[key] = true;
       } else {
         // Continue traversal
-        currentObj[key] = { ...currentObj[key] };
+        currentObj[key] = currentEdges[key] ? currentObj[key]: { ...currentObj[key] };
         currentObj = currentObj[key];
-        currentEdges = currentEdges[key] as Tree<boolean>;
+        currentEdges = currentEdges[key] ? currentEdges[key] : {};
       }
     }
     return currentState;
