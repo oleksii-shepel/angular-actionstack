@@ -216,7 +216,7 @@ export class Store {
       } else {
         // Continue traversal
         currentObj = currentObj[key] = currentEdges[key] ? currentObj[key]: { ...currentObj[key] };
-        currentEdges = currentEdges[key] ? currentEdges[key] : {};
+        currentEdges = currentEdges[key] = currentEdges[key] ?? {};
       }
     }
     return currentState;
