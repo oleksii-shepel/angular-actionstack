@@ -236,15 +236,7 @@ export class Store {
       modified[slice] = true; // Mark this property as modified
       return updatedState;
     } else if (Array.isArray(slice)) {
-      // Update the nested state property with the given path using reduce
-      const updatedState = slice.reduce((currentObj, key) => {
-        if (!currentObj[key]) {
-          currentObj[key] = {}; // Create a new node
-        }  
-        modified[key] = true; // Mark this property as modified
-        return currentObj[key];
-      }, { ...this.currentState.value });
-      return updatedState;
+      return this.applyChange(this.currentState.value, {path: slice, value}, modified);
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
