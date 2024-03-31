@@ -332,6 +332,25 @@ export class Store {
     return this;
   }
 
+  protected async combineReducersNew(reducers: Tree<Reducer>): Promise<[Reducer, Tree<any>, Map<string, string>]> {
+    // Create a map for reducers
+    const reducerMap = new Map();
+
+    const buildReducerMap = (tree, path = []) => {
+      for (const key in tree) {
+        const reducer = tree[key];
+        const newPath = [...path, key]; // Add current key to the path
+        reducerMap.set(reducer, newPath);
+
+        if (typeof reducer === 'object') {
+          buildReducerMap(reducer, newPath);
+        }
+      }
+    };
+
+    buildReducerMap(reducers);
+  }
+  
   protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, any, Map<string, string>]> {
     let errors = new Map<string, string>();
     let featureReducers = {} as any;
