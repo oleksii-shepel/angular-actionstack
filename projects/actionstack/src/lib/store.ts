@@ -200,7 +200,32 @@ export class Store {
       throw new Error("Unsupported type of slice parameter");
     }
   }
-    
+
+  // Function to apply a single change to the state and accumulate edges
+  protected applyChange(initialState: any, {path, value}: {path: string[], value: any}, edges: Tree<boolean>): any {
+    let currentState: any = { ...initialState };
+    let currentObj: any = currentState;
+    let currentEdges: Tree<boolean> = edges;
+
+    for (let i = 0; i < path.length; i++) {
+      const key = path[i];
+      if (!currentEdges[key]) {
+        // Edge not found in the edges object, mark it as reached
+        currentEdges[key] = {};
+      }
+      if (i === path.length - 1) {
+         // Reached the leaf node, update its value
+         currentObj[key] = value;
+      } else {
+        // Continue traversal
+        currentObj[key] = { ...currentObj[key] };
+        currentObj = currentObj[key];
+        currentEdges = currentEdges[key] as Tree<boolean>;
+      }
+    }
+    return currentState;
+  }
+                                                                                                                                      
   protected setState(slice?: keyof T | string[], value?: any, modified?: Tree<boolean> = {}): any {
     if (slice === undefined || (typeof slice === "string" && slice === "@global")) {
       // Update the whole state with a shallow copy of the value
