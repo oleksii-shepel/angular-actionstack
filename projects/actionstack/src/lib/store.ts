@@ -385,7 +385,7 @@ export class Store {
       // Apply every reducer to state and track changes
       for (const [reducer, path] of reducerMap) {
         try {
-          const currentState = this.getState(path);
+          const currentState = await this.getState(path);
           const updatedState = await reducer(currentState, action);
           if(currentState !== updatedState) { changesMap.set(reducer, updatedState); }
         } catch (error: any) {
