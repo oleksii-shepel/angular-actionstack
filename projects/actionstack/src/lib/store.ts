@@ -187,7 +187,17 @@ export class Store {
     } else if (typeof slice === "string") {
       return this.currentState.value[slice] as T;
     } else if (Array.isArray(slice)) {
-      return slice.reduce((acc, key) => (acc && Array.isArray(acc) ? acc[parseInt(key)] : acc[key]) || undefined, this.currentState.value) as T;
+      return slice.reduce((acc, key) => {
+        if (acc === undefined) {
+          return undefined;
+        } else if (Array.isArray(acc)) {
+          return acc[parseInt(key)];
+        } else if (typeof acc === 'object' && acc !== null) {
+          return acc[key];
+        } else {
+          return undefined;
+        }
+      }, this.currentState.value) as T;
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
