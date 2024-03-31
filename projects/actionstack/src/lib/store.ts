@@ -188,14 +188,12 @@ export class Store {
       return this.currentState.value[slice] as T;
     } else if (Array.isArray(slice)) {
       return slice.reduce((acc, key) => {
-        if (acc === undefined) {
+        if (acc === undefined || acc === null) {
           return undefined;
         } else if (Array.isArray(acc)) {
           return acc[parseInt(key)];
-        } else if (typeof acc === 'object' && acc !== null) {
-          return acc[key];
         } else {
-          return undefined;
+          return acc[key];
         }
       }, this.currentState.value) as T;
     } else {
