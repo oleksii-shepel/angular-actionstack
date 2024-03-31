@@ -357,6 +357,31 @@ export class Store {
     };
 
     buildReducerMap(reducers);
+
+    const combinedReducer = (state: any = {}, action: Action<any>) => {
+      const changesMap = new Map();
+
+      // Apply every reducer to state and track changes
+      for (const [reducer, path] of reducerMap) {
+        try {
+          const currentState = this.getState(path);
+          const updatedState = await reducer(currentState, action);
+          if(currentState !== updatedState) { changesMap.set(reducer, updatedState); }
+        } catch (error: any) {
+          throw new Error(`Error occurred while processing an action ${action.type} for ${path}: ${error.message}`);
+        }
+      }
+
+      // Apply changes to source state
+      for (const [reducer, change] of changesMap) {
+        try {
+          const path = reducerMap.get(reducer);
+          this.setState(path);
+        } catch (error: any) {
+          throw new Error(`Error occurred while applying changes for ${path}: ${error.message}`);
+        }
+      }
+    };
   }
   
   protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, any, Map<string, string>]> {
