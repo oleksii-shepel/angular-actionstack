@@ -399,7 +399,6 @@ export class Store {
       }
     }
     
-    await this.currentState.next(state);
     modified = {} as any;
     
     const combinedReducer = (state: any = {}, action: Action<any>) => {
@@ -418,6 +417,7 @@ export class Store {
       }
       return state;
     };
+    return [combinedReducer, state, errors]; 
   }
   
   protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, any, Map<string, string>]> {
