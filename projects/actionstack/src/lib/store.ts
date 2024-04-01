@@ -361,7 +361,7 @@ export class Store {
     return this;
   }
 
-  protected async combineReducersNew(reducers: Tree<Reducer>): Promise<[Reducer, Tree<any>, Map<string, string>]> {
+  protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, Tree<any>, Map<string, string>]> {
     // Create a map for reducers
     const reducerMap = new Map<Reducer, string[]>();
 
@@ -419,57 +419,6 @@ export class Store {
       return state;
     };
     return [combinedReducer, state, errors]; 
-  }
-  
-  protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, any, Map<string, string>]> {
-    let errors = new Map<string, string>();
-    let featureReducers = {} as any;
-    let featureState = {} as any;
-
-    // Initialize state
-    for (let key of Object.keys(reducers)) {
-      try {
-        if(reducers[key] instanceof Function) {
-         let reducer = reducers[key] as Function;
-          let reducerResult = reducer(undefined, systemActions.initializeState());
-
-          featureState[key] = await reducerResult;
-          featureReducers[key] = reducer;
-
-          if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
-            throw new Error("Async reducers are disabled.");
-          }
-        } else {
-          let [nestedReducer, nestedState, nestedErrors] = await this.combineReducers(featureReducers[key]);
-          featureState[key] = nestedState;
-          featureReducers[key] = nestedReducer;
-          errors = new Map([...errors, ...nestedErrors]);
-        }
-      } catch (error: any) {
-        errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
-      }
-    }
-
-    // Combine the main module reducer with the feature module reducers
-    const combinedReducer = async (state: any = {}, action: Action<any>) => {
-      let newState = state;
-
-      for (let key of Object.keys(featureReducers)) {
-        try {
-          const featureState = await featureReducers[key](newState[key], action);
-
-          if(featureState !== newState[key]){
-            newState = {...newState, [key]: featureState};
-          }
-        } catch (error: any) {
-          throw new Error(`Error occurred while processing an action ${action.type} for ${key}: ${error.message}`);
-        }
-      }
-
-      return newState;
-    };
-
-    return [combinedReducer, featureState, errors];
   }
 
   protected hydrateState(state: any, initialState: any): any {
