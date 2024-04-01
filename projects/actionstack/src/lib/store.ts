@@ -379,7 +379,7 @@ export class Store {
     buildReducerMap(reducers);
 
     let errors = new Map<string, string>();
-    let state = this currenState.value; let modified = {} as any;
+    let state = {}; let modified = {} as any;
     
     // Initialize state
     for (const [reducer, path] of reducerMap) {
