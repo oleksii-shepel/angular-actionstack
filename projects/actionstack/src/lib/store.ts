@@ -30,15 +30,25 @@ export class StoreSettings {
   }
 }
 
+export const systemActionTypes = {
+  INITIALIZE_STATE: `INITIALIZE_STATE`,
+  UPDATE_STATE: `UPDATE_STATE`,
+  STORE_INITIALIZED: `STORE_INITIALIZED`,
+  MODULE_LOADED: `MODULE_LOADED`,
+  MODULE_UNLOADED: `MODULE_UNLOADED`,
+  EFFECTS_REGISTERED: `EFFECTS_REGISTERED`,
+  EFFECTS_UNREGISTERED: `EFFECTS_UNREGISTERED`
+};
+
 // Define the action creators
-export const systemActions = {
-  initializeState: action(`initializeState`),
-  updateState: action(`updateState`),
-  storeInitialized: action(`storeInitialized`),
-  moduleLoaded: action(`moduleLoaded`, (module: FeatureModule) => ({module})),
-  moduleUnloaded: action(`moduleUnloaded`, (module: FeatureModule) => ({module})),
-  effectsRegistered: action(`effectsRegistered`, (effects: SideEffect[]) => ({effects})),
-  effectsUnregistered: action(`effectsUnregistered`, (effects: SideEffect[]) => ({effects}))
+const systemActions = {
+  initializeState: action(systemActionTypes.INITIALIZE_STATE),
+  updateState: action(systemActionTypes.UPDATE_STATE),
+  storeInitialized: action(systemActionTypes.STORE_INITIALIZED),
+  moduleLoaded: action(systemActionTypes.MODULE_LOADED, (module: FeatureModule) => ({module})),
+  moduleUnloaded: action(systemActionTypes.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
+  effectsRegistered: action(systemActionTypes.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
+  effectsUnregistered: action(systemActionTypes.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
 };
 
 export class Store {
