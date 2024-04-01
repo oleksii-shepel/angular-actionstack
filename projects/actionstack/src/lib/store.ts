@@ -181,11 +181,11 @@ export class Store {
     this.actionStream.next(action);
   }
 
-  getState<T = any>(slice?: keyof T | string[]): any {
-    if (this.currentState.value === undefined || slice === undefined || typeof slice === "string" && slice == "@global") {
-      return this.currentState.value as T;
+  getState<T = any>(state?: any, slice?: keyof T | string[]): any {
+    if (state === undefined || slice === undefined || typeof slice === "string" && slice == "@global") {
+      return value as T;
     } else if (typeof slice === "string") {
-      return this.currentState.value[slice] as T;
+      return state[slice] as T;
     } else if (Array.isArray(slice)) {
       return slice.reduce((acc, key) => {
         if (acc === undefined || acc === null) {
@@ -195,7 +195,7 @@ export class Store {
         } else {
           return acc[key];
         }
-      }, this.currentState.value) as T;
+      }, state) as T;
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
@@ -222,17 +222,17 @@ export class Store {
     return currentState;
   }
                                                                                                                                       
-  protected setState(slice?: keyof T | string[], value?: any, modified?: Tree<boolean> = {}): any {
+  protected setState(state?: any, slice?: keyof T | string[], value?: any, modified?: Tree<boolean> = {}): any {
     if (slice === undefined || (typeof slice === "string" && slice === "@global")) {
       // Update the whole state with a shallow copy of the value
       return { ...value };
     } else if (typeof slice === "string") {
       // Update the state property with the given key, tracking modifications
-      const updatedState = {...this.currentState.value, [slice]: { ...value }}; 
+      const updatedState = {...state, [slice]: { ...value }}; 
       modified[slice] = true; // Mark this property as modified
       return updatedState;
     } else if (Array.isArray(slice)) {
-      return this.applyChange(this.currentState.value, {path: slice, value}, modified);
+      return this.applyChange(state, {path: slice, value}, modified);
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
@@ -244,9 +244,9 @@ export class Store {
         throw new Error('Callback function is missing. State will not be updated.')
       }
 
-      let state = await this.getState(slice);
+      let state = await this.getState(this.currentState.value, slice);
       let result = await callback(state);
-      let newState = await this.setState(slice, result);
+      let newState = await this.setState(this.currentState.value, slice, result);
 
       let stateUpdated = this.currentState.next(newState);
       let actionHandled = this.currentAction.next(action);
@@ -258,7 +258,6 @@ export class Store {
       return action;
     })());
   }
-
 
   subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
     const stateObservable = this.currentState.asObservable().pipe(
@@ -379,31 +378,44 @@ export class Store {
 
     buildReducerMap(reducers);
 
+    let errors = new Map<string, string>();
+    let state = this currenState.value; let modified = {} as any;
+    
+    // Initialize state
+    for (const [reducer, path] of reducerMap) {
+      try {
+        if(reducer instanceof Function) {
+          let reducerFn = reducer as Function;
+          let reducerResult = reducerFn(undefined, systemActions.initializeState());
+
+          state = await this.setState(state, path, await reducerResult, modified);
+
+          if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
+            throw new Error("Async reducers are disabled.");
+          }
+        }
+      } catch (error: any) {
+        errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
+      }
+    }
+    
+    await this.currentState.next(state);
+    modified = {} as any;
+    
     const combinedReducer = (state: any = {}, action: Action<any>) => {
       const changesMap = new Map();
 
       // Apply every reducer to state and track changes
       for (const [reducer, path] of reducerMap) {
         try {
-          const currentState = await this.getState(path);
+          const currentState = await this.getState(state, path);
           const updatedState = await reducer(currentState, action);
-          if(currentState !== updatedState) { changesMap.set(reducer, updatedState); }
+          if(currentState !== updatedState) { state = await this.setState(state, path, currentState, modified);
+        }
         } catch (error: any) {
           throw new Error(`Error occurred while processing an action ${action.type} for ${path}: ${error.message}`);
         }
       }
-
-      let modified = {}; let state = this.currentState.value;
-      // Apply changes to source state
-      for (const [reducer, change] of changesMap) {
-        try {
-          const path = reducerMap.get(reducer);
-          state = await this.setState(path, change, modified);
-        } catch (error: any) {
-          throw new Error(`Error occurred while applying changes for ${path}: ${error.message}`);
-        }
-      }
-
       return state;
     };
   }
@@ -417,7 +429,7 @@ export class Store {
     for (let key of Object.keys(reducers)) {
       try {
         if(reducers[key] instanceof Function) {
-          let reducer = reducers[key] as Function;
+         let reducer = reducers[key] as Function;
           let reducerResult = reducer(undefined, systemActions.initializeState());
 
           featureState[key] = await reducerResult;
