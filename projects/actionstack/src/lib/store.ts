@@ -222,17 +222,17 @@ export class Store {
     return currentState;
   }
                                                                                                                                       
-  protected setState(state?: any, slice?: keyof T | string[], value?: any, modified?: Tree<boolean> = {}): any {
-    if (slice === undefined || (typeof slice === "string" && slice === "@global")) {
-      // Update the whole state with a shallow copy of the value
-      return { ...value };
+  protected setState<T = any>(slice?: keyof T | string[], value?: any): any {
+    if (slice === undefined || typeof slice === "string" && slice == "@global") {
+      // update the whole state with a shallow copy of the value
+      return ({...value});
     } else if (typeof slice === "string") {
-      // Update the state property with the given key, tracking modifications
-      const updatedState = {...state, [slice]: { ...value }}; 
+      // update the state property with the given key with a shallow copy of the value
+      const updatedState = {...this.currentState.value, [slice]: { ...value }}; 
       modified[slice] = true; // Mark this property as modified
       return updatedState;
     } else if (Array.isArray(slice)) {
-      return this.applyChange(state, {path: slice, value}, modified);
+      return this.applyChange(this currentState.value, {path: slice, value}, modified);
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
