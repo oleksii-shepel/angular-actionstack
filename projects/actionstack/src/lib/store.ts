@@ -388,12 +388,12 @@ export class Store {
         if(reducer instanceof Function) {
           let reducerFn = reducer as Function;
           let reducerResult = reducerFn(undefined, systemActions.initializeState());
-
-          state = await this.setState(state, path, await reducerResult, modified);
-
+          
           if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
             throw new Error("Async reducers are disabled.");
           }
+          
+          state = await this.setState(state, path, await reducerResult, modified);
         }
       } catch (error: any) {
         errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
