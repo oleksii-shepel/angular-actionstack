@@ -181,11 +181,11 @@ export class Store {
     this.actionStream.next(action);
   }
 
-  getState<T = any>(state?: any, slice?: keyof T | string[]): any {
-    if (state === undefined || slice === undefined || typeof slice === "string" && slice == "@global") {
-      return value as T;
+  getState<T = any>(slice?: keyof T | string[]): any {
+    if (this.currentState.value === undefined || slice === undefined || typeof slice === "string" && slice == "@global") {
+      return this.currentState.value as T;
     } else if (typeof slice === "string") {
-      return state[slice] as T;
+      return this.currentState.value[slice] as T;
     } else if (Array.isArray(slice)) {
       return slice.reduce((acc, key) => {
         if (acc === undefined || acc === null) {
@@ -195,7 +195,7 @@ export class Store {
         } else {
           return acc[key];
         }
-      }, state) as T;
+      }, this.currentState.value) as T;
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
