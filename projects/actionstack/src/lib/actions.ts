@@ -3,6 +3,9 @@ import { isAction, kindOf } from "./types";
 export { createAction as action };
 
 function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
+  function snakecase(str: string): string {
+    return str.replace(/([A-Z])/g, (_) => `_${_.toUpperCase()}`);
+  }
   function actionCreator(...args: any[]) {
     let action: any = {
       type: typeOrThunk,
@@ -39,7 +42,7 @@ function createAction(typeOrThunk: string | Function, payloadCreator?: Function)
     return action;
   }
 
-  actionCreator.toString = () => `${typeOrThunk}`;
+  actionCreator.toString = () => `${snakecase(typeOrThunk)}`;
   actionCreator.type = typeOrThunk;
   actionCreator.match = (action: any) => isAction(action) && action.type === typeOrThunk;
 
