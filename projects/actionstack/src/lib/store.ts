@@ -30,25 +30,24 @@ export class StoreSettings {
   }
 }
 
-export const systemActionTypes = {
-  INITIALIZE_STATE: `INITIALIZE_STATE`,
-  UPDATE_STATE: `UPDATE_STATE`,
-  STORE_INITIALIZED: `STORE_INITIALIZED`,
-  MODULE_LOADED: `MODULE_LOADED`,
-  MODULE_UNLOADED: `MODULE_UNLOADED`,
-  EFFECTS_REGISTERED: `EFFECTS_REGISTERED`,
-  EFFECTS_UNREGISTERED: `EFFECTS_UNREGISTERED`
-};
+export type SystemActionTypes = 
+  | "INITIALIZE_STATE"
+  | "UPDATE_STATE"
+  | "STORE_INITIALIZED"
+  | "MODULE_LOADED"
+  | "MODULE_UNLOADED"
+  | "EFFECTS_REGISTERED"
+  | "EFFECTS_UNREGISTERED";
 
 // Define the action creators
-const systemActions = {
-  initializeState: action(systemActionTypes.INITIALIZE_STATE),
-  updateState: action(systemActionTypes.UPDATE_STATE),
-  storeInitialized: action(systemActionTypes.STORE_INITIALIZED),
-  moduleLoaded: action(systemActionTypes.MODULE_LOADED, (module: FeatureModule) => ({module})),
-  moduleUnloaded: action(systemActionTypes.MODULE_UNLOADED, (module: FeatureModule) => ({module})),
-  effectsRegistered: action(systemActionTypes.EFFECTS_REGISTERED, (effects: SideEffect[]) => ({effects})),
-  effectsUnregistered: action(systemActionTypes.EFFECTS_UNREGISTERED, (effects: SideEffect[]) => ({effects}))
+const systemActions<T = keyof SystemActionTypes> = {
+  initializeState: action<T>(`INITIALIZE_STATE`),
+  updateState: action<T>(`UPDATE_STATE`),
+  storeInitialized: action<T>(`STORE_INITIALIZED`),
+  moduleLoaded: action<T>(`MODULE_LOADED`, (module: FeatureModule) => ({module})),
+  moduleUnloaded: action<T>(`MODULE_UNLOADED`, (module: FeatureModule) => ({module})),
+  effectsRegistered: action<T>(`EFFECTS_REGISTERED`, (effects: SideEffect[]) => ({effects})),
+  effectsUnregistered: action<T>(`EFFECTS_UNREGISTERED`, (effects: SideEffect[]) => ({effects}))
 };
 
 export class Store {
