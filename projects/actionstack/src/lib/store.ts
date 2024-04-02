@@ -27,7 +27,7 @@ export type SystemActionTypes =
   | "EFFECTS_UNREGISTERED";
 
 // Define the action creators
-const systemActions<T = keyof SystemActionTypes> = {
+export const systemActions<T = keyof SystemActionTypes> = {
   initializeState: action<T>(`INITIALIZE_STATE`),
   updateState: action<T>(`UPDATE_STATE`),
   storeInitialized: action<T>(`STORE_INITIALIZED`),
