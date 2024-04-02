@@ -10,25 +10,12 @@ import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEff
 
 export { createStore as store };
 
-export class StoreSettings {
-  dispatchSystemActions!: boolean;
-  awaitStatePropagation!: boolean;
-  enableMetaReducers!: boolean;
-  enableAsyncReducers!: boolean;
-
-  constructor() {
-    Object.assign(this, StoreSettings.default);
-  }
-
-  static get default(): StoreSettings {
-    return {
-      dispatchSystemActions: false,
-      awaitStatePropagation: true,
-      enableMetaReducers: false,
-      enableAsyncReducers: false,
-    };
-  }
-}
+export const StoreSettings = {
+  dispatchSystemActions: false,
+  awaitStatePropagation: true,
+  enableMetaReducers: false,
+  enableAsyncReducers: false,
+};
 
 export type SystemActionTypes = 
   | "INITIALIZE_STATE"
