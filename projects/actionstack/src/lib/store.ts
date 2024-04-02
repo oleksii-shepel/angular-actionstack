@@ -28,13 +28,13 @@ export type SystemActionTypes =
 
 // Define the action creators
 const systemActions = <T = SystemActionTypes>(() => ({
-  initializeState: action<T>(`INITIALIZE_STATE`),
-  updateState: action<T>(`UPDATE_STATE`),
-  storeInitialized: action<T>(`STORE_INITIALIZED`),
-  moduleLoaded: action<T>(`MODULE_LOADED`, (module: FeatureModule) => ({module})),
-  moduleUnloaded: action<T>(`MODULE_UNLOADED`, (module: FeatureModule) => ({module})),
-  effectsRegistered: action<T>(`EFFECTS_REGISTERED`, (effects: SideEffect[]) => ({effects})),
-  effectsUnregistered: action<T>(`EFFECTS_UNREGISTERED`, (effects: SideEffect[]) => ({effects}))
+  initializeState: action<T>("INITIALIZE_STATE"),
+  updateState: action<T>("UPDATE_STATE"),
+  storeInitialized: action<T>("STORE_INITIALIZED"),
+  moduleLoaded: action<T>("MODULE_LOADED", (module: FeatureModule) => ({module})),
+  moduleUnloaded: action<T>("MODULE_UNLOADED", (module: FeatureModule) => ({module})),
+  effectsRegistered: action<T>("EFFECTS_REGISTERED", (effects: SideEffect[]) => ({effects})),
+  effectsUnregistered: action<T>("EFFECTS_UNREGISTERED", (effects: SideEffect[]) => ({effects}))
 }))();
 
 export class Store {
