@@ -47,16 +47,11 @@ export class Store {
     strategy: "exclusive" as "exclusive"
   };
   protected modules: FeatureModule[] = [];
-  protected pipeline: {
-    middlewares: any[];
-    reducer: Reducer;
-    dependencies: Record<string, any>;
-    strategy: "exclusive" | "concurrent";
-  } = {
-    middlewares: [],
-    reducer: (state: any = {}, action: Action<any>) => state,
-    dependencies: {},
-    strategy: "exclusive" as "exclusive"
+  protected pipeline = {
+    middlewares: [] as any[],
+    reducer: (state: any = {}, action: Action<any>) => state as Reducer,
+    dependencies: {} as Record<string, any>,
+    strategy: "exclusive" as "exclusive" | "concurrent"
   };
   protected actionStream = new Subject<Action<any>>();
   protected actionStack = new Stack();
