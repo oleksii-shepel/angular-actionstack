@@ -27,7 +27,7 @@ export type SystemActionTypes =
   | "EFFECTS_UNREGISTERED";
 
 // Define the action creators
-const systemActions<T = keyof SystemActionTypes> = {
+const systemActions = <T extends keyof typeof SystemActionTypes>(() => ({
   initializeState: action<T>(`INITIALIZE_STATE`),
   updateState: action<T>(`UPDATE_STATE`),
   storeInitialized: action<T>(`STORE_INITIALIZED`),
@@ -35,7 +35,7 @@ const systemActions<T = keyof SystemActionTypes> = {
   moduleUnloaded: action<T>(`MODULE_UNLOADED`, (module: FeatureModule) => ({module})),
   effectsRegistered: action<T>(`EFFECTS_REGISTERED`, (effects: SideEffect[]) => ({effects})),
   effectsUnregistered: action<T>(`EFFECTS_UNREGISTERED`, (effects: SideEffect[]) => ({effects}))
-};
+}))<SystemActionTypes>();
 
 export class Store {
   protected mainModule: MainModule;
