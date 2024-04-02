@@ -38,73 +38,34 @@ const systemActions = <T = SystemActionTypes>(() => ({
 }))();
 
 export class Store {
-  protected mainModule: MainModule;
-  protected modules: FeatureModule[];
+  protected mainModule: MainModule = {
+    slice: "main",
+    middlewares: [],
+    reducer: (state: any = {}, action: Action<any>) => state,
+    metaReducers: [],
+    dependencies: {},
+    strategy: "exclusive" as "exclusive"
+  };
+  protected modules: FeatureModule[] = [];
   protected pipeline: {
     middlewares: any[];
     reducer: Reducer;
     dependencies: Record<string, any>;
     strategy: "exclusive" | "concurrent";
+  } = {
+    middlewares: [],
+    reducer: (state: any = {}, action: Action<any>) => state,
+    dependencies: {},
+    strategy: "exclusive" as "exclusive"
   };
-  protected actionStream: Subject<Action<any>>;
-  protected actionStack: Stack;
-  protected currentAction: CustomAsyncSubject<any>;
-  protected currentState: CustomAsyncSubject<any>;
-  protected isProcessing: BehaviorSubject<boolean>;
-  protected subscription: Subscription;
-  protected systemActions: Record<keyof typeof systemActions, any>;
-  protected settings: StoreSettings;
-
-  protected constructor() {
-    let STORE_SETTINGS_DEFAULT = StoreSettings.default;
-
-    let MAIN_MODULE_DEFAULT = {
-      slice: "main",
-      middlewares: [],
-      reducer: (state: any = {}, action: Action<any>) => state,
-      metaReducers: [],
-      dependencies: {},
-      strategy: "exclusive" as "exclusive"
-    };
-
-    let MODULES_DEFAULT: FeatureModule[] = [];
-
-    let PIPELINE_DEFAULT = {
-      middlewares: [],
-      reducer: (state: any = {}, action: Action<any>) => state,
-      dependencies: {},
-      strategy: "exclusive" as "exclusive"
-    };
-
-    let ACTION_STREAM_DEFAULT = new Subject<Action<any>>();
-    let ACTION_STACK_DEFAULT = new Stack();
-
-    let CURRENT_ACTION_DEFAULT = new CustomAsyncSubject<any>();
-    let CURRENT_STATE_DEFAULT = new CustomAsyncSubject<any>();
-
-    let PROCESSING_DEFAULT = new BehaviorSubject(false);
-    let SUBSCRIPTION_DEFAULT = Subscription.EMPTY;
-    let SYSTEM_ACTIONS_DEFAULT = { ...systemActions };
-
-    try {
-      STORE_SETTINGS_DEFAULT = Object.assign(STORE_SETTINGS_DEFAULT, inject(StoreSettings));
-    } catch {
-      console.warn("Failed to inject StoreSettings. Please check your configuration and try again.");
-      STORE_SETTINGS_DEFAULT = STORE_SETTINGS_DEFAULT;
-    }
-
-    this.mainModule = MAIN_MODULE_DEFAULT;
-    this.modules = MODULES_DEFAULT;
-    this.pipeline = PIPELINE_DEFAULT;
-    this.actionStream = ACTION_STREAM_DEFAULT;
-    this.actionStack = ACTION_STACK_DEFAULT;
-    this.currentAction = CURRENT_ACTION_DEFAULT;
-    this.currentState = CURRENT_STATE_DEFAULT;
-    this.isProcessing = PROCESSING_DEFAULT;
-    this.subscription = SUBSCRIPTION_DEFAULT;
-    this.systemActions = SYSTEM_ACTIONS_DEFAULT;
-    this.settings = STORE_SETTINGS_DEFAULT;
-  }
+  protected actionStream = new Subject<Action<any>>();
+  protected actionStack = new Stack();
+  protected currentAction = new CustomAsyncSubject<any>();
+  protected currentState = new CustomAsyncSubject<any>();
+  protected isProcessing = new BehaviorSubject<boolean>(false);
+  protected subscription = Subscription.EMPTY;
+  protected systemActions: Record<keyof typeof systemActions, any> = { ...systemActions };
+  protected settings = Object.assign({}, new StoreSettings(), inject(StoreSettings));
 
   static create(mainModule: MainModule, enhancer?: StoreEnhancer) {
 
