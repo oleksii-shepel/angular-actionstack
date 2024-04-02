@@ -10,11 +10,11 @@ import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEff
 
 export { createStore as store };
 
-export const StoreSettings = {
-  dispatchSystemActions: false,
-  awaitStatePropagation: true,
-  enableMetaReducers: false,
-  enableAsyncReducers: false,
+export class StoreSettings {
+  dispatchSystemActions = false;
+  awaitStatePropagation = true;
+  enableMetaReducers = false;
+  enableAsyncReducers = false;
 };
 
 export type SystemActionTypes = 
@@ -27,7 +27,7 @@ export type SystemActionTypes =
   | "EFFECTS_UNREGISTERED";
 
 // Define the action creators
-export const systemActions<T = keyof SystemActionTypes> = {
+const systemActions<T = keyof SystemActionTypes> = {
   initializeState: action<T>(`INITIALIZE_STATE`),
   updateState: action<T>(`UPDATE_STATE`),
   storeInitialized: action<T>(`STORE_INITIALIZED`),
