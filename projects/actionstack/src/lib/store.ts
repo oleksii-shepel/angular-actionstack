@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -95,6 +95,13 @@ export class Store {
       let action$ = store.actionStream.asObservable();
 
       store.subscription = action$.pipe(
+        scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
+        map(({count, action}: any) => {
+          if (count === 1) {
+            console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;");
+          }
+          return action;
+        }),
         store.processAction()
       ).subscribe();
 
