@@ -34,7 +34,7 @@ export function isSystemActionType(type: string): type is SystemActionTypes {
   return SYSTEM_ACTION_TYPES_ARRAY.includes(type as SystemActionTypes);
 }
 
-function systemAction<T extends SystemActionTypes>(type: T, payload?: any) {
+function systemAction<T extends SystemActionTypes>(type: T, payload?: Function) {
   return action(type, payload);
 }
 
