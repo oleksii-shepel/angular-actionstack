@@ -352,15 +352,14 @@ export class Store {
       }
     }
 
-    modified = {} as any;
-
     const combinedReducer = async (state: any = {}, action: Action<any>) => {
       // Apply every reducer to state and track changes
+      let modified = {};
       for (const [reducer, path] of reducerMap) {
         try {
           const currentState = await this.getState(path);
           const updatedState = await reducer(currentState, action);
-          if(currentState !== updatedState) { state = await this.setState(state, path, currentState, modified); }
+          if(currentState !== updatedState) { state = await this.setState(state, path, updatedState, modified); }
         } catch (error: any) {
           throw new Error(`Error occurred while processing an action ${action.type} for ${path.join('.')}: ${error.message}`);
         }
@@ -534,7 +533,7 @@ export class Store {
 
     const starterAPI = {
       getState: () => this.getState(),
-      dispatch: (action: any) => this.dispatch(action),
+      dispatch: (action: any) => dispatch(action),
       isProcessing: this.isProcessing,
       actionStack: this.actionStack,
       dependencies: () => this.pipeline.dependencies,
@@ -543,7 +542,7 @@ export class Store {
 
     const middlewareAPI = {
       getState: () => this.getState(),
-      dispatch: (action: any) => this.dispatch(action),
+      dispatch: (action: any) => dispatch(action),
     };
 
     const chain = [starter(isValidMiddleware(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
