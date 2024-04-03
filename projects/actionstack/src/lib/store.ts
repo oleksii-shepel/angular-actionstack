@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -11,7 +11,7 @@ import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEff
 export { createStore as store };
 
 export class StoreSettings {
-  dispatchSystemActions = true;
+  dispatchSystemActions = false;
   awaitStatePropagation = true;
   enableMetaReducers = false;
   enableAsyncReducers = false;
@@ -95,8 +95,6 @@ export class Store {
       let action$ = store.actionStream.asObservable();
 
       store.subscription = action$.pipe(
-        scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        concatMap(({count, action}: any) => (count === 1) ? store.updateState("@global", () => store.setupReducer(), systemActions.initializeState()) : of(action)),
         store.processAction()
       ).subscribe();
 
