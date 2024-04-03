@@ -138,6 +138,26 @@ export class Store {
     this.actionStream.next(action);
   }
 
+  subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
+    const stateObservable = this.currentState.asObservable().pipe(
+      filter(value => value !== undefined),
+      distinctUntilChanged()
+    );
+    if (typeof next === 'function') {
+      return stateObservable.subscribe({next, error, complete});
+    } else {
+      return stateObservable.subscribe(next as Partial<AsyncObserver<any>>);
+    }
+  }
+
+  select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
+    let obs = selector(this.currentState.asObservable()).pipe(distinctUntilChanged());
+    if (defaultValue !== undefined) {
+      obs = obs.pipe(defaultIfEmpty(defaultValue));
+    }
+    return obs;
+  }
+
   getState<T = any>(slice?: keyof T | string[]): any {
     if (this.currentState.value === undefined || slice === undefined || typeof slice === "string" && slice == "@global") {
       return this.currentState.value as T;
@@ -215,26 +235,6 @@ export class Store {
 
       return action;
     })());
-  }
-
-  subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
-    const stateObservable = this.currentState.asObservable().pipe(
-      filter(value => value !== undefined),
-      distinctUntilChanged()
-    );
-    if (typeof next === 'function') {
-      return stateObservable.subscribe({next, error, complete});
-    } else {
-      return stateObservable.subscribe(next as Partial<AsyncObserver<any>>);
-    }
-  }
-
-  select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
-    let obs = selector(this.currentState.asObservable()).pipe(distinctUntilChanged());
-    if (defaultValue !== undefined) {
-      obs = obs.pipe(defaultIfEmpty(defaultValue));
-    }
-    return obs;
   }
 
   protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, Tree<any>, Map<string, string>]> {
