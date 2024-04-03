@@ -17,7 +17,7 @@ export class StoreSettings {
   enableAsyncReducers = false;
 };
 
-const SYSTEM_ACTION_TYPES_ARRAY = [
+const SYSTEM_ACTION_TYPES = [
   "INITIALIZE_STATE",
   "UPDATE_STATE",
   "STORE_INITIALIZED",
@@ -28,10 +28,10 @@ const SYSTEM_ACTION_TYPES_ARRAY = [
 ] as const;
 
 // Define the type from the values of the array
-export type SystemActionTypes = typeof SYSTEM_ACTION_TYPES_ARRAY[number] & string;
+export type SystemActionTypes = typeof SYSTEM_ACTION_TYPES[number] & string;
 
 export function isSystemActionType(type: string): type is SystemActionTypes {
-  return SYSTEM_ACTION_TYPES_ARRAY.includes(type as SystemActionTypes);
+  return SYSTEM_ACTION_TYPES.includes(type as SystemActionTypes);
 }
 
 function systemAction<T extends SystemActionTypes>(type: T, payload?: Function) {
