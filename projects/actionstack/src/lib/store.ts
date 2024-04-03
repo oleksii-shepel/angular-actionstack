@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -95,8 +95,6 @@ export class Store {
       let action$ = store.actionStream.asObservable();
 
       store.subscription = action$.pipe(
-        scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        concatMap(({count, action}: any) => (count === 1 && !systemActions.initializeState.match(action)) ? store.updateState("@global", () => store.setupReducer(), action) : of(action)),
         store.processAction()
       ).subscribe();
 
@@ -230,87 +228,6 @@ export class Store {
       obs = obs.pipe(defaultIfEmpty(defaultValue));
     }
     return obs;
-  }
-
-  extend(...args: SideEffect[]) {
-    const dependencies = this.pipeline.dependencies;
-    const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
-    const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-
-    const effectsSubscription = this.currentAction.asObservable().pipe(
-      withLatestFrom(this.currentState.asObservable()),
-      concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
-        mapMethod((childActions: Action<any>[]) => {
-          if (childActions.length > 0) {
-            return from(childActions).pipe(
-            tap((nextAction: Action<any>) => {
-              this.actionStack.push(nextAction);
-              this.dispatch(nextAction);
-            }));
-          }
-          return EMPTY;
-        })
-      )),
-      finalize(() => this.systemActions.effectsUnregistered(args))
-    ).subscribe();
-
-    this.systemActions.effectsRegistered(args);
-    return effectsSubscription;
-  }
-
-  loadModule(module: FeatureModule, injector: Injector) {
-    firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
-      tap(() => {
-        this.isProcessing.next(true);
-        // Check if the module already exists in the this's modules
-        if (this.modules.some(m => m.slice === module.slice)) {
-          // If the module already exists, return the this without changes
-          return;
-        }
-        // Create a new array with the module added to the this's modules
-        const newModules = [...this.modules, module];
-
-        // Return a new this with the updated properties
-        this.modules = newModules;
-
-        // Inject dependencies
-        this.injectDependencies(injector);
-      }),
-      concatMap(() => this.updateState("@global", state => this.setupReducer(state), systemActions.updateState())),
-      tap(() => this.systemActions.moduleLoaded(module)),
-      catchError(error => { console.warn(error.message); return EMPTY; }),
-      finalize(() => this.isProcessing.next(false))
-    ));
-
-    return this;
-  }
-
-  unloadModule(module: FeatureModule, clearState: boolean = false) {
-    firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
-      tap(() => {
-        this.isProcessing.next(true);
-        // Create a new array with the module removed from the this's modules
-        const newModules = this.modules.filter(m => m.slice !== module.slice);
-
-        // Return a new this with the updated properties
-        this.modules = newModules;
-
-        // Eject dependencies
-        this.ejectDependencies(module);
-      }),
-      concatMap(() => this.updateState("@global", state => {
-        if (clearState) {
-          state = { ...state };
-          delete state[module.slice];
-        }
-        return this.setupReducer(state);
-      }, systemActions.initializeState())),
-      tap(() => this.systemActions.moduleUnloaded(module)),
-      catchError(error => { console.warn(error.message); return EMPTY; }),
-      finalize(() => this.isProcessing.next(false))
-    ));
-
-    return this;
   }
 
   protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, Tree<any>, Map<string, string>]> {
@@ -507,7 +424,6 @@ export class Store {
     return this;
   }
 
-
   protected processAction() {
     return (source: Observable<Action<any>>) => {
       return source.pipe(
@@ -549,6 +465,90 @@ export class Store {
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
+    return this;
+  }
+
+  protected processSystemAction(operator: (obs: Observable<any>) => Observable<any>) {
+    return (async() => await firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
+      tap(() => this.isProcessing.next(true)),
+      operator,
+      catchError(error => { console.warn(error.message); return EMPTY; }),
+      finalize(() => this.isProcessing.next(false))
+    )))();
+  }
+
+  extend(...args: SideEffect[]) {
+    const dependencies = this.pipeline.dependencies;
+    const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
+    const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
+
+    const effectsSubscription = from(this.processSystemAction((obs) => obs.pipe(
+      concatMap(() => this.currentAction.asObservable()),
+      withLatestFrom(this.currentState.asObservable()),
+      concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
+        mapMethod((childActions: Action<any>[]) => {
+          if (childActions.length > 0) {
+            return from(childActions).pipe(
+            tap((nextAction: Action<any>) => {
+              this.actionStack.push(nextAction);
+              this.dispatch(nextAction);
+            }));
+          }
+          return EMPTY;
+        })
+      )),
+      finalize(() => this.systemActions.effectsUnregistered(args))
+    ))).subscribe();
+
+    return effectsSubscription;
+  }
+
+  loadModule(module: FeatureModule, injector: Injector) {
+    this.processSystemAction((obs) => obs.pipe(
+      tap(() => {
+        // Check if the module already exists in the this's modules
+        if (this.modules.some(m => m.slice === module.slice)) {
+          // If the module already exists, return the this without changes
+          return;
+        }
+        // Create a new array with the module added to the this's modules
+        const newModules = [...this.modules, module];
+
+        // Return a new this with the updated properties
+        this.modules = newModules;
+
+        // Inject dependencies
+        this.injectDependencies(injector);
+      }),
+      concatMap(() => this.updateState("@global", state => this.setupReducer(state), systemActions.updateState())),
+      tap(() => this.systemActions.moduleLoaded(module)),
+    ));
+
+    return this;
+  }
+
+  unloadModule(module: FeatureModule, clearState: boolean = false) {
+    this.processSystemAction((obs) => obs.pipe(
+      tap(() => {
+        // Create a new array with the module removed from the this's modules
+        const newModules = this.modules.filter(m => m.slice !== module.slice);
+
+        // Return a new this with the updated properties
+        this.modules = newModules;
+
+        // Eject dependencies
+        this.ejectDependencies(module);
+      }),
+      concatMap(() => this.updateState("@global", state => {
+        if (clearState) {
+          state = { ...state };
+          delete state[module.slice];
+        }
+        return this.setupReducer(state);
+      }, systemActions.initializeState())),
+      tap(() => this.systemActions.moduleUnloaded(module)),
+    ));
+
     return this;
   }
 }
