@@ -60,7 +60,7 @@ export class Store {
   };
   protected modules: FeatureModule[] = [];
   protected pipeline = {
-    middlewares: [] as any[],
+    middleware: [] as any[],
     reducer: (state: any = {}, action: Action<any>) => state as Reducer,
     dependencies: {} as Record<string, any>,
     strategy: "exclusive" as "exclusive" | "concurrent"
@@ -534,7 +534,7 @@ export class Store {
 
     const starterAPI = {
       getState: () => this.getState(),
-      dispatch: (action: any) => dispatch(action),
+      dispatch: (action: any) => this.dispatch(action),
       isProcessing: this.isProcessing,
       actionStack: this.actionStack,
       dependencies: () => this.pipeline.dependencies,
@@ -543,10 +543,10 @@ export class Store {
 
     const middlewareAPI = {
       getState: () => this.getState(),
-      dispatch: (action: any) => dispatch(action),
+      dispatch: (action: any) => this.dispatch(action),
     };
 
-    const chain = [starter(isValidMiddleware(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middlewares.map(middleware => middleware(middlewareAPI))];
+    const chain = [starter(isValidMiddleware(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
     dispatch = compose(...chain)(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
