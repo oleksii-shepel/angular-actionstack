@@ -12,7 +12,7 @@ import { MessagesModule } from './messages/messages.module';
     FormsModule,
     AppRoutingModule,
     provideStore({
-      middlewares: [measure],
+      middleware: [measure],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
       strategy: "concurrent",

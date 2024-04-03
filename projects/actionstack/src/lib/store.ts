@@ -11,36 +11,48 @@ import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEff
 export { createStore as store };
 
 export class StoreSettings {
-  dispatchSystemActions = false;
+  dispatchSystemActions = true;
   awaitStatePropagation = true;
   enableMetaReducers = false;
   enableAsyncReducers = false;
 };
 
-export type SystemActionTypes = 
-  | "INITIALIZE_STATE"
-  | "UPDATE_STATE"
-  | "STORE_INITIALIZED"
-  | "MODULE_LOADED"
-  | "MODULE_UNLOADED"
-  | "EFFECTS_REGISTERED"
-  | "EFFECTS_UNREGISTERED";
+const SYSTEM_ACTION_TYPES_ARRAY = [
+  "INITIALIZE_STATE",
+  "UPDATE_STATE",
+  "STORE_INITIALIZED",
+  "MODULE_LOADED",
+  "MODULE_UNLOADED",
+  "EFFECTS_REGISTERED",
+  "EFFECTS_UNREGISTERED"
+] as const;
+
+// Define the type from the values of the array
+export type SystemActionTypes = typeof SYSTEM_ACTION_TYPES_ARRAY[number] & string;
+
+export function isSystemActionType(type: string): type is SystemActionTypes {
+  return SYSTEM_ACTION_TYPES_ARRAY.includes(type as SystemActionTypes);
+}
+
+function systemAction<T extends SystemActionTypes>(type: T, payload?: any) {
+  return action(type, payload);
+}
 
 // Define the action creators
-const systemActions = <T = SystemActionTypes>(() => ({
-  initializeState: action<T>("INITIALIZE_STATE"),
-  updateState: action<T>("UPDATE_STATE"),
-  storeInitialized: action<T>("STORE_INITIALIZED"),
-  moduleLoaded: action<T>("MODULE_LOADED", (module: FeatureModule) => ({module})),
-  moduleUnloaded: action<T>("MODULE_UNLOADED", (module: FeatureModule) => ({module})),
-  effectsRegistered: action<T>("EFFECTS_REGISTERED", (effects: SideEffect[]) => ({effects})),
-  effectsUnregistered: action<T>("EFFECTS_UNREGISTERED", (effects: SideEffect[]) => ({effects}))
-}))();
+const systemActions = {
+  initializeState: systemAction("INITIALIZE_STATE"),
+  updateState: systemAction("UPDATE_STATE"),
+  storeInitialized: systemAction("STORE_INITIALIZED"),
+  moduleLoaded: systemAction("MODULE_LOADED", (module: FeatureModule) => ({module})),
+  moduleUnloaded: systemAction("MODULE_UNLOADED", (module: FeatureModule) => ({module})),
+  effectsRegistered: systemAction("EFFECTS_REGISTERED", (effects: SideEffect[]) => ({effects})),
+  effectsUnregistered: systemAction("EFFECTS_UNREGISTERED", (effects: SideEffect[]) => ({effects}))
+};
 
 export class Store {
   protected mainModule: MainModule = {
     slice: "main",
-    middlewares: [],
+    middleware: [],
     reducer: (state: any = {}, action: Action<any>) => state,
     metaReducers: [],
     dependencies: {},
@@ -69,10 +81,10 @@ export class Store {
       let store = new Store();
 
       mainModule = Object.assign(store.mainModule, { ...mainModule });
-      
+
       store.mainModule = mainModule;
       store.pipeline = Object.assign(store.pipeline, {
-        middlewares: Array.from(mainModule.middlewares),
+        middleware: Array.from(mainModule.middleware ?? []),
         reducer: mainModule.reducer,
         dependencies: Object.assign({}, { ...mainModule.dependencies }),
         strategy: mainModule.strategy,
@@ -156,24 +168,24 @@ export class Store {
       } else {
         // Continue traversal
         currentObj = currentObj[key] = currentEdges[key] ? currentObj[key] : { ...currentObj[key] };
-        currentEdges = currentEdges[key] = currentEdges[key] ?? {};
+        currentEdges = (currentEdges[key] = currentEdges[key] ?? {}) as any;
       }
     }
     return currentState;
   }
-                                                                                                                                      
-  protected setState<T = any>(state?: any, slice?: keyof T | string[], value?: any): any {
-    state = state ?? this.curentState.value;
+
+  protected setState<T = any>(state?: any, slice?: keyof T | string[], value?: any, edges: Tree<boolean> = {}): any {
+    state = state ?? this.currentState.value;
     if (slice === undefined || typeof slice === "string" && slice == "@global") {
       // update the whole state with a shallow copy of the value
       return ({...value});
     } else if (typeof slice === "string") {
       // update the state property with the given key with a shallow copy of the value
-      const updatedState = {...state, [slice]: { ...value }}; 
-      modified[slice] = true; // Mark this property as modified
+      const updatedState = {...state, [slice]: { ...value }};
+      edges[slice] = true; // Mark this property as modified
       return updatedState;
     } else if (Array.isArray(slice)) {
-      return this.applyChange(state, {path: slice, value}, modified);
+      return this.applyChange(state, {path: slice, value}, edges);
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
@@ -185,7 +197,7 @@ export class Store {
         throw new Error('Callback function is missing. State will not be updated.')
       }
 
-      let state = await this.getState(this.currentState.value, slice);
+      let state = await this.getState(slice);
       let result = await callback(state);
       let newState = await this.setState(this.currentState.value, slice, result);
 
@@ -307,11 +319,11 @@ export class Store {
 
     const buildReducerMap = (tree: Tree<Reducer>, path: string[] = []) => {
       for (const key in tree) {
-        const reducer = tree[key];
-        const newPath = [...path, key]; // Add current key to the path
-        reducerMap.set(reducer, newPath);
-
-        if (typeof reducer === 'object') {
+        const reducer = tree[key]; const newPath = [...path, key]; // Add current key to the path
+        if(reducer instanceof Function) {
+          reducerMap.set(reducer, newPath);
+        }
+        else if (typeof reducer === 'object') {
           buildReducerMap(reducer, newPath);
         }
       }
@@ -321,44 +333,41 @@ export class Store {
 
     let errors = new Map<string, string>();
     let state = {}; let modified = {} as any;
-    
+
     // Initialize state
     for (const [reducer, path] of reducerMap) {
       try {
         if(reducer instanceof Function) {
           let reducerFn = reducer as Function;
           let reducerResult = reducerFn(undefined, systemActions.initializeState());
-          
+
           if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
             throw new Error("Async reducers are disabled.");
           }
-          
+
           state = await this.setState(state, path, await reducerResult, modified);
         }
       } catch (error: any) {
-        errors.set(key, `Initializing state failed for ${key}: ${error.message}`);
+        errors.set(path.join('.'), `Initializing state failed for ${path.join('.')}: ${error.message}`);
       }
     }
-    
-    modified = {} as any;
-    
-    const combinedReducer = (state: any = {}, action: Action<any>) => {
-      const changesMap = new Map();
 
+    modified = {} as any;
+
+    const combinedReducer = async (state: any = {}, action: Action<any>) => {
       // Apply every reducer to state and track changes
       for (const [reducer, path] of reducerMap) {
         try {
-          const currentState = await this.getState(state, path);
+          const currentState = await this.getState(path);
           const updatedState = await reducer(currentState, action);
-          if(currentState !== updatedState) { state = await this.setState(state, path, currentState, modified);
-        }
+          if(currentState !== updatedState) { state = await this.setState(state, path, currentState, modified); }
         } catch (error: any) {
-          throw new Error(`Error occurred while processing an action ${action.type} for ${path}: ${error.message}`);
+          throw new Error(`Error occurred while processing an action ${action.type} for ${path.join('.')}: ${error.message}`);
         }
       }
       return state;
     };
-    return [combinedReducer, state, errors]; 
+    return [combinedReducer, state, errors];
   }
 
   protected hydrateState(state: any, initialState: any): any {

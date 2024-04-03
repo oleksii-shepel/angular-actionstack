@@ -45,7 +45,7 @@ export interface FeatureModule {
 
 export interface MainModule {
   slice?: string;
-  middlewares?: Middleware[];
+  middleware?: Middleware[];
   reducer: Reducer | Tree<Reducer>;
   metaReducers?: MetaReducer[];
   dependencies?: Tree<Type<any> | InjectionToken<any>>;

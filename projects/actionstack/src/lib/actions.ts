@@ -2,10 +2,10 @@ import { Action, isAction, kindOf } from "./types";
 
 export { createAction as action };
 
-function createAction<T = string>(typeOrThunk: T | Function, payloadCreator?: Function): any {
+function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
   function actionCreator(...args: any[]) {
-    let action: Action<T | Function> = {
-      type: typeOrThunk,
+    let action: Action<any> = {
+      type: typeOrThunk as string,
     };
 
     if (typeof typeOrThunk === 'function') {
