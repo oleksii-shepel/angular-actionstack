@@ -96,12 +96,8 @@ export class Store {
 
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        map(({count, action}: any) => {
-          if (count === 1) {
-            console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;");
-          }
-          return action;
-        }),
+        concatMap(({count, action}: any) => (count === 1) ? (console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
+          store.updateState("@global", () => store.setupReducer(), action)) : of(action)),
         store.processAction()
       ).subscribe();
 
