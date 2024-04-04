@@ -350,7 +350,7 @@ export class Store {
     });
 
     // Create a stack for the DFS traversal
-    let stack = [{ source: this.pipeline.dependencies, target: newDependencies }];
+    let stack = [{ source: this.pipeline.dependencies as any, target: newDependencies }];
 
     while (stack.length > 0) {
       const { source, target } = stack.pop()!;
