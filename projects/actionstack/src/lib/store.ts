@@ -6,7 +6,7 @@ import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects"
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { AsyncObserver, CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, Tree, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
 
@@ -56,14 +56,14 @@ export class Store {
     reducer: (state: any = {}, action: Action<any>) => state,
     metaReducers: [],
     dependencies: {},
-    strategy: "exclusive" as "exclusive"
+    strategy: "exclusive" as ProcessingStrategy
   };
   protected modules: FeatureModule[] = [];
   protected pipeline = {
     middleware: [] as any[],
     reducer: (state: any = {}, action: Action<any>) => state as Reducer,
-    dependencies: {} as Record<string, any>,
-    strategy: "exclusive" as "exclusive" | "concurrent"
+    dependencies: {} as Tree<Type<any> | InjectionToken<any>>,
+    strategy: "exclusive" as ProcessingStrategy
   };
   protected actionStream = new Subject<Action<any>>();
   protected actionStack = new Stack();

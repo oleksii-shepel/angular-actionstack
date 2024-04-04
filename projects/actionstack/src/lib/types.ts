@@ -37,6 +37,7 @@ export type Tree<LeafType, T = any> = {
   [K in keyof T]: T[K] extends object ? Tree<LeafType, T[K]> : LeafType;
 };
 
+export type ProcessingStrategy = "exclusive" | "concurrent";
 export interface FeatureModule {
   slice: string;
   reducer: Reducer | Tree<Reducer>;
@@ -49,7 +50,7 @@ export interface MainModule {
   reducer: Reducer | Tree<Reducer>;
   metaReducers?: MetaReducer[];
   dependencies?: Tree<Type<any> | InjectionToken<any>>;
-  strategy?: "exclusive" | "concurrent";
+  strategy?: ProcessingStrategy;
 }
 
 export type StoreCreator = (module: MainModule, enhancer?: StoreEnhancer) => Store;
