@@ -237,7 +237,7 @@ export class Store {
     })());
   }
 
-  protected async combineReducers(reducers: Tree<Reducer>): Promise<[Reducer, Tree<any>, Map<string, string>]> {
+  protected combineReducers(reducers: Tree<Reducer>): Reducer {
     // Create a map for reducers
     const reducerMap = new Map<Reducer, string[]>();
 
@@ -255,27 +255,6 @@ export class Store {
 
     buildReducerMap(reducers);
 
-    let errors = new Map<string, string>();
-    let state = {}; let modified = {} as any;
-
-    // Initialize state
-    for (const [reducer, path] of reducerMap) {
-      try {
-        if(reducer instanceof Function) {
-          let reducerFn = reducer as Function;
-          let reducerResult = reducerFn(undefined, systemActions.initializeState());
-
-          if (reducerResult instanceof Promise && this.settings.enableAsyncReducers === false) {
-            throw new Error("Async reducers are disabled.");
-          }
-
-          state = await this.setState(state, path, await reducerResult, modified);
-        }
-      } catch (error: any) {
-        errors.set(path.join('.'), `Initializing state failed for ${path.join('.')}: ${error.message}`);
-      }
-    }
-
     const combinedReducer = async (state: any = {}, action: Action<any>) => {
       // Apply every reducer to state and track changes
       let modified = {};
@@ -285,33 +264,12 @@ export class Store {
           const updatedState = await reducer(currentState, action);
           if(currentState !== updatedState) { state = await this.setState(state, path, updatedState, modified); }
         } catch (error: any) {
-          throw new Error(`Error occurred while processing an action ${action.type} for ${path.join('.')}: ${error.message}`);
+          console.warn(`Error occurred while processing an action ${action.type} for ${path.join('.')}: ${error.message}`);
         }
       }
       return state;
     };
-    return [combinedReducer, state, errors];
-  }
-
-  protected hydrateState(state: any, initialState: any): any {
-    // Create a new object to avoid mutating the original state
-    let newState = {...state};
-
-    // Iterate over each property in the initial state
-    for (let prop in initialState) {
-      // If the property is not already present in the state, add it
-      if (!newState.hasOwnProperty(prop) || newState[prop] === undefined) {
-        newState[prop] = initialState[prop];
-      } else if (Array.isArray(initialState[prop])) {
-        // If the property is an array, merge the arrays
-        newState[prop] = newState[prop] ?? initialState[prop];
-      } else if (typeof newState[prop] === 'object' && newState[prop] !== null) {
-        // If the property is an object, recurse into it
-        newState[prop] = this.hydrateState(newState[prop], initialState[prop]);
-      }
-    }
-
-    return newState;
+    return combinedReducer;
   }
 
   protected async setupReducer(state: any = {}): Promise<any> {
@@ -322,10 +280,7 @@ export class Store {
       return reducers;
     }, {} as Tree<Reducer>);
 
-    let [reducer, initialState, errors] = await this.combineReducers(featureReducers);
-
-    // Update store state
-    state = this.hydrateState({ ...state }, initialState);
+    let reducer = this.combineReducers(featureReducers);
 
     const asyncCompose = (...fns: MetaReducer[]) => async (reducer: Reducer) => {
       for (let i = fns.length - 1; i >= 0; i--) {
@@ -339,12 +294,8 @@ export class Store {
       && (reducer = await asyncCompose(...this.mainModule.metaReducers)(reducer));
     this.pipeline.reducer = reducer;
 
-    if(errors.size) {
-      let receivedErrors = Array.from(errors.entries()).map((value) => value[1]).join('\n');
-      throw new Error(`${errors.size} errors during state initialization.\n${receivedErrors}`);
-    }
-
-    return state;
+    // Update store state
+    return await reducer(state, systemActions.updateState());
   }
 
   protected injectDependencies(injector: Injector): Store {
