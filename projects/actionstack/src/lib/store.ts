@@ -13,8 +13,8 @@ export { createStore as store };
 export class StoreSettings {
   dispatchSystemActions = false;
   awaitStatePropagation = true;
-  enableMetaReducers = false;
-  enableAsyncReducers = false;
+  enableMetaReducers = true;
+  enableAsyncReducers = true;
 };
 
 const SYSTEM_ACTION_TYPES = [
@@ -291,7 +291,7 @@ export class Store {
     this.pipeline.reducer = reducer;
 
     // Update store state
-    return await reducer(state, systemActions.updateState());
+    return reducer(state, systemActions.updateState());
   }
 
   protected injectDependencies(injector: Injector): Store {
