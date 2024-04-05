@@ -38,7 +38,9 @@ function createSelector<U = any, T = any> (
     }
 
     return (state$: Observable<T>) => {
-      return (featureSelector$ === "@global" ? state$.pipe(filter(state => state !== undefined)) : (featureSelector$ as Function)(state$)).pipe(
+      return (featureSelector$ === "@global"
+        ? state$.pipe(filter(state => state !== undefined))
+        : (featureSelector$ as Function)(state$)).pipe(
         concatMap(sliceState => {
           let selectorResults;
           if (Array.isArray(selectors)) {
@@ -77,7 +79,9 @@ function createSelectorAsync<U = any, T = any> (
     }
 
     return (state$: Observable<T>) => {
-      return (featureSelector$ === "@global" ? state$.pipe(filter(state => state !== undefined)) : (featureSelector$ as Function)(state$)).pipe(
+      return (featureSelector$ === "@global"
+        ? state$.pipe(filter(state => state !== undefined))
+        : (featureSelector$ as Function)(state$)).pipe(
         concatMap(async sliceState => {
           let selectorResults;
           if (Array.isArray(selectors)) {
