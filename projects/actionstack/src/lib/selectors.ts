@@ -21,7 +21,7 @@ function createFeatureSelector<U = any, T = any> (
 }
 
 function createSelector<U = any, T = any> (
-  featureSelector$: (store: Observable<T>) => Observable<U>,
+  featureSelector$: (state: Observable<T>) => Observable<U>,
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
 
@@ -59,7 +59,7 @@ function createSelector<U = any, T = any> (
 }
 
 function createSelectorAsync<U = any, T = any> (
-  featureSelector$: (store: Observable<T>) => Observable<U>,
+  featureSelector$: (state: Observable<T>) => Observable<U>,
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction
 ): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
