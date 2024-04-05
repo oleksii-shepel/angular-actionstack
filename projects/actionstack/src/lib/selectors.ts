@@ -60,7 +60,7 @@ function createSelector<U = any, T = any> (
 
 function createSelectorAsync<U = any, T = any> (
   featureSelector$: (store: Observable<T>) => Observable<U>,
-  selectors: ((...args: any) => any | Promise<any>) | ((...args: any) => any | Promise<any>)[],
+  selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction
 ): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
 
