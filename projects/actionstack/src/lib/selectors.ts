@@ -1,5 +1,5 @@
 import { EMPTY, Observable, concatMap, distinctUntilChanged, filter, map, of, shareReplay, switchMap } from "rxjs";
-import { SelectorFunction, ProjectionFunction } from "./types";
+import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
   createFeatureSelector as featureSelector,
@@ -21,7 +21,7 @@ function createFeatureSelector<U = any, T = any> (
 }
 
 function createSelector<U = any, T = any> (
-  featureSelector$: (state: Observable<T>) => Observable<U>,
+  featureSelector$: ((state: Observable<T>) => Observable<U>) | "@global",
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
 
@@ -38,7 +38,7 @@ function createSelector<U = any, T = any> (
     }
 
     return (state$: Observable<T>) => {
-      return featureSelector$(state$).pipe(
+      return (featureSelector$ === "@global" ? state$.pipe(filter(state => state !== undefined)) : (featureSelector$ as Function)(state$)).pipe(
         concatMap(sliceState => {
           let selectorResults;
           if (Array.isArray(selectors)) {
@@ -59,7 +59,7 @@ function createSelector<U = any, T = any> (
 }
 
 function createSelectorAsync<U = any, T = any> (
-  featureSelector$: (state: Observable<T>) => Observable<U>,
+  featureSelector$: ((state: Observable<T>) => Observable<U>) | "@global",
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction
 ): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
@@ -77,7 +77,7 @@ function createSelectorAsync<U = any, T = any> (
     }
 
     return (state$: Observable<T>) => {
-      return featureSelector$(state$).pipe(
+      return (featureSelector$ === "@global" ? state$.pipe(filter(state => state !== undefined)) : (featureSelector$ as Function)(state$)).pipe(
         concatMap(async sliceState => {
           let selectorResults;
           if (Array.isArray(selectors)) {
@@ -94,7 +94,7 @@ function createSelectorAsync<U = any, T = any> (
               : projection ? projection(selectorResults, projectionProps) : selectorResults)
           }
         }),
-        switchMap(result => result) // switchMap to unwrap the Observable returned by of()
+        switchMap((result: any) => result) // switchMap to unwrap the Observable returned by of()
       );
     };
   };
