@@ -201,8 +201,7 @@ export class Store {
       return ({...value});
     } else if (typeof slice === "string") {
       // update the state property with the given key with a shallow copy of the value
-      const updatedState = {...this.currentState.value, [slice]: { ...value }};
-      return updatedState;
+      return {...this.currentState.value, [slice]: { ...value }};
     } else if (Array.isArray(slice)) {
       return this.applyChange(this.currentState.value, {path: slice, value}, {});
     } else {
