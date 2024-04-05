@@ -36,7 +36,7 @@ export class Slice implements OnDestroy {
 
   setup(opts: SliceOptions): void {
     this.opts = Object.assign(this.opts, opts);
-    this.opts.effects && this.opts.effects.length && (this.subscription = this.store.extend(...this.opts.effects as any));
+    this.opts.effects && this.opts.effects.length && (this.subscription = this.store.extend(...this.opts.effects as any).subscribe());
     this.opts.slice && this.opts.reducer && this.store.loadModule({
       slice: this.opts.slice,
       dependencies: this.opts.dependencies,
