@@ -431,12 +431,12 @@ export class Store {
     )))();
   }
 
-  extend(...args: SideEffect[]) {
+  extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
-    const effectsSubscription = from(this.processSystemAction((obs) => obs.pipe(
+    const effects$ = from(this.processSystemAction((obs) => obs.pipe(
       concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
       concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
@@ -452,9 +452,9 @@ export class Store {
         })
       )),
       finalize(() => this.systemActions.effectsUnregistered(args))
-    ))).subscribe();
+    )));
 
-    return effectsSubscription;
+    return effects$;
   }
 
   loadModule(module: FeatureModule, injector: Injector) {
