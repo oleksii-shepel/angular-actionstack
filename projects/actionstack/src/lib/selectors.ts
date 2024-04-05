@@ -1,5 +1,5 @@
 import { EMPTY, Observable, concatMap, distinctUntilChanged, filter, map, of, shareReplay, switchMap } from "rxjs";
-import { AnyFn, ProjectionFunction } from "./types";
+import { SelectorFunction, ProjectionFunction } from "./types";
 
 export {
   createFeatureSelector as featureSelector,
@@ -22,7 +22,7 @@ function createFeatureSelector<U = any, T = any> (
 
 function createSelector<U = any, T = any> (
   featureSelector$: (store: Observable<T>) => Observable<U>,
-  selectors: AnyFn | AnyFn[],
+  selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
 
   const isSelectorArray = Array.isArray(selectors);
