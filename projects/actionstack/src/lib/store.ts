@@ -195,18 +195,16 @@ export class Store {
     return currentState;
   }
 
-  protected setState<T = any>(state?: any, slice?: keyof T | string[], value?: any, edges: Tree<boolean> = {}): any {
-    state = state ?? this.currentState.value;
+  protected setState<T = any>(slice?: keyof T | string[], value?: any): any {
     if (slice === undefined || typeof slice === "string" && slice == "@global") {
       // update the whole state with a shallow copy of the value
       return ({...value});
     } else if (typeof slice === "string") {
       // update the state property with the given key with a shallow copy of the value
-      const updatedState = {...state, [slice]: { ...value }};
-      edges[slice] = true; // Mark this property as modified
+      const updatedState = {...this.currentState.value, [slice]: { ...value }};
       return updatedState;
     } else if (Array.isArray(slice)) {
-      return this.applyChange(state, {path: slice, value}, edges);
+      return this.applyChange(this.currentState.value, {path: slice, value}, {});
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
@@ -220,7 +218,7 @@ export class Store {
 
       let state = await this.getState(slice);
       let result = await callback(state);
-      let newState = await this.setState(this.currentState.value, slice, result);
+      let newState = await this.setState(slice, result);
 
       let stateUpdated = this.currentState.next(newState);
       let actionHandled = this.currentAction.next(action);
@@ -258,7 +256,7 @@ export class Store {
         try {
           const currentState = await this.getState(path);
           const updatedState = await reducer(currentState, action);
-          if(currentState !== updatedState) { state = await this.setState(state, path, updatedState, modified); }
+          if(currentState !== updatedState) { state = await this.applyChange(state, {path, value: updatedState}, modified); }
         } catch (error: any) {
           console.warn(`Error occurred while processing an action ${action.type} for ${path.join('.')}: ${error.message}`);
         }
