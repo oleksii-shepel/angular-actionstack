@@ -277,7 +277,7 @@ export class Store {
 
     const asyncCompose = (...fns: MetaReducer[]) => async (reducer: Reducer) => {
       for (let i = fns.length - 1; i >= 0; i--) {
-          reducer = await fns[i](reducer);
+          reducer = fns[i](await reducer);
       }
       return reducer;
     };
