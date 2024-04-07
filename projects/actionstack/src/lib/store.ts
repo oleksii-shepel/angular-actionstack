@@ -435,24 +435,23 @@ export class Store {
 
     const effects$ = this.isProcessing.pipe(
       first(value => value === false).pipe(
-        concat(this.currentAction.asObservable())),
-      withLatestFrom(this.currentState.asObservable()),
-      concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
-        mapMethod((childActions: Action<any>[]) => {
-          if (childActions.length > 0) {
-            return from(childActions).pipe(
-            tap((nextAction: Action<any>) => {
-              this.actionStack.push(nextAction);
-              this.dispatch(nextAction);
-            }));
-          }
-          return EMPTY;
-        })
-      )),
-      catchError(error => { console.warn(error.message); return EMPTY; }),
-      finalize(() => this.systemActions.effectsUnregistered(args))
+        concat(this.currentAction.asObservable()).pipe(
+          withLatestFrom(this.currentState.asObservable()),
+          concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
+            mapMethod((childActions: Action<any>[]) => {
+              if (childActions.length > 0) {
+                return from(childActions).pipe(
+                  tap((nextAction: Action<any>) => {
+                  this.actionStack.push(nextAction);
+                  this.dispatch(nextAction);
+                }));
+              }
+              return EMPTY;
+            })
+          )),
+          catchError(error => { console.warn(error.message); return EMPTY; }),
+          finalize(() => this.systemActions.effectsUnregistered(args))))
     );
-
     return effects$;
   }
 
