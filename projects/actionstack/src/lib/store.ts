@@ -209,8 +209,8 @@ export class Store {
     }
   }
 
-  protected updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActions.updateState()): Observable<any> {
-    return from((async () => {
+  protected updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActions.updateState()): Promise<any> {
+    return (async () => {
       if(callback === undefined) {
         throw new Error('Callback function is missing. State will not be updated.')
       }
@@ -227,7 +227,7 @@ export class Store {
       }
 
       return action;
-    })());
+    })();
   }
 
   protected combineReducers(reducers: Tree<Reducer>): Reducer {
