@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concatMap, defaultIfEmpty, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concat, concatMap, defaultIfEmpty, distinctUntilChanged, first, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -434,8 +434,8 @@ export class Store {
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
     const effects$ = this.isProcessing.pipe(
-      first(value => value === false),
-      concatMap(() => this.currentAction.asObservable()),
+      first(value => value === false).pipe(
+        concat(this.currentAction.asObservable())),
       withLatestFrom(this.currentState.asObservable()),
       concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
         mapMethod((childActions: Action<any>[]) => {
