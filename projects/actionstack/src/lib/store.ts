@@ -433,7 +433,8 @@ export class Store {
     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
-    const effects$ = from(this.processSystemAction((obs) => obs.pipe(
+    const effects$ = this.isProcessing.pipe(
+      first(value => value === false),
       concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
       concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
@@ -449,7 +450,7 @@ export class Store {
         })
       )),
       finalize(() => this.systemActions.effectsUnregistered(args))
-    )));
+    );
 
     return effects$;
   }
