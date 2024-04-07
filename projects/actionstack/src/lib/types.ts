@@ -1,5 +1,5 @@
 import { InjectionToken, Type } from "@angular/core";
-import { Observable } from "rxjs";
+import { Observable, isObservable, isPromise } from "rxjs";
 import { Store } from "./store";
 
 export interface Action<T = any> {
@@ -81,11 +81,16 @@ function kindOf(val: any): string {
 
   if (isError(val))
     return "error";
+  
+  if (isObservable(val))
+    return "observable";
 
+  if (isPromise(val))
+    return "promise";
+  
   const constructorName = ctorName(val);
   switch (constructorName) {
     case "Symbol":
-    case "Promise":
     case "WeakMap":
     case "WeakSet":
     case "Map":
