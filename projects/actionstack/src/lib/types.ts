@@ -1,5 +1,5 @@
 import { InjectionToken, Type } from "@angular/core";
-import { Observable, isObservable, isPromise } from "rxjs";
+import { Observable, isObservable } from "rxjs";
 import { Store } from "./store";
 
 export interface Action<T = any> {
@@ -81,13 +81,13 @@ function kindOf(val: any): string {
 
   if (isError(val))
     return "error";
-  
+
   if (isObservable(val))
     return "observable";
 
   if (isPromise(val))
     return "promise";
-  
+
   const constructorName = ctorName(val);
   switch (constructorName) {
     case "Symbol":
@@ -122,6 +122,10 @@ function isBoxed(value: any) {
 
 function isPrimitive(value: any) {
   return value === undefined || value === null || typeof value !== 'object';
+}
+
+function isPromise(value: any) {
+  return Promise.resolve(value) == value;
 }
 
 function isAction(action: any): boolean {
