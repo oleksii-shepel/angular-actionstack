@@ -449,6 +449,7 @@ export class Store {
           return EMPTY;
         })
       )),
+      catchError(error => { console.warn(error.message); return EMPTY; }),
       finalize(() => this.systemActions.effectsUnregistered(args))
     );
 
