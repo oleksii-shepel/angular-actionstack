@@ -134,18 +134,6 @@ export class Store {
     this.actionStream.next(action);
   }
 
-  subscribe(next?: AnyFn | Observer<any>, error?: AnyFn, complete?: AnyFn): Subscription {
-    const stateObservable = this.currentState.asObservable().pipe(
-      filter(value => value !== undefined),
-      distinctUntilChanged()
-    );
-    if (typeof next === 'function') {
-      return stateObservable.subscribe({next, error, complete});
-    } else {
-      return stateObservable.subscribe(next as Partial<AsyncObserver<any>>);
-    }
-  }
-
   select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
     let obs = selector(this.currentState.asObservable()).pipe(distinctUntilChanged());
     if (defaultValue !== undefined) {
