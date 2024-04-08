@@ -5,7 +5,7 @@ import { Action } from "./types";
 export const createPerformanceLogger = () => {
   let actionGroup: { action: Action<any>, label: string, duration: number, date: Date }[] = [];
 
-  const measurePerformance = () => (next: Function) => async (action: Action<any>) => {
+  const perfmon = () => (next: Function) => async (action: Action<any>) => {
     async function processAction(action: Action<any>) {
       const startTime = performance.now(); // Capture the start time
 
@@ -42,9 +42,9 @@ export const createPerformanceLogger = () => {
     await processAction(action);
   };
 
-  measurePerformance.signature = '2.m.z.d.u.x.w.l.v.e';
-  return measurePerformance;
+  perfmon.signature = '2.m.z.d.u.x.w.l.v.e';
+  return perfmon;
 };
 
 // Create the performance middleware with the lock
-export const measure = createPerformanceLogger();
+export const perfmon = createPerformanceLogger();
