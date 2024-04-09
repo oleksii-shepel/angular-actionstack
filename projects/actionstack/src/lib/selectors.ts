@@ -38,19 +38,19 @@ function createSelector<U = any, T = any> (
     return (state$: Observable<T>) => {
       return (featureSelector$ === "@global"
         ? state$ : (featureSelector$ as Function)(state$)).pipe(
-        concatMap(sliceState => {
-          if (sliceState === undefined) { return of(undefined); }
+        map(sliceState => {
+          if (sliceState === undefined) { return sliceState; }
           let selectorResults;
           if (Array.isArray(selectors)) {
             selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]))
-            return of((selectorResults.some(result => result === undefined))
+            return (selectorResults.some(result => result === undefined))
               ? undefined as U
-              : projection ? projection(selectorResults, projectionProps) : selectorResults)
+              : projection ? projection(selectorResults, projectionProps) : selectorResults;
           } else {
             selectorResults = selectors && selectors(sliceState, props);
-            return of((selectorResults === undefined)
+            return (selectorResults === undefined)
               ? undefined as U
-              : projection ? projection(selectorResults, projectionProps) : selectorResults)
+              : projection ? projection(selectorResults, projectionProps) : selectorResults;
           }
         })
       );
