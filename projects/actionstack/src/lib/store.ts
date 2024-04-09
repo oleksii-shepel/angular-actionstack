@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concat, concatMap, defaultIfEmpty, distinctUntilChanged, first, filter, finalize, firstValueFrom, from, ignoreElements, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concat, concatMap, distinctUntilChanged, first, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -137,7 +137,7 @@ export class Store {
   select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
     let obs = selector(this.currentState.asObservable()).pipe(distinctUntilChanged());
     if (defaultValue !== undefined) {
-      obs = obs.pipe(defaultIfEmpty(defaultValue));
+      obs = obs.pipe(map(value => value ?? defaultValue));
     }
     return obs;
   }
