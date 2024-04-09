@@ -1,4 +1,4 @@
-import { EMPTY, Observable, concatMap, distinctUntilChanged, filter, map, shareReplay, switchMap } from "rxjs";
+import { Observable, concatMap, distinctUntilChanged, filter, map, shareReplay, switchMap } from "rxjs";
 import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
