@@ -39,15 +39,16 @@ function createSelector<U = any, T = any> (
       return (featureSelector$ === "@global"
         ? state$ : (featureSelector$ as Function)(state$)).pipe(
         concatMap(sliceState => {
+          if (sliceState === undefined) { return of(undefined); }
           let selectorResults;
           if (Array.isArray(selectors)) {
             selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]))
-            return of((selectorResults.some(result => typeof result === 'undefined'))
+            return of((selectorResults.some(result => result === undefined))
               ? undefined as U
               : projection ? projection(selectorResults, projectionProps) : selectorResults)
           } else {
             selectorResults = selectors && selectors(sliceState, props);
-            return of((typeof selectorResults === 'undefined')
+            return of((selectorResults === undefined)
               ? undefined as U
               : projection ? projection(selectorResults, projectionProps) : selectorResults)
           }
@@ -79,17 +80,18 @@ function createSelectorAsync<U = any, T = any> (
       return (featureSelector$ === "@global"
         ? state$ : (featureSelector$ as Function)(state$)).pipe(
         concatMap(async sliceState => {
+          if (sliceState === undefined) { return of(undefined); }
           let selectorResults;
           if (Array.isArray(selectors)) {
             // Use Promise.all to wait for all async selectors to resolve
             selectorResults = await Promise.all(selectors.map((selector, index) => selector(sliceState, props[index])));
-            return of((selectorResults.some(result => typeof result === 'undefined'))
+            return of((selectorResults.some(result => result === undefined))
               ? undefined as U
               : projection ? projection(selectorResults, projectionProps) : selectorResults)
           } else {
             // If selectors is a single function, await its result
             selectorResults = await selectors(sliceState, props);
-            return of((typeof selectorResults === 'undefined')
+            return of((selectorResults === undefined)
               ? undefined as U
               : projection ? projection(selectorResults, projectionProps) : selectorResults)
           }
