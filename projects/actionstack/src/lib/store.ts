@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -425,11 +425,10 @@ export class Store {
     const dependencies = this.pipeline.dependencies;
     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-    let isIdle = false;
+    
     const effects$ = this.isProcessing.pipe(
-      tap(value => value === false && (isIdle = true)),
-      filter(value => value),
-      distinctUntilChanged(),
+      filter(value => value === false),
+      take(1),
       tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
