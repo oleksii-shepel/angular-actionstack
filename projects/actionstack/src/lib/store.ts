@@ -1,4 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
+import { Lock } from "actionstack";
 import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
@@ -261,10 +262,16 @@ export class Store {
     }, {} as Tree<Reducer>);
 
     let reducer = await this.combineReducers(featureReducers);
+    let lock = new Lock();
 
     const asyncCompose = (...fns: MetaReducer[]) => async (reducer: Reducer) => {
       for (let i = fns.length - 1; i >= 0; i--) {
+        await lock.acquire();
+        try {
           reducer = await fns[i](reducer);
+        } finally {
+          lock.release();
+        }
       }
       return reducer;
     };
