@@ -4,7 +4,6 @@ import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { isValidMiddleware } from "./hash";
-import { Lock } from "./lock";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isPlainObject, kindOf } from "./types";
@@ -262,16 +261,10 @@ export class Store {
     }, {} as Tree<Reducer>);
 
     let reducer = await this.combineReducers(featureReducers);
-    let lock = new Lock();
 
     const asyncCompose = (...fns: MetaReducer[]) => async (reducer: Reducer) => {
       for (let i = fns.length - 1; i >= 0; i--) {
-        await lock.acquire();
-        try {
-          reducer = await fns[i](reducer);
-        } finally {
-          lock.release();
-        }
+        reducer = await fns[i](reducer);
       }
       return reducer;
     };
