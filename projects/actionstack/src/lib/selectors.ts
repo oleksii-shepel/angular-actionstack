@@ -1,4 +1,4 @@
-import { Observable, concatMap, distinctUntilChanged, filter, map, shareReplay, switchMap } from "rxjs";
+import { Observable, concatMap, distinctUntilChanged, filter, map, shareReplay } from "rxjs";
 import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
@@ -95,8 +95,7 @@ function createSelectorAsync<U = any, T = any> (
               ? undefined as U
               : projection ? projection(selectorResults, projectionProps) : selectorResults;
           }
-        }),
-        switchMap((result: any) => result) // switchMap to unwrap the Observable returned by of()
+        })
       );
     };
   };
