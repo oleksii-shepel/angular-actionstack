@@ -97,7 +97,7 @@ export class Store {
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
         concatMap(({count, action}: any) => (count === 1) ? (console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
-          store.updateState("@global", () => store.setupReducer(), action)) : of(action)),
+          store.updateState("@global", async () => store.setupReducer(), action)) : of(action)),
         store.processAction()
       ).subscribe();
 
@@ -367,7 +367,7 @@ export class Store {
       return source.pipe(
         concatMap(async (action: Action<any>) => {
           try {
-            await this.updateState("@global", (state) => this.pipeline.reducer(state, action), action);
+            await this.updateState("@global", async (state) => this.pipeline.reducer(state, action), action);
           } finally {
             this.actionStack.pop();
             if (this.actionStack.length === 0) {
@@ -465,7 +465,7 @@ export class Store {
         // Inject dependencies
         this.injectDependencies(injector);
       }),
-      concatMap(() => this.updateState("@global", state => this.setupReducer(state), systemActions.updateState())),
+      concatMap(() => this.updateState("@global", async (state) => this.setupReducer(state), systemActions.updateState())),
       tap(() => this.systemActions.moduleLoaded(module)),
     ));
 
@@ -484,7 +484,7 @@ export class Store {
         // Eject dependencies
         this.ejectDependencies(module);
       }),
-      concatMap(() => this.updateState("@global", state => {
+      concatMap(() => this.updateState("@global", async (state) => {
         if (clearState) {
           state = { ...state };
           delete state[module.slice];
