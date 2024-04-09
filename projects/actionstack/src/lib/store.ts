@@ -11,7 +11,7 @@ import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, ProcessingStrate
 export { createStore as store };
 
 export class StoreSettings {
-  dispatchSystemActions = false;
+  dispatchSystemActions = true;
   awaitStatePropagation = true;
   enableMetaReducers = true;
   enableAsyncReducers = true;
@@ -430,6 +430,7 @@ export class Store {
       tap(value => value === false && (isIdle = true)),
       filter(value => value),
       distinctUntilChanged(),
+      tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
       concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
