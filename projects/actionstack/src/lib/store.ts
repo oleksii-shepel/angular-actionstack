@@ -1,11 +1,11 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Observer, Subject, Subscription, catchError, concat, concatMap, distinctUntilChanged, first, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
-import { AsyncObserver, CustomAsyncSubject } from "./subject";
+import { CustomAsyncSubject } from "./subject";
 import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
@@ -421,23 +421,22 @@ export class Store {
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
     const effects$ = this.isProcessing.pipe(
-      first(value => value === false).pipe(
-        concat(this.currentAction.asObservable()).pipe(
-          withLatestFrom(this.currentState.asObservable()),
-          concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
-            mapMethod((childActions: Action<any>[]) => {
-              if (childActions.length > 0) {
-                return from(childActions).pipe(
-                  tap((nextAction: Action<any>) => {
-                  this.actionStack.push(nextAction);
-                  this.dispatch(nextAction);
-                }));
-              }
-              return EMPTY;
-            })
-          )),
-          catchError(error => { console.warn(error.message); return EMPTY; }),
-          finalize(() => this.systemActions.effectsUnregistered(args))))
+      concatMap(value => value === false ? this.currentAction.asObservable() : EMPTY),
+      withLatestFrom(this.currentState.asObservable()),
+      concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
+        mapMethod((childActions: Action<any>[]) => {
+          if (childActions.length > 0) {
+            return from(childActions).pipe(
+              tap((nextAction: Action<any>) => {
+                this.actionStack.push(nextAction);
+                this.dispatch(nextAction);
+              }));
+          }
+          return EMPTY;
+        }),
+        catchError(error => { console.warn(error.message); return EMPTY; }),
+        finalize(() => this.systemActions.effectsUnregistered(args))
+      ))
     );
     return effects$;
   }
