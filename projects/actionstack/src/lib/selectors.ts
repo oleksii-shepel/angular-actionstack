@@ -10,11 +10,9 @@ export {
 function createFeatureSelector<U = any, T = any> (
   slice: keyof T | string[]): (state$: Observable<T>) => Observable<U> {
   return (state$: Observable<T>) => state$.pipe(
-    filter(state => state !== undefined),
     map(state => (Array.isArray(slice))
       ? slice.reduce((acc, key) => (acc && Array.isArray(acc) ? acc[parseInt(key)] : (acc as any)[key]) || undefined, state)
-      : state[slice]),
-    concatMap(state => state === undefined ? EMPTY: of(state)),
+      : state && state[slice]),
     distinctUntilChanged(),
     shareReplay({bufferSize: 1, refCount: false})
   ) as Observable<U>;
@@ -39,8 +37,7 @@ function createSelector<U = any, T = any> (
 
     return (state$: Observable<T>) => {
       return (featureSelector$ === "@global"
-        ? state$.pipe(filter(state => state !== undefined))
-        : (featureSelector$ as Function)(state$)).pipe(
+        ? state$ : (featureSelector$ as Function)(state$)).pipe(
         concatMap(sliceState => {
           let selectorResults;
           if (Array.isArray(selectors)) {
@@ -80,8 +77,7 @@ function createSelectorAsync<U = any, T = any> (
 
     return (state$: Observable<T>) => {
       return (featureSelector$ === "@global"
-        ? state$.pipe(filter(state => state !== undefined))
-        : (featureSelector$ as Function)(state$)).pipe(
+        ? state$ : (featureSelector$ as Function)(state$)).pipe(
         concatMap(async sliceState => {
           let selectorResults;
           if (Array.isArray(selectors)) {
