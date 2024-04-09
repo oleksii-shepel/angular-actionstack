@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, first, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
@@ -365,10 +365,16 @@ export class Store {
   protected processAction() {
     return (source: Observable<Action<any>>) => {
       return source.pipe(
-        concatMap((action: Action<any>) => {
-          return this.updateState("@global", (state) => this.pipeline.reducer(state, action), action).pipe(
-            finalize(() => (this.actionStack.pop(), this.actionStack.length === 0 && this.isProcessing.next(false)))
-          );
+        concatMap(async (action: Action<any>) => {
+          try {
+            await this.updateState("@global", (state) => this.pipeline.reducer(state, action), action);
+          } finally {
+            this.actionStack.pop();
+            if (this.actionStack.length === 0) {
+              this.isProcessing.next(false);
+            }
+          }
+          return EMPTY;
         }),
         ignoreElements(),
         catchError((error) => {
@@ -421,7 +427,8 @@ export class Store {
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
     const effects$ = this.isProcessing.pipe(
-      concatMap(value => value === false ? this.currentAction.asObservable() : EMPTY),
+      first(value => value === false),
+      concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
       concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
         mapMethod((childActions: Action<any>[]) => {
