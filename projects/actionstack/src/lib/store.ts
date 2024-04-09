@@ -430,6 +430,7 @@ export class Store {
       tap(value => value === false && (isIdle = true)),
       filter(value => value),
       distinctUntilChanged(),
+      tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
       concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
@@ -445,7 +446,6 @@ export class Store {
         }),
         catchError(error => { console.warn(error.message); return EMPTY; }),
       )),
-      tap(() => this.systemActions.effectsRegistered(args)),
       finalize(() => this.systemActions.effectsUnregistered(args))
     );
     return effects$;
