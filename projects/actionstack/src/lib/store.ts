@@ -137,7 +137,8 @@ export class Store {
   select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
     return selector(this.currentState.asObservable()).pipe(
       map(value => value === undefined ? defaultValue : value),
-      filter(value => value !== undefined));
+      filter(value => value !== undefined),
+      distinctUntilChanged());
   }
 
   getState<T = any>(slice?: keyof T | string[]): any {
