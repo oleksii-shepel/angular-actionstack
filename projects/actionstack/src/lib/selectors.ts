@@ -1,4 +1,4 @@
-import { EMPTY, Observable, concatMap, distinctUntilChanged, filter, map, of, shareReplay, switchMap } from "rxjs";
+import { EMPTY, Observable, concatMap, distinctUntilChanged, filter, map, shareReplay, switchMap } from "rxjs";
 import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
@@ -80,20 +80,20 @@ function createSelectorAsync<U = any, T = any> (
       return (featureSelector$ === "@global"
         ? state$ : (featureSelector$ as Function)(state$)).pipe(
         concatMap(async sliceState => {
-          if (sliceState === undefined) { return of(undefined); }
+          if (sliceState === undefined) { return sliceState; }
           let selectorResults;
           if (Array.isArray(selectors)) {
             // Use Promise.all to wait for all async selectors to resolve
             selectorResults = await Promise.all(selectors.map((selector, index) => selector(sliceState, props[index])));
-            return of((selectorResults.some(result => result === undefined))
+            return (selectorResults.some(result => result === undefined))
               ? undefined as U
-              : projection ? projection(selectorResults, projectionProps) : selectorResults)
+              : projection ? projection(selectorResults, projectionProps) : selectorResults;
           } else {
             // If selectors is a single function, await its result
             selectorResults = await selectors(sliceState, props);
-            return of((selectorResults === undefined)
+            return (selectorResults === undefined)
               ? undefined as U
-              : projection ? projection(selectorResults, projectionProps) : selectorResults)
+              : projection ? projection(selectorResults, projectionProps) : selectorResults;
           }
         }),
         switchMap((result: any) => result) // switchMap to unwrap the Observable returned by of()
