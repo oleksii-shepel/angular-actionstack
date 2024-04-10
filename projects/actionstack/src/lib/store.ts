@@ -423,9 +423,16 @@ export class Store {
 
   extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
-    const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
+    function runSideEffects(...sideEffects: SideEffect[]) {
+      return (action: Action<any>, state: any, dependencies: any) =>
+        from(sideEffects).pipe(
+          mapMethod(sideEffect => sideEffect(of(action), of(state), dependencies) as Observable<Action<any>>),
+          toArray()
+        );
+    }
+    
     const effects$ = from(this.processSystemAction((obs) => obs.pipe(
       tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable()),
