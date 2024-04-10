@@ -425,10 +425,8 @@ export class Store {
     const dependencies = this.pipeline.dependencies;
     const runSideEffects = this.pipeline.strategy === "concurrent" ? runSideEffectsInParallel : runSideEffectsSequentially;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-    
-    const effects$ = this.isProcessing.pipe(
-      filter(value => value === false),
-      take(1),
+
+    const effects$ = from(this.processSystemAction((obs) => obs.pipe(
       tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
@@ -436,17 +434,17 @@ export class Store {
         mapMethod((childActions: Action<any>[]) => {
           if (childActions.length > 0) {
             return from(childActions).pipe(
-              tap((nextAction: Action<any>) => {
-                this.actionStack.push(nextAction);
-                this.dispatch(nextAction);
-              }));
+            tap((nextAction: Action<any>) => {
+              this.actionStack.push(nextAction);
+              this.dispatch(nextAction);
+            }));
           }
           return EMPTY;
-        }),
-        catchError(error => { console.warn(error.message); return EMPTY; }),
+        })
       )),
       finalize(() => this.systemActions.effectsUnregistered(args))
-    );
+    )));
+    
     return effects$;
   }
 
