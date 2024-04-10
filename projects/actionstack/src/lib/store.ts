@@ -420,23 +420,22 @@ export class Store {
       finalize(() => this.isProcessing.next(false))
     )))();
   }
-
+  
   extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-
+    
     const effects$ = from(this.processSystemAction((obs) => obs.pipe(
       tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
-      // Combine side effects and map in a single pipe
       concatMap(([action, state]) =>
         from(args).pipe(
+          // Combine side effects and map in a single pipe
           mapMethod(sideEffect => sideEffect(action, state, dependencies) as Observable<Action<any>>),
-          toArray(),
           // Flatten child actions and dispatch directly
-          flatMap((childActions: Action<any>[]) =>
-            childActions.length > 0 ? from(childActions).pipe(tap(this.dispatch)) : EMPTY
+          mergeMap((childAction: Action<any>) =>
+            childAction ? from([childAction]).pipe(tap(this.dispatch)) : EMPTY
           )
         )
       ),
@@ -445,6 +444,7 @@ export class Store {
 
     return effects$;
   }
+
 
 
   loadModule(module: FeatureModule, injector: Injector) {
