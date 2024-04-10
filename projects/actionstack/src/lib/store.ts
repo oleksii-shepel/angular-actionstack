@@ -425,35 +425,27 @@ export class Store {
     const dependencies = this.pipeline.dependencies;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
-    function runSideEffects(...sideEffects: SideEffect[]) {
-      return (action: Action<any>, state: any, dependencies: any) =>
-        from(sideEffects).pipe(
-          mapMethod(sideEffect => sideEffect(of(action), of(state), dependencies) as Observable<Action<any>>),
-          toArray()
-        );
-    }
-    
     const effects$ = from(this.processSystemAction((obs) => obs.pipe(
       tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable()),
       withLatestFrom(this.currentState.asObservable()),
-      concatMap(([action, state]) => runSideEffects(...args)(action, state, dependencies).pipe(
-        mapMethod((childActions: Action<any>[]) => {
-          if (childActions.length > 0) {
-            return from(childActions).pipe(
-            tap((nextAction: Action<any>) => {
-              this.actionStack.push(nextAction);
-              this.dispatch(nextAction);
-            }));
-          }
-          return EMPTY;
-        })
-      )),
+      // Combine side effects and map in a single pipe
+      concatMap(([action, state]) =>
+        from(args).pipe(
+          mapMethod(sideEffect => sideEffect(action, state, dependencies) as Observable<Action<any>>),
+          toArray(),
+          // Flatten child actions and dispatch directly
+          flatMap((childActions: Action<any>[]) =>
+            childActions.length > 0 ? from(childActions).pipe(tap(this.dispatch)) : EMPTY
+          )
+        )
+      ),
       finalize(() => this.systemActions.effectsUnregistered(args))
     )));
-    
+
     return effects$;
   }
+
 
   loadModule(module: FeatureModule, injector: Injector) {
     this.processSystemAction((obs) => obs.pipe(
