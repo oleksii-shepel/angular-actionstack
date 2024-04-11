@@ -274,7 +274,7 @@ export class Store {
     this.pipeline.reducer = reducer;
 
     // Update store state
-    return reducer(state, systemActions.updateState());
+    return await reducer(state, systemActions.updateState());
   }
 
   protected injectDependencies(injector: Injector): Store {
