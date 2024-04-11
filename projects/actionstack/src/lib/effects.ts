@@ -20,14 +20,14 @@ function createEffect(
           if (isObservable(result)) {
             return result.pipe(
               map((resultAction) => {
-                if (action.type === resultAction.type) {
+                if (action.type === resultAction?.type) {
                   throw new Error(`The effect for action type "${actionType}" may result in an infinite loop as it returns an action of the same type.`);
                 }
                 return resultAction;
               })
             );
           }
-          if (result.type === action.type) {
+          if (result?.type === action.type) {
             throw new Error(`The effect for action type "${actionType}" returns an action of the same type, this can lead to an infinite loop.`);
           }
           return of(result);
