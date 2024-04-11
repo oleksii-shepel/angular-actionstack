@@ -426,11 +426,10 @@ export class Store {
 
     const effects$ = from(this.processSystemAction((obs) => obs.pipe(
       tap(() => this.systemActions.effectsRegistered(args)),
-      map(() => ([this.currentAction.asObservable(), this.currentState.asObservable()])),
-      map(([action$, state$]) =>
+      concatMap(() =>
         from(args).pipe(
           // Combine side effects and map in a single pipe
-          mapMethod(sideEffect => sideEffect(action$, state$, dependencies) as Observable<Action<any>>),
+          mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies) as Observable<Action<any>>),
           // Flatten child actions and dispatch directly
           mergeMap((childAction: Action<any>) =>
             childAction ? from([childAction]).pipe(tap(this.dispatch)) : EMPTY
