@@ -2,11 +2,10 @@ import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
-import { runSideEffectsInParallel, runSideEffectsSequentially } from "./effects";
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
 
@@ -53,7 +52,7 @@ export class Store {
   protected mainModule: MainModule = {
     slice: "main",
     middleware: [],
-    reducer: (state: any = {}, action: Action<any>) => state,
+    reducer: (state: any = {}, action: Action<any>) => state as Reducer,
     metaReducers: [],
     dependencies: {},
     strategy: "exclusive" as ProcessingStrategy
@@ -61,7 +60,7 @@ export class Store {
   protected modules: FeatureModule[] = [];
   protected pipeline = {
     middleware: [] as any[],
-    reducer: (state: any = {}, action: Action<any>) => state as Reducer,
+    reducer: async (state: any = {}, action: Action<any>) => state as AsyncReducer,
     dependencies: {} as Tree<Type<any> | InjectionToken<any>>,
     strategy: "exclusive" as ProcessingStrategy
   };
@@ -85,7 +84,7 @@ export class Store {
       store.mainModule = mainModule;
       store.pipeline = Object.assign(store.pipeline, {
         middleware: Array.from(mainModule.middleware ?? []),
-        reducer: mainModule.reducer,
+        reducer: async (state: any = {}, action: Action<any>) => mainModule.reducer(state, action) as AsyncReducer,
         dependencies: Object.assign({}, { ...mainModule.dependencies }),
         strategy: mainModule.strategy,
       });
