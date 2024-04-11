@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { isValidMiddleware } from "./hash";
@@ -423,10 +423,12 @@ export class Store {
   extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
+    let isIdle = false;
 
     const effects$ = this.isProcessing.pipe(
-      filter(value => value === false),
-      take(1),
+      tap(value => value === false && (isIdle = true)),
+      filter(value => value),
+      distinctUntilChanged(),
       tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => from([...args]).pipe(
           // Combine side effects and map in a single pipe
@@ -434,9 +436,8 @@ export class Store {
           // Flatten child actions and dispatch directly
           mergeMap((childAction: Action<any>) =>
             childAction ? from([childAction]).pipe(tap(this.dispatch)) : EMPTY
-          ),
-          catchError(error => { console.warn(error.message); return EMPTY; })
-        ),
+          )
+        )
       ),
       finalize(() => this.systemActions.effectsUnregistered(args))
     );
