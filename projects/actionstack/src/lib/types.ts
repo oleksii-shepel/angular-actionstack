@@ -13,8 +13,9 @@ export interface AsyncAction<T = any> {
   (...args: any[]): Promise<T>;
 }
 
-export type Reducer = (state: any, action: Action<any>) => any | Promise<any>;
-export type MetaReducer = (reducer: Reducer) => Reducer | Promise<Reducer>;
+export type Reducer = (state: any, action: Action<any>) => any;
+export type AsyncReducer = (state: any, action: Action<any>) => Promise<any>;
+export type MetaReducer = (reducer: AsyncReducer) => Promise<AsyncReducer>;
 
 export interface Middleware {
   (store: any): (next: (action: any) => any) => Promise<(action: any) => any> | any;
@@ -38,6 +39,7 @@ export type Tree<LeafType, T = any> = {
 };
 
 export type ProcessingStrategy = "exclusive" | "concurrent";
+
 export interface FeatureModule {
   slice: string;
   reducer: Reducer | Tree<Reducer>;
