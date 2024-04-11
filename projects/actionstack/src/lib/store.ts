@@ -259,7 +259,7 @@ export class Store {
       return reducers;
     }, {} as Tree<Reducer>);
 
-    let reducer = await this.combineReducers(featureReducers);
+    let reducer = this.combineReducers(featureReducers);
 
     const asyncCompose = (...fns: MetaReducer[]) => async (reducer: Reducer) => {
       for (let i = fns.length - 1; i >= 0; i--) {
@@ -270,7 +270,7 @@ export class Store {
 
     this.settings.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
-      && (reducer = await asyncCompose(...this.mainModule.metaReducers)(reducer));
+      && (reducer = asyncCompose(...this.mainModule.metaReducers)(reducer));
     this.pipeline.reducer = reducer;
 
     // Update store state
