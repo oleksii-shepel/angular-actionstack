@@ -13,7 +13,7 @@ export interface AsyncAction<T = any> {
   (...args: any[]): Promise<T>;
 }
 
-export type Reducer = (state: any, action: Action<any>) => any;
+export type Reducer = (state: any, action: Action<any>) => Exclude<any, Promise<any>>;
 export type AsyncReducer = (state: any, action: Action<any>) => Promise<any>;
 export type MetaReducer = (reducer: AsyncReducer) => Promise<AsyncReducer>;
 

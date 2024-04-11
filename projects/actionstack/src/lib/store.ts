@@ -84,7 +84,7 @@ export class Store {
       store.mainModule = mainModule;
       store.pipeline = Object.assign(store.pipeline, {
         middleware: Array.from(mainModule.middleware ?? []),
-        reducer: async (state: any = {}, action: Action<any>) => mainModule.reducer(state, action) as AsyncReducer,
+        reducer: store.combineReducers({[mainModule.slice!]: mainModule.reducer}),
         dependencies: Object.assign({}, { ...mainModule.dependencies }),
         strategy: mainModule.strategy,
       });

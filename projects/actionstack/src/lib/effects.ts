@@ -1,4 +1,4 @@
-import { EMPTY, Observable, OperatorFunction, filter, isObservable, map, withLatestFrom } from 'rxjs';
+import { EMPTY, Observable, OperatorFunction, concatMap, filter, isObservable, map, of, withLatestFrom } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 export { createEffect as effect };
@@ -11,29 +11,28 @@ function createEffect(
     return action$.pipe(
       filter((action) => action.type === actionType),
       withLatestFrom(state$),
-      map(([action, state]) => {
+      concatMap(([action, state]) => {
         try {
           const result = effectFn(action, state, dependencies);
           if (result === null || result === undefined) {
             throw new Error(`The effect for action type "${actionType}" must return an action or an observable. It currently does not return anything.`);
           }
-
           if (isObservable(result)) {
             return result.pipe(
               map((resultAction) => {
-                if (action.type === resultAction?.type) {
+                if (action.type === resultAction.type) {
                   throw new Error(`The effect for action type "${actionType}" may result in an infinite loop as it returns an action of the same type.`);
                 }
                 return resultAction;
               })
             );
           }
-
-          if (result?.type === actionType) {
+          if (result.type === action.type) {
             throw new Error(`The effect for action type "${actionType}" returns an action of the same type, this can lead to an infinite loop.`);
           }
-          return result;
-        } catch (error: any) {
+          return of(result);
+        }
+        catch (error: any) {
           console.warn(`Error in effect: ${error.message}`);
           return EMPTY;
         }
@@ -48,6 +47,7 @@ function createEffect(
   return () => effectCreator;
 }
 
+
 export function ofType(...types: [string, ...string[]]): OperatorFunction<Action<any>, Action<any>> {
   return filter((action): action is Action<any> => {
     if (isAction(action)) {
@@ -56,4 +56,3 @@ export function ofType(...types: [string, ...string[]]): OperatorFunction<Action
     return false;
   });
 }
-
