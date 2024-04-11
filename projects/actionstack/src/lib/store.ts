@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap, withLatestFrom } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { isValidMiddleware } from "./hash";
@@ -216,7 +216,7 @@ export class Store {
     })();
   }
 
-  protected combineReducers(reducers: Tree<Reducer>): Reducer {
+  protected combineReducers(reducers: Tree<Reducer>): AsyncReducer {
     // Create a map for reducers
     const reducerMap = new Map<Reducer, string[]>();
 
@@ -261,7 +261,7 @@ export class Store {
 
     let reducer = this.combineReducers(featureReducers);
 
-    const asyncCompose = (...fns: MetaReducer[]) => async (reducer: Reducer) => {
+    const asyncCompose = (...fns: MetaReducer[]) => async (reducer: AsyncReducer) => {
       for (let i = fns.length - 1; i >= 0; i--) {
         reducer = await fns[i](reducer);
       }
@@ -270,7 +270,7 @@ export class Store {
 
     this.settings.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
-      && (reducer = asyncCompose(...this.mainModule.metaReducers)(reducer));
+      && (reducer = await asyncCompose(...this.mainModule.metaReducers)(reducer));
     this.pipeline.reducer = reducer;
 
     // Update store state
@@ -419,11 +419,11 @@ export class Store {
       finalize(() => this.isProcessing.next(false))
     )))();
   }
-  
+
   extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-    
+
     const effects$ = from(this.processSystemAction((obs) => obs.pipe(
       tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable()),
