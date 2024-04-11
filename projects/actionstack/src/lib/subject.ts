@@ -67,7 +67,7 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
   }
 
   asObservable() {
-    this._observable = this._observable ?? toObservable(this);
+    this._observable = this._observable ?? toObservable<T>(this);
     return this._observable;
   }
 
