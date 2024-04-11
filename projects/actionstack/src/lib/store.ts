@@ -430,7 +430,7 @@ export class Store {
       filter(value => value),
       distinctUntilChanged(),
       tap(() => this.systemActions.effectsRegistered(args)),
-      concatMap(() => from([...args]).pipe(
+      concatMap(() => this.currentAction.asObservable().pipe(() => from([...args]).pipe(
           // Combine side effects and map in a single pipe
           mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies) as Observable<Action<any>>),
           // Flatten child actions and dispatch directly
@@ -438,7 +438,7 @@ export class Store {
             childAction ? from([childAction]).pipe(tap(this.dispatch)) : EMPTY
           )
         )
-      ),
+      )),
       finalize(() => this.systemActions.effectsUnregistered(args))
     );
 
