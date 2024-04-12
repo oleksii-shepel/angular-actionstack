@@ -1,11 +1,11 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { Stack } from "./collections";
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
-import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
 
@@ -423,19 +423,17 @@ export class Store {
   extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
-    let isIdle = false;
 
     const effects$ = this.isProcessing.pipe(
-      tap(value => value === false && (isIdle = true)),
-      filter(value => value),
-      distinctUntilChanged(),
+      filter(value => value === false),
+      take(1),
       tap(() => this.systemActions.effectsRegistered(args)),
       concatMap(() => this.currentAction.asObservable().pipe(() => from([...args]).pipe(
           // Combine side effects and map in a single pipe
           mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies) as Observable<Action<any>>),
           // Flatten child actions and dispatch directly
-          mergeMap((childAction: Action<any>) =>
-            childAction ? from([childAction]).pipe(tap(this.dispatch)) : EMPTY
+          mergeMap((childAction: any) =>
+            isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY
           )
         )
       )),
