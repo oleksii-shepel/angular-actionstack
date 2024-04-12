@@ -1,5 +1,10 @@
 ActionStack is a powerful Angular library designed to simplify and enhance state management within your web applications. Developed for the modern Angular developer, it offers a robust and intuitive approach to managing application state, empowering you to create scalable and maintainable UIs. It combines all the good parts of its predecessors and eliminates their shortcomings in asynchronous environment.
 
+  [![build status](https://github.com/actioncrew/actionstack/workflows/build/badge.svg)](https://github.com/actioncrew/actionstack/workflows/build/badge.svg)
+  [![npm version](https://img.shields.io/npm/v/@actioncrew%2Factionstack.svg?style=flat-square)](https://www.npmjs.com/package/@actioncrew%2Factionstack)
+  [![npm downloads](https://img.shields.io/npm/dm/@actioncrew%2Factionstack.svg?style=flat-square)](https://www.npmjs.com/package/@actioncrew%2Factionstack)
+  [![min+zipped](https://badgen.net/bundlephobia/minzip/@actioncrew%2Factionstack)](https://badgen.net/bundlephobia/minzip/@actioncrew%2Factionstack)
+  
 ## Key Features
 - Reactive State Management: Leverages RxJS observables for a reactive approach, keeping your components and views in sync with the latest state changes.
 - Immutable State Updates: Ensures predictable and maintainable state transitions by promoting immutability principles.
