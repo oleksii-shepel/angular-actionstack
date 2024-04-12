@@ -2,6 +2,20 @@ import { Action, isAction, kindOf } from "./types";
 
 export { createAction as action };
 
+/**
+ * Creates an action creator function for Actionstack actions.
+ *
+ * @param {string|Function} typeOrThunk   - This can be either a string representing the action type
+ *                                          or a function representing a thunk (asynchronous action).
+ * @param {Function} [payloadCreator]     - (Optional) A function used to generate the payload for the action.
+ * @returns {Function}                    - An action creator function.
+ *
+ * This function creates an action creator function that can be used to create action objects.
+ * The action object will have a `type` property set to the provided `typeOrThunk` value.
+ * Additionally, it can have a `payload` property if a `payloadCreator` function is provided
+ * or if arguments are passed to the action creator function itself.
+ * It can also have optional `meta` and `error` properties included in the payload object.
+ */
 function createAction(typeOrThunk: string | Function, payloadCreator?: Function): any {
   function actionCreator(...args: any[]) {
     let action: Action<any> = {
@@ -46,12 +60,39 @@ function createAction(typeOrThunk: string | Function, payloadCreator?: Function)
   return actionCreator;
 }
 
+/**
+ * Binds an action creator to the dispatch function.
+ *
+ * @param {Function} actionCreator   - The action creator function to be bound.
+ * @param {Function} dispatch        - The dispatch function.
+ * @returns {Function}               - A new function that dispatches the action created by the provided action creator.
+ *
+ * This function takes an action creator function and the dispatch function.
+ * It returns a new function that, when called, will dispatch the action created by the provided action creator.
+ * The new function can be called with any arguments, which will be passed on to the original action creator function.
+ */
 export function bindActionCreator(actionCreator: Function, dispatch: Function): Function {
   return function(this: any, ...args: any[]): any {
     return dispatch(actionCreator.apply(this, args));
   };
 }
 
+/**
+ * Binds multiple action creators or a single action creator to the dispatch function.
+ *
+ * @param {Object|Function} actionCreators - An object containing action creator functions or a single action creator function.
+ * @param {Function} dispatch              - The dispatch function.
+ * @returns {Object|Function}              - An object containing the bound action creator functions or the bound single action creator function.
+ *
+ * This function takes an object containing multiple action creator functions or a single action creator function,
+ * along with the dispatch function.
+ * It iterates through the provided object (or binds a single function if provided) and returns a new object.
+ * In the new object, each action creator function is wrapped with the `bindActionCreator` function
+ * to automatically dispatch the created action when called.
+ *
+ * This function is useful for binding all action creators from a module or file to the dispatch function
+ * in a single call, promoting cleaner component code.
+ */
 export function bindActionCreators(actionCreators: any, dispatch: Function): any {
   actionCreators = { ...actionCreators };
   if (typeof actionCreators === "function") {

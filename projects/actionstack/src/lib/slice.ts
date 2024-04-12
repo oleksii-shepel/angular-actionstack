@@ -4,6 +4,10 @@ import { StoreModule } from "./module";
 import { Store } from "./store";
 import { Action, Reducer, SideEffect } from "./types";
 
+
+/**
+ * Interface defining configuration options for a Slice.
+ */
 export interface SliceOptions {
   slice?: string;
   reducer?: Reducer;
@@ -12,12 +16,27 @@ export interface SliceOptions {
   strategy?: "persistent" | "temporary";
 }
 
+/**
+ * A class representing a slice of state within an Actionstack application.
+ * A Slice instance provides methods for interacting with the Actionstack store to manage the state for a specific part of the application.
+ *
+ * @see {@link StoreModule} - for registering the Slice with the Actionstack store.
+ * @see {@link Store} - for interacting with the global Actionstack state.
+ * @see {@link Action} - for representing actions that can be dispatched to update the state.
+ * @see {@link Reducer} - for defining how the state is updated in response to an action.
+ * @see {@link SideEffect} - for handling side effects triggered by actions.
+ */
 @Injectable()
 export class Slice implements OnDestroy {
   private opts: SliceOptions;
   private subscription = Subscription.EMPTY;
   private elRef!: ElementRef<HTMLElement>;
 
+  /**
+   * @param store - The Actionstack store instance.
+   *
+   * @throws Error if ElementRef injection fails, indicating the Slice is used in the wrong context.
+   */
   constructor(private store: Store) {
     try {
       this.elRef = inject(ElementRef);
