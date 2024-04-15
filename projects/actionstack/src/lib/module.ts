@@ -1,5 +1,5 @@
 import { Injector, ModuleWithProviders, NgModule } from "@angular/core";
-import { Store } from "actionstack";
+import { Store } from "./store";
 import { asapScheduler } from "rxjs";
 import { StoreSettings } from "./store";
 import { FeatureModule, MainModule } from "./types";
