@@ -114,49 +114,42 @@ export class Store {
   protected settings = Object.assign({}, new StoreSettings(), inject(StoreSettings));
 
   /**
-   * Factory function to create a new Store instance.
-   *
-   * This function takes the main module configuration (`mainModule`) and an optional enhancer function (`enhancer`). It performs the following steps:
-   *  1. Defines an inner function `storeCreator` that takes the `mainModule` as input.
-   *  2. Creates a new `Store` instance.
-   *  3. Merges the provided `mainModule` configuration with the store's default `mainModule` properties.
-   *  4. Updates the store's `pipeline` object with properties derived from the `mainModule` configuration.
-   *  5. Calls the `applyMiddleware` method (presumably defined elsewhere) to apply middleware to the pipeline.
-   *  6. Sets up an observable stream (`action$`) from the `actionStream` subject.
-   *  7. Defines a subscription pipeline using RxJS operators to process actions:
-   *      - `scan` - Tracks the number of actions processed.
-   *      - `concatMap` - Checks if it's the first action and logs a message if so. Then, either updates state with a setup reducer or emits the action for processing.
-   *      - `processAction` - Likely calls a method to handle action processing.
-   *  8. Subscribes to the action processing pipeline.
-   *  9. Creates bound action creators for system actions using `bindActionCreators` and checks the `dispatchSystemActions` setting before dispatching.
-   *  10. Dispatches the `initializeState` and `storeInitialized` system actions.
-   *  11. Returns the newly created `Store` instance.
-   *  12. If an enhancer function is provided, it's wrapped around the `storeCreator` to potentially add additional logic before creating the store.
-   *
-   * @param mainModule - The main module configuration object.
-   * @param enhancer - Optional enhancer function to wrap the store creation process.
-   * @returns Store - The newly created Store instance.
+   * Creates a new store instance with the provided mainModule and optional enhancer.
+   * @param {MainModule} mainModule - The main module containing middleware, reducer, dependencies, and strategy.
+   * @param {StoreEnhancer} [enhancer] - Optional store enhancer function.
+   * @returns {Store} The created store instance.
+   * @throws {Error} Throws an error if the enhancer is not a function.
    */
   static create(mainModule: MainModule, enhancer?: StoreEnhancer) {
 
+    /**
+     * Function to create a store instance.
+     * @param {MainModule} mainModule - The main module containing middleware, reducer, dependencies, and strategy.
+     * @returns {Store} The created store instance.
+     */
     let storeCreator = (mainModule: MainModule) => {
 
       let store = new Store();
 
-      mainModule = Object.assign(store.mainModule, { ...mainModule });
-
+      // Assign mainModule properties to store
+      mainModule = Object.assign(store.mainModule, mainModule);
       store.mainModule = mainModule;
+
+      // Configure store pipeline
       store.pipeline = Object.assign(store.pipeline, {
         middleware: Array.from(mainModule.middleware ?? []),
         reducer: store.combineReducers({[mainModule.slice!]: mainModule.reducer}),
-        dependencies: Object.assign({}, { ...mainModule.dependencies }),
+        dependencies: Object.assign({}, mainModule.dependencies),
         strategy: mainModule.strategy,
       });
 
+      // Apply middleware
       store.applyMiddleware();
 
+      // Create action stream observable
       let action$ = store.actionStream.asObservable();
 
+      // Subscribe to action stream and process actions
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
         concatMap(async ({count, action}: any) => (count === 1) ? (console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
@@ -164,37 +157,33 @@ export class Store {
         store.processAction()
       ).subscribe();
 
+      // Bind system actions
       store.systemActions = bindActionCreators(systemActions, (action: Action<any>) => store.settings.dispatchSystemActions && store.dispatch(action));
 
+      // Initialize state and mark store as initialized
       store.systemActions.initializeState();
       store.systemActions.storeInitialized();
 
       return store;
     }
 
+    // Apply enhancer if provided
     if (typeof enhancer !== "undefined") {
       if (typeof enhancer !== "function") {
         throw new Error(`Expected the enhancer to be a function. Instead, received: '${kindOf(enhancer)}'`);
       }
-      // Apply the enhancer to the this
+      // Apply the enhancer to the storeCreator function
       return enhancer(storeCreator)(mainModule);
     }
 
+    // If no enhancer provided, return the result of calling storeCreator
     return storeCreator(mainModule);
   }
 
   /**
-   * Dispatches an action to the store.
-   *
-   * This method takes an action object and performs the following validations:
-   *  - Checks if the action is a plain object.
-   *  - Ensures the action has a defined "type" property that's a string.
-   *  - Throws errors if validations fail.
-   *
-   * If valid, the method pushes the action object into the `actionStream` subject for processing.
-   *
-   * @param action - The action object to dispatch.
-   * @throws Error - If the action object is invalid.
+   * Dispatches an action to be processed by the store's reducer.
+   * @param {Action<any>} action - The action to dispatch.
+   * @throws {Error} Throws an error if the action is not a plain object, does not have a defined "type" property, or if the "type" property is not a string.
    */
   dispatch(action: Action<any>) {
     if (!isPlainObject(action)) {
@@ -211,18 +200,10 @@ export class Store {
   }
 
   /**
-   * Selects a slice of state using a selector function.
-   *
-   * This method takes a selector function and an optional default value.
-   * The selector function receives the state observable as input and returns a new observable representing the selected state slice.
-   * The returned observable is piped with operators to:
-   *  - Map the value to the default value if undefined.
-   *  - Filter out undefined values.
-   *  - Use `distinctUntilChanged` to avoid emitting the same value repeatedly.
-   *
-   * @param selector - Function that takes the state observable and returns a new observable representing the selected state slice.
-   * @param defaultValue - Optional default value to emit if the selection results in undefined.
-   * @returns Observable<any> - An observable that emits the selected state slice.
+   * Selects a value from the store's state using the provided selector function.
+   * @param {(obs: Observable<any>) => Observable<any>} selector - The selector function to apply on the state observable.
+   * @param {*} [defaultValue] - The default value to use if the selected value is undefined.
+   * @returns {Observable<any>} An observable stream with the selected value.
    */
   select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
     return selector(this.currentState.asObservable()).pipe(
@@ -232,18 +213,11 @@ export class Store {
   }
 
   /**
-   * Retrieves the current state or a specific slice of the state.
-   *
-   * This method takes an optional `slice` parameter that can be:
-   *  - Undefined: Returns the entire state.
-   *  - String representing a state property key: Returns the value of that property.
-   *  - Array of strings representing state property keys: Applies a reducer-like function to retrieve nested values.
-   *
-   * The method throws an error if the provided `slice` type is unsupported.
-   *
-   * @param slice - Optional state slice identifier (property key or array of keys).
-   * @returns T - The entire state object or the selected state slice value.
-   * @throws Error - If the provided `slice` type is unsupported.
+   * Gets the current state or a slice of the state from the store.
+   * @param {keyof T | string[]} [slice] - The slice of the state to retrieve.
+   * @returns {T | any} The current state or the selected slice of the state.
+   * @throws {Error} Throws an error if the slice parameter is of unsupported type.
+   * @template T
    */
   getState<T = any>(slice?: keyof T | string[]): any {
     if (this.currentState.value === undefined || slice === undefined || typeof slice === "string" && slice == "@global") {
@@ -266,29 +240,14 @@ export class Store {
   }
 
   /**
-   * Protected method to apply a single change to the state and accumulate edges.
-   *
-   * This method takes the following arguments:
-   *  - `initialState`: The initial state object.
-   *  - `{path, value}`: An object containing the update path (`path` - array of keys) and the new value.
-   *  - `edges`: A tree structure (likely used to track changes and optimize subsequent updates).
-   *
-   * It iterates through the `path` array and performs the following steps:
-   *  - Creates a copy of the current object if edges exist.
-   *  - Traverses the state object based on the path keys.
-   *  - If it's the last key in the path (leaf node):
-   *      - Updates the value of the corresponding property in the current object.
-   *      - Sets the corresponding edge in the `edges` tree to `true`.
-   *  - Otherwise (non-leaf node):
-   *      - Creates a copy of the nested object if necessary based on the edges information.
-   *      - Continues traversing to the next level using the current object and updates the `currentEdges` for the next iteration.
-   *
-   * Finally, the method returns the updated state object.
-   *
-   * @param initialState - The initial state object.
-   * @param pathAndValue - An object containing the update path (`path` - array of keys) and the new value.
-   * @param edges - A tree structure (likely used to track changes and optimize subsequent updates).
-   * @returns any - The updated state object.
+   * Applies a change to the initial state based on the provided path and value, updating the state and tracking changes.
+   * @param {any} initialState - The initial state object.
+   * @param {Object} change - The change object containing the path and value to update.
+   * @param {string[]} change.path - The path to the value to be updated.
+   * @param {any} change.value - The new value to set at the specified path.
+   * @param {Tree<boolean>} edges - The tree structure representing the tracked changes.
+   * @returns {any} The updated state object after applying the change.
+   * @protected
    */
   protected applyChange(initialState: any, {path, value}: {path: string[], value: any}, edges: Tree<boolean>): any {
     let currentState: any = Object.keys(edges).length > 0 ? initialState: {...initialState};
@@ -311,32 +270,27 @@ export class Store {
   }
 
   /**
-   * Protected method to update the state based on a slice and value.
-   *
-   * This method takes an optional `slice` argument that can be:
-   *  - Undefined: Updates the entire state with a shallow copy of the provided `value`.
-   *  - String representing a state property key: Updates the state property with the given key using a shallow copy of the `value`.
-   *  - Array of strings representing state property keys: Calls the `applyChange` method to update a nested value using the path and value.
-   *
-   * The method throws an error if the provided `slice` type is unsupported.
-   *
-   * @param slice - State slice identifier (property key or array of keys).
-   * @param value - New value to update the state with.
-   * @param action - Action object (defaults to `systemActions.updateState`).
-   * @returns Promise<any> - The updated state object.
-   * @throws Error - If the provided `slice` type is unsupported.
+   * Updates the state based on the provided slice and value, returning the updated state.
+   * @param {keyof T | string[] | undefined} slice - The slice of the state to update.
+   * @param {any} value - The new value to set for the specified slice.
+   * @param {Action<any>} [action=systemActions.updateState()] - The action to propagate after updating the state.
+   * @returns {Promise<any>}  A promise that resolves to the updated state object.
+   * @protected
+   * @template T
    */
   protected async setState<T = any>(slice: keyof T | string[] | undefined, value: any, action: Action<any> = systemActions.updateState()): Promise<any> {
     let newState: any;
     if (slice === undefined || typeof slice === "string" && slice == "@global") {
-      // update the whole state with a shallow copy of the value
+      // Update the whole state with a shallow copy of the value
       newState = ({...value});
     } else if (typeof slice === "string") {
-      // update the state property with the given key with a shallow copy of the value
+      // Update the state property with the given key with a shallow copy of the value
       newState = {...this.currentState.value, [slice]: { ...value }};
     } else if (Array.isArray(slice)) {
+      // Apply change to the state based on the provided path and value
       newState = this.applyChange(this.currentState.value, {path: slice, value}, {});
     } else {
+      // Unsupported type of slice parameter
       throw new Error("Unsupported type of slice parameter");
     }
 
@@ -351,27 +305,13 @@ export class Store {
   }
 
   /**
-   * Protected asynchronous method to update state using a callback function.
-   *
-   * This method takes the following arguments:
-   *  - `slice`: Optional state slice identifier (property key or array of keys).
-   *  - `callback`: Function that receives the current state and returns the updated state value.
-   *  - `action`: Optional action object (defaults to `systemActions.updateState`).
-   *
-   * The method performs the following steps asynchronously:
-   *  - Throws an error if the `callback` function is missing.
-   *  - Retrieves the current state for the specified slice using `getState`.
-   *  - Calls the `callback` function with the retrieved state.
-   *  - Updates the state using `setState` with the result from the callback.
-   *  - Emits the updated state to the `currentState` subject.
-   *  - Dispatches the provided `action` (defaults to `updateState`).
-   *  - Optionally waits for both state propagation and action handling to complete using `Promise.allSettled`.
-   *  - Finally, returns the provided `action` object.
-   *
-   * @param slice - Optional state slice identifier (property key or array of keys).
-   * @param callback - Function that receives the current state and returns the updated state value.
-   * @param action - Optional action object (defaults to `systemActions.updateState`).
-   * @returns Promise<any> - A promise that resolves with the provided `action` object.
+   * Updates the state asynchronously based on the provided slice and callback function, then propagates the action.
+   * @param {keyof T | string[]} slice - The slice of the state to update.
+   * @param {AnyFn} callback - The callback function to apply on the current state.
+   * @param {Action<any>} [action=systemActions.updateState()] - The action to propagate after updating the state.
+   * @returns {Promise<any>} A promise that resolves to the propagated action.
+   * @protected
+   * @template T
    */
   protected async updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActions.updateState()): Promise<any> {
     if(callback === undefined) {
@@ -380,34 +320,26 @@ export class Store {
 
     let state = await this.getState(slice);
     let result = await callback(state);
-    let newState = await this.setState(slice, result, action);
+    await this.setState(slice, result, action);
 
     return action;
   }
 
   /**
-   * Protected method that combines multiple reducers into a single asynchronous reducer.
-   *
-   * This method takes a tree structure (`reducers`) containing individual reducers.
-   * It iterates through the tree and builds a map that associates each reducer function with its corresponding state slice path (an array of keys).
-   *
-   * The method returns a new asynchronous reducer function (`combinedReducer`). This function:
-   *  - Takes the current state object and an action object as arguments.
-   *  - Iterates through the reducer map:
-   *      - Retrieves the current state for the reducer's slice path using `getState`.
-   *      - Calls the reducer function with the retrieved state and the action.
-   *      - If the reducer returns a new state (different from the current state):
-   *          - Uses `applyChange` to update the combined state object with the new state for the specific slice path.
-   *  - Catches potential errors during reducer execution and logs a warning message.
-   *  - Finally, returns the combined state object.
-   *
-   * @param reducers - A tree structure containing individual reducers for different state slices.
-   * @returns AsyncReducer - A new asynchronous reducer function that combines all provided reducers.
+   * Combines multiple reducers into a single asynchronous reducer function.
+   * @param {Tree<Reducer>} reducers - The tree structure containing reducers.
+   * @returns {AsyncReducer} An asynchronous reducer function.
+   * @protected
    */
   protected combineReducers(reducers: Tree<Reducer>): AsyncReducer {
     // Create a map for reducers
     const reducerMap = new Map<Reducer, string[]>();
 
+    /**
+     * Recursively builds a map of reducers with their corresponding paths.
+     * @param {Tree<Reducer>} tree - The tree structure containing reducers.
+     * @param {string[]} [path=[]] - The current path in the tree.
+     */
     const buildReducerMap = (tree: Tree<Reducer>, path: string[] = []) => {
       for (const key in tree) {
         const reducer = tree[key]; const newPath = [...path, key]; // Add current key to the path
@@ -422,6 +354,12 @@ export class Store {
 
     buildReducerMap(reducers);
 
+    /**
+     * Combined reducer function that applies each individual reducer to the state.
+     * @param {any} [state={}] - The current state.
+     * @param {Action<any>} action - The action to process.
+     * @returns {Promise<any>} A promise that resolves to the modified state.
+     */
     const combinedReducer = async (state: any = {}, action: Action<any>) => {
       // Apply every reducer to state and track changes
       let modified = {};
@@ -439,24 +377,11 @@ export class Store {
     return combinedReducer;
   }
 
-  /**
-   * Protected asynchronous method to set up the store's root reducer.
-   *
-   * This method performs the following steps asynchronously:
-   *  1. Merges reducers from the main module and other registered modules:
-   *      - Extracts the `slice` and `reducer` properties from the main module.
-   *      - Iterates through other registered modules and combines their reducers if they exist.
-   *      - Builds a tree structure (`featureReducers`) with the combined slice-reducer pairs.
-   *  2. Calls `combineReducers` to create a single asynchronous reducer from the feature reducers.
-   *  3. Optionally applies meta-reducers (if enabled in settings and provided by the main module):
-   *      - Defines an `asyncCompose` function to compose meta-reducers asynchronously.
-   *      - If meta-reducers are defined in the main module, it creates an asynchronous composition chain using `asyncCompose` and applies it to the combined reducer.
-   *  4. Updates the store's pipeline with the final reducer.
-   *  5. Initializes the store state by calling the combined reducer with an initial state and the `updateState` system action.
-   *  6. Returns the initial state after processing by the combined reducer.
-   *
-   * @param state - Optional initial state object (defaults to an empty object).
-   * @returns Promise<any> - A promise that resolves with the initial state after processing by the combined reducer.
+    /**
+   * Sets up the reducer function by combining feature reducers and applying meta reducers.
+   * @param {any} [state={}] - The initial state.
+   * @returns {Promise<any>} A promise that resolves to the updated state after setting up the reducer.
+   * @protected
    */
   protected async setupReducer(state: any = {}): Promise<any> {
 
@@ -468,6 +393,7 @@ export class Store {
 
     let reducer = this.combineReducers(featureReducers);
 
+    // Define async compose function to apply meta reducers
     const asyncCompose = (...fns: MetaReducer[]) => async (reducer: AsyncReducer) => {
       for (let i = fns.length - 1; i >= 0; i--) {
         reducer = await fns[i](reducer);
@@ -475,6 +401,7 @@ export class Store {
       return reducer;
     };
 
+    // Apply meta reducers if enabled
     this.settings.enableMetaReducers && this.mainModule.metaReducers
       && this.mainModule.metaReducers.length
       && (reducer = await asyncCompose(...this.mainModule.metaReducers)(reducer));
@@ -485,36 +412,10 @@ export class Store {
   }
 
   /**
-   * Protected method to inject dependencies into the store pipeline.
-   *
-   * This method takes an `Injector` object and performs the following steps:
-   *  1. Initializes an empty object `newDependencies` to store combined dependencies.
-   *  2. Combines dependencies from the main module and other registered modules:
-   *      - Extracts the `dependencies` property from the main module.
-   *      - Iterates through other registered modules and filters out modules without dependencies.
-   *      - Creates an array `allDependencies` containing these combined dependency objects.
-   *  3. Recursively iterates through `allDependencies` using a depth-first search (DFS) approach:
-   *      - Iterates over each key-value pair in the current dependency object.
-   *      - For arrays as values:
-   *          - Adds each element to the `stack` for further processing.
-   *      - For objects as values:
-   *          - Adds each child key-value pair to the `stack` for processing.
-   *      - For function or `InjectionToken` values:
-   *          - Uses the injector to retrieve the actual dependency instance and stores it in the corresponding key of the `newDependencies` object.
-   *  4. Initializes an empty object `pipeline.dependencies` to store the pipeline-specific dependencies.
-   *  5. Creates a stack for the DFS traversal, initializing it with the top-level dependencies.
-   *  6. Iterates through the `stack` until empty:
-   *      - Pops a node from the stack with properties `parent`, `key`, and `subtree`.
-   *      - Extracts the value from the current parent object using the `key`.
-   *      - Based on the value type:
-   *          - For arrays: Adds elements to the corresponding subtree in `newDependencies` for further processing.
-   *          - For objects: Adds child key-value pairs to the `stack` for further processing.
-   *          - For functions or `InjectionToken`s: Retrieves the dependency from the injector and stores it in the subtree.
-   *  7. Updates the `pipeline.dependencies` with the final processed `newDependencies` object.
-   *  8. Returns the current `Store` instance (likely for method chaining).
-   *
-   * @param injector - The injector object used to retrieve dependencies.
-   * @returns Store - The current Store instance.
+   * Injects dependencies into the store using the provided injector.
+   * @param {Injector} injector - The injector to use for dependency injection.
+   * @returns {Store} The store instance with injected dependencies.
+   * @protected
    */
   protected injectDependencies(injector: Injector): Store {
     // Initialize the new dependencies object
@@ -557,32 +458,12 @@ export class Store {
     return this;
   }
 
-  /**
-   * Protected method to eject dependencies for a specific feature module.
-   *
-   * This method takes a `FeatureModule` instance and performs the following steps:
-   *  1. Combines dependencies from the main module and other modules, excluding the module to be ejected:
-   *      - Filters out the provided `module` from the registered modules list.
-   *      - Creates an array `allDependencies` containing dependencies from the main module and remaining modules.
-   *  2. Initializes an empty object `newDependencies` to store the processed dependencies.
-   *  3. Recursively iterates through `allDependencies` using a DFS approach (similar to `injectDependencies`).
-   *  4. Creates a stack for the DFS traversal, initializing it with source and target objects.
-   *      - Source: Existing pipeline dependencies.
-        - Target: The `newDependencies` object.
-  *  5. Iterates through the `stack` until empty:
-  *      - Pops a node from the stack with properties `source` and `target`.
-  *  6. Iterates through each key in the `target` object:
-  *      - For arrays as target values:
-  *          - Iterates through elements and copies non-function/InjectionToken values to the stack for further processing.
-  *          - For function/InjectionToken values, directly copies the source value to the target.
-  *      - For objects as target values: Adds child key-value pairs to the `stack` for processing.
-  *      - For function/InjectionToken as target values: Directly copies the source value to the target.
-  *  7. Assigns the processed `newDependencies` object to `pipeline.dependencies`.
-  *  8. Returns the current `Store` instance (likely for method chaining).
-  *
-  * @param module - The FeatureModule instance to eject dependencies for.
-  * @returns Store - The current Store instance.
-  */
+    /**
+   * Ejects dependencies associated with the specified module from the store.
+   * @param {FeatureModule} module - The module whose dependencies should be ejected.
+   * @returns {Store} The store instance with ejected dependencies.
+   * @protected
+   */
   protected ejectDependencies(module: FeatureModule): Store {
     // Combine all dependencies into one object, excluding the module to eject
     let allDependencies = [this.mainModule.dependencies, ...this.modules.filter(m => m !== module).map(m => m.dependencies)].filter(Boolean);
@@ -627,23 +508,10 @@ export class Store {
   }
 
   /**
-   * Protected method that creates an operator function for processing actions.
-   *
-   * This method takes an observable source of `Action` objects and returns a new observable.
-   * The returned observable applies the following operators to each emitted action:
-   *  - `concatMap`: Ensures actions are processed sequentially (one at a time).
-   *  - Inside `concatMap`:
-   *      - Wraps the action processing in a `try...finally` block.
-   *      - Attempts to update the entire state ("@global") using `updateState`.
-   *          - The update callback calls the pipeline's reducer with the current state and the action.
-   *      - Pops the action from the internal `actionStack` after processing (regardless of success or failure).
-   *      - If the `actionStack` becomes empty, it emits `false` on the `isProcessing` subject.
-   *  - `ignoreElements`: Ignores the values emitted by the action processing logic (we only care about side effects).
-   *  - `catchError`: Catches any errors during action processing and logs a warning message.
-   *      - Returns an empty observable (`EMPTY`) to prevent further errors downstream.
-   *
-   * @param source - An observable source of `Action` objects.
-   * @returns Observable - A new observable that processes actions sequentially.
+   * Creates an RxJS operator that processes incoming actions.
+   * @param {Observable<Action<any>>} source - The observable stream of actions.
+   * @returns {Observable<any>} An observable stream that processes actions.
+   * @protected
    */
   protected processAction() {
     return (source: Observable<Action<any>>) => {
@@ -668,30 +536,9 @@ export class Store {
   }
 
   /**
-   * Protected method to apply middleware to the dispatch function.
-   *
-   * This method creates a new dispatch function that chains the provided middleware functions.
-   * Here's a breakdown of the steps:
-   *  1. Initializes a temporary `dispatch` function that throws an error if called during middleware setup.
-   *  2. Defines an object `starterAPI` containing initial store APIs for middleware:
-   *      - `getState`: Retrieves the current state.
-   *      - `dispatch`: Dispatches actions (initially the temporary `dispatch`).
-   *      - `isProcessing`: Access to the `isProcessing` subject.
-   *      - `actionStack`: Access to the internal action stack.
-   *      - `dependencies`: Retrieves pipeline dependencies.
-   *      - `strategy`: Retrieves the pipeline execution strategy.
-   *  3. Defines an object `middlewareAPI` (used internally by middleware) containing basic store APIs:
-   *      - `getState`: Retrieves the current state.
-   *      - `dispatch`: Dispatches actions.
-   *  4. Creates an array `chain` containing chained middleware functions:
-   *      - The first element is the result of calling `starter` with either `starterAPI` or `middlewareAPI` depending on middleware signature validation.
-   *      - Subsequent elements are the results of calling each middleware function from `pipeline.middleware` with `middlewareAPI`.
-   *  5. Composes the middleware chain using `compose` from Actionstack.
-   *  6. Binds the original `dispatch` method to `this` context.
-   *  7. Updates the store's `dispatch` function with the composed middleware chain applied to the bound `dispatch`.
-   *  8. Returns the current `Store` instance (likely for method chaining).
-   *
-   * @returns Store - The current Store instance.
+   * Applies middleware to the store's dispatch method.
+   * @returns {Store} The store instance with applied middleware.
+   * @protected
    */
   protected applyMiddleware(): Store {
 
@@ -699,6 +546,7 @@ export class Store {
       throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
     };
 
+    // Define starter and middleware APIs
     const starterAPI = {
       getState: () => this.getState(),
       dispatch: (action: any) => dispatch(action),
@@ -713,7 +561,9 @@ export class Store {
       dispatch: (action: any) => dispatch(action),
     };
 
+    // Build middleware chain
     const chain = [starter(isValidMiddleware(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
+    // Compose middleware chain with dispatch function
     dispatch = (chain.length === 1 ? chain[0] : chain.reduce((a, b) => (...args: any[]) => a(b(...args))))(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
@@ -721,19 +571,10 @@ export class Store {
   }
 
   /**
-   * Protected asynchronous method to process a system action using the provided operator.
-   *
-   * This method takes an operator function that transforms an observable stream.
-   * It performs the following steps asynchronously:
-   *  1. Waits for the `isProcessing` subject to emit `false` (indicating no ongoing action processing).
-   *  2. Sets the `isProcessing` subject to `true` before processing.
-   *  3. Applies the provided `operator` to an observable stream that emits the current state.
-   *  4. Catches any errors during processing and logs a warning message.
-   *      - Returns an empty observable (`EMPTY`) to prevent further errors downstream.
-   *  5. Finally, sets the `isProcessing` subject back to `false`.
-   *  6. Awaits the result of the observable chain and likely returns nothing (void).
-   *
-   * @param operator - A function that takes an observable and returns a transformed observable.
+   * Processes system actions using the provided operator.
+   * @param {(obs: Observable<any>) => Observable<any>} operator - The operator function to apply on the observable stream.
+   * @returns {Promise<void>} A promise that resolves after processing the system action.
+   * @protected
    */
   protected processSystemAction(operator: (obs: Observable<any>) => Observable<any>) {
     return (async() => await firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
@@ -745,38 +586,10 @@ export class Store {
   }
 
   /**
-   * Public method that combines multiple side effects into a single observable stream.
-   *
-   * This method takes an indefinite number of `SideEffect` functions as arguments.
-   * It returns an observable stream that emits actions dispatched by the side effects.
-   * Here's a breakdown of the implementation:
-   *  1. Retrieves the pipeline dependencies from `pipeline.dependencies`.
-   *  2. Chooses the appropriate mapping operator based on the pipeline strategy:
-   *      - "concurrent": Uses `mergeMap` to allow side effects to run concurrently.
-   *      - Otherwise: Uses `concatMap` to run side effects sequentially (one at a time).
-   *  3. Creates an observable `effects$` using the `isProcessing` subject:
-   *      - Waits for the `isProcessing` subject to emit `false` (no ongoing action processing).
-   *      - Takes only one emission using `take(1)`.
-   *      - Dispatches a `systemActions.effectsRegistered` action with the provided side effects.
-   *      - Uses `concatMap` to chain the following logic triggered by the current action:
-   *          - Converts the current action observable using `asObservable`.
-   *          - Converts the provided side effect functions to an observable stream using `from`.
-   *          - Combines side effects and applies the mapping operator (`mapMethod`) in a single pipe:
-   *              - The `mapMethod` (either `mergeMap` or `concatMap`) ensures side effects are run according to the strategy.
-   *              - Inside the mapping function:
-   *                  - Calls each side effect with the current action observable, current state observable, and dependencies.
-   *                  - Casts the side effect result to an `Observable<Action<any>>`.
-   *          - Flattens child actions emitted by side effects using `mergeMap`:
-   *              - Checks if the emitted value is an action using `isAction`.
-   *                  - If it's an action:
-   *                      - Creates an observable with the action using `of`.
-   *                      - Pipes the action through a `tap` operator to dispatch it using the store's `dispatch` function.
-   *                  - If it's not an action: Returns an empty observable (`EMPTY`) to prevent further emissions.
-   *  4. Finalizes the observable chain by dispatching a `systemActions.effectsUnregistered` action with the side effects.
-   *  5. Returns the observable stream `effects$`.
-   *
-   * @param args - An indefinite number of `SideEffect` functions.
-   * @returns Observable<any> - An observable stream that emits actions dispatched by the side effects.
+   * Extends the observable stream with the provided side effects.
+   * @param {...SideEffect[]} args - The side effect functions to extend the stream.
+   * @returns {Observable<any>} An observable stream extended with the specified side effects.
+   * @protected
    */
   extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
@@ -802,23 +615,10 @@ export class Store {
   }
 
   /**
-   * Public method to load a feature module into the store.
-   *
-   * This method takes a `FeatureModule` instance and an `Injector` object.
-   * It performs the following actions using a system action pipeline:
-   *  1. Checks if the module already exists using `this.modules.some`.
-   *      - If it exists, returns the current `Store` instance without changes.
-   *  2. Creates a new array with the provided module appended to the existing modules.
-   *  3. Updates the store's internal `modules` property with the new array.
-   *  4. Injects dependencies for the feature module using `injectDependencies`.
-   *  5. Updates the entire state ("@global") using `updateState`:
-   *      - Calls `setupReducer` to potentially create a new combined reducer with the loaded module.
-   *  6. Dispatches a `systemActions.moduleLoaded` action with the loaded module.
-   *  7. Returns the current `Store` instance (likely for method chaining).
-   *
-   * @param module - The FeatureModule instance to load.
-   * @param injector - The injector object used to inject dependencies.
-   * @returns Store - The current Store instance.
+   * Loads a feature module into the store.
+   * @param {FeatureModule} module - The feature module to load.
+   * @param {Injector} injector - The injector to use for dependency injection.
+   * @returns {Store} The store instance with the loaded module.
    */
   loadModule(module: FeatureModule, injector: Injector) {
     this.processSystemAction((obs) => obs.pipe(
@@ -845,28 +645,10 @@ export class Store {
   }
 
   /**
-   * Public method to unload a feature module from the store.
-   *
-   * This method takes a `FeatureModule` instance and an optional `clearState` flag (defaults to `false`).
-   * It unloads the module and optionally clears its corresponding state slice.
-   * Here's a breakdown of the process:
-   *  1. Uses `processSystemAction` to execute the following logic within a system action pipeline:
-   *      - Inside the pipeline:
-   *          - Removes the provided module from the store's internal `modules` list using a `tap` operator:
-   *              - Filters out modules where the `slice` property doesn't match the provided module's slice.
-   *              - Updates the store's `modules` property with the filtered array.
-   *          - Ejects dependencies associated with the unloaded module using `ejectDependencies`.
-   *          - Updates the entire state ("@global") using `updateState`:
-   *              - Calls `setupReducer` to potentially create a new combined reducer without the unloaded module.
-   *              - Optionally clears the state slice for the unloaded module:
-   *                  - If `clearState` is `true`, creates a copy of the state using spread syntax (`...state`).
-   *                  - Deletes the property corresponding to the module's slice from the copied state.
-   *          - Dispatches a `systemActions.moduleUnloaded` action with the unloaded module.
-   *  2. Returns the current `Store` instance (likely for method chaining).
-   *
-   * @param module - The FeatureModule instance to unload.
-   * @param clearState - Optional flag (defaults to `false`) to indicate whether to clear the state slice for the unloaded module.
-   * @returns Store - The current Store instance.
+   * Unloads a feature module from the store.
+   * @param {FeatureModule} module - The feature module to unload.
+   * @param {boolean} [clearState=false] - A flag indicating whether to clear the module's state.
+   * @returns {Store} The store instance with the unloaded module
    */
   unloadModule(module: FeatureModule, clearState: boolean = false) {
     this.processSystemAction((obs) => obs.pipe(
@@ -895,16 +677,10 @@ export class Store {
 }
 
 /**
- * Creates a new store instance.
- *
- * This function is a wrapper around the internal `Store.create` method.
- * It takes a `MainModule` instance as a required argument and an optional `StoreEnhancer` function.
- * The `MainModule` defines the core configuration for the store, including initial state and reducers.
- * The optional `StoreEnhancer` allows for applying middleware or other enhancements to the store creation process.
- *
- * @param mainModule - The MainModule instance that defines the core store configuration.
- * @param enhancer - Optional StoreEnhancer function to apply enhancements during store creation.
- * @returns Store - A newly created Store instance.
+ * Creates a store instance with the specified main module and optional enhancer.
+ * @param {MainModule} mainModule - The main module of the store.
+ * @param {StoreEnhancer} [enhancer] - An optional enhancer for the store.
+ * @returns {Store} The created store instance.
  */
 export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
   return Store.create(mainModule, enhancer);
