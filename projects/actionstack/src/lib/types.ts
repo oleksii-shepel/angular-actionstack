@@ -164,6 +164,12 @@ export type Tree<LeafType, T = any> = {
 export type ProcessingStrategy = "exclusive" | "concurrent";
 
 /**
+ * Type alias representing slice strategies.
+ *
+ */
+export type SliceStrategy = "persistent" | "temporary";
+
+/**
  * Interface defining the structure of a feature module.
  *
  * Feature modules are used to organize state and logic for specific parts of an application.

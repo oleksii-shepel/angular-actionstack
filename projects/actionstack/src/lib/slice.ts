@@ -2,7 +2,7 @@ import { ElementRef, Injectable, OnDestroy, inject } from "@angular/core";
 import { Observable, Subscription } from "rxjs";
 import { StoreModule } from "./module";
 import { Store } from "./store";
-import { Action, Reducer, SideEffect } from "./types";
+import { Action, Reducer, SideEffect, SliceStrategy } from "./types";
 
 
 /**
@@ -13,7 +13,7 @@ export interface SliceOptions {
   reducer?: Reducer;
   effects?: (SideEffect | any)[];
   dependencies?: any;
-  strategy?: "persistent" | "temporary";
+  strategy?: SliceStrategy;
 }
 
 /**

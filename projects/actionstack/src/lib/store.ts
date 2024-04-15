@@ -114,29 +114,29 @@ export class Store {
   protected settings = Object.assign({}, new StoreSettings(), inject(StoreSettings));
 
   /**
- * Factory function to create a new Store instance.
- *
- * This function takes the main module configuration (`mainModule`) and an optional enhancer function (`enhancer`). It performs the following steps:
- *  1. Defines an inner function `storeCreator` that takes the `mainModule` as input.
- *  2. Creates a new `Store` instance.
- *  3. Merges the provided `mainModule` configuration with the store's default `mainModule` properties.
- *  4. Updates the store's `pipeline` object with properties derived from the `mainModule` configuration.
- *  5. Calls the `applyMiddleware` method (presumably defined elsewhere) to apply middleware to the pipeline.
- *  6. Sets up an observable stream (`action$`) from the `actionStream` subject.
- *  7. Defines a subscription pipeline using RxJS operators to process actions:
- *      - `scan` - Tracks the number of actions processed.
- *      - `concatMap` - Checks if it's the first action and logs a message if so. Then, either updates state with a setup reducer or emits the action for processing.
- *      - `processAction` - Likely calls a method to handle action processing.
- *  8. Subscribes to the action processing pipeline.
- *  9. Creates bound action creators for system actions using `bindActionCreators` and checks the `dispatchSystemActions` setting before dispatching.
- *  10. Dispatches the `initializeState` and `storeInitialized` system actions.
- *  11. Returns the newly created `Store` instance.
- *  12. If an enhancer function is provided, it's wrapped around the `storeCreator` to potentially add additional logic before creating the store.
- *
- * @param mainModule - The main module configuration object.
- * @param enhancer - Optional enhancer function to wrap the store creation process.
- * @returns Store - The newly created Store instance.
- */
+   * Factory function to create a new Store instance.
+   *
+   * This function takes the main module configuration (`mainModule`) and an optional enhancer function (`enhancer`). It performs the following steps:
+   *  1. Defines an inner function `storeCreator` that takes the `mainModule` as input.
+   *  2. Creates a new `Store` instance.
+   *  3. Merges the provided `mainModule` configuration with the store's default `mainModule` properties.
+   *  4. Updates the store's `pipeline` object with properties derived from the `mainModule` configuration.
+   *  5. Calls the `applyMiddleware` method (presumably defined elsewhere) to apply middleware to the pipeline.
+   *  6. Sets up an observable stream (`action$`) from the `actionStream` subject.
+   *  7. Defines a subscription pipeline using RxJS operators to process actions:
+   *      - `scan` - Tracks the number of actions processed.
+   *      - `concatMap` - Checks if it's the first action and logs a message if so. Then, either updates state with a setup reducer or emits the action for processing.
+   *      - `processAction` - Likely calls a method to handle action processing.
+   *  8. Subscribes to the action processing pipeline.
+   *  9. Creates bound action creators for system actions using `bindActionCreators` and checks the `dispatchSystemActions` setting before dispatching.
+   *  10. Dispatches the `initializeState` and `storeInitialized` system actions.
+   *  11. Returns the newly created `Store` instance.
+   *  12. If an enhancer function is provided, it's wrapped around the `storeCreator` to potentially add additional logic before creating the store.
+   *
+   * @param mainModule - The main module configuration object.
+   * @param enhancer - Optional enhancer function to wrap the store creation process.
+   * @returns Store - The newly created Store instance.
+   */
   static create(mainModule: MainModule, enhancer?: StoreEnhancer) {
 
     let storeCreator = (mainModule: MainModule) => {
@@ -159,8 +159,8 @@ export class Store {
 
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        concatMap(({count, action}: any) => (count === 1) ? (console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
-          store.updateState("@global", async () => store.setupReducer(), action)) : of(action)),
+        concatMap(async ({count, action}: any) => (count === 1) ? (console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
+          await store.updateState("@global", async () => await store.setupReducer(), action)) : action),
         store.processAction()
       ).subscribe();
 
@@ -320,23 +320,34 @@ export class Store {
    *
    * The method throws an error if the provided `slice` type is unsupported.
    *
-   * @param slice - Optional state slice identifier (property key or array of keys).
-   * @param value - Optional new value to update the state with.
-   * @returns any - The updated state object.
+   * @param slice - State slice identifier (property key or array of keys).
+   * @param value - New value to update the state with.
+   * @param action - Action object (defaults to `systemActions.updateState`).
+   * @returns Promise<any> - The updated state object.
    * @throws Error - If the provided `slice` type is unsupported.
    */
-  protected setState<T = any>(slice?: keyof T | string[], value?: any): any {
+  protected async setState<T = any>(slice: keyof T | string[] | undefined, value: any, action: Action<any> = systemActions.updateState()): Promise<any> {
+    let newState: any;
     if (slice === undefined || typeof slice === "string" && slice == "@global") {
       // update the whole state with a shallow copy of the value
-      return ({...value});
+      newState = ({...value});
     } else if (typeof slice === "string") {
       // update the state property with the given key with a shallow copy of the value
-      return {...this.currentState.value, [slice]: { ...value }};
+      newState = {...this.currentState.value, [slice]: { ...value }};
     } else if (Array.isArray(slice)) {
-      return this.applyChange(this.currentState.value, {path: slice, value}, {});
+      newState = this.applyChange(this.currentState.value, {path: slice, value}, {});
     } else {
       throw new Error("Unsupported type of slice parameter");
     }
+
+    let stateUpdated = this.currentState.next(newState);
+    let actionHandled = this.currentAction.next(action);
+
+    if (this.settings.awaitStatePropagation) {
+      await Promise.allSettled([stateUpdated, actionHandled]);
+    }
+
+    return newState;
   }
 
   /**
@@ -362,25 +373,16 @@ export class Store {
    * @param action - Optional action object (defaults to `systemActions.updateState`).
    * @returns Promise<any> - A promise that resolves with the provided `action` object.
    */
-  protected updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActions.updateState()): Promise<any> {
-    return (async () => {
-      if(callback === undefined) {
-        throw new Error('Callback function is missing. State will not be updated.')
-      }
+  protected async updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActions.updateState()): Promise<any> {
+    if(callback === undefined) {
+      throw new Error('Callback function is missing. State will not be updated.')
+    }
 
-      let state = await this.getState(slice);
-      let result = await callback(state);
-      let newState = await this.setState(slice, result);
+    let state = await this.getState(slice);
+    let result = await callback(state);
+    let newState = await this.setState(slice, result, action);
 
-      let stateUpdated = this.currentState.next(newState);
-      let actionHandled = this.currentAction.next(action);
-
-      if (this.settings.awaitStatePropagation) {
-        await Promise.allSettled([stateUpdated, actionHandled]);
-      }
-
-      return action;
-    })();
+    return action;
   }
 
   /**
@@ -524,7 +526,7 @@ export class Store {
     // Recursively clone and update dependencies
     allDependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        newDependencies[key] = deepCopy(dep[key]);
+        newDependencies[key] = dep[key];
       });
     });
 
@@ -591,7 +593,7 @@ export class Store {
     // Recursively clone and update dependencies
     allDependencies.forEach((dep: any) => {
       Object.keys(dep).forEach(key => {
-        newDependencies[key] = deepCopy(dep[key]);
+        newDependencies[key] = dep[key];
       });
     });
 
@@ -648,14 +650,13 @@ export class Store {
       return source.pipe(
         concatMap(async (action: Action<any>) => {
           try {
-            await this.updateState("@global", async (state) => this.pipeline.reducer(state, action), action);
+            return await this.updateState("@global", async (state) => this.pipeline.reducer(state, action), action);
           } finally {
             this.actionStack.pop();
             if (this.actionStack.length === 0) {
               this.isProcessing.next(false);
             }
           }
-          return EMPTY;
         }),
         ignoreElements(),
         catchError((error) => {
@@ -713,7 +714,7 @@ export class Store {
     };
 
     const chain = [starter(isValidMiddleware(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
-    dispatch = compose(...chain)(this.dispatch.bind(this));
+    dispatch = (chain.length === 1 ? chain[0] : chain.reduce((a, b) => (...args: any[]) => a(b(...args))))(this.dispatch.bind(this));
 
     this.dispatch = dispatch;
     return this;
@@ -836,7 +837,7 @@ export class Store {
         // Inject dependencies
         this.injectDependencies(injector);
       }),
-      concatMap(() => this.updateState("@global", async (state) => this.setupReducer(state), systemActions.updateState())),
+      concatMap(async () => await this.updateState("@global", async (state) => this.setupReducer(state), systemActions.updateState())),
       tap(() => this.systemActions.moduleLoaded(module)),
     ));
 
@@ -879,12 +880,12 @@ export class Store {
         // Eject dependencies
         this.ejectDependencies(module);
       }),
-      concatMap(() => this.updateState("@global", async (state) => {
+      concatMap(async () => await this.updateState("@global", async (state) => {
         if (clearState) {
           state = { ...state };
           delete state[module.slice];
         }
-        return this.setupReducer(state);
+        return await this.setupReducer(state);
       }, systemActions.initializeState())),
       tap(() => this.systemActions.moduleUnloaded(module)),
     ));
@@ -909,70 +910,4 @@ export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
   return Store.create(mainModule, enhancer);
 }
 
-/**
- * Composes multiple functions into a single function.
- *
- * This function takes a variable number of function arguments.
- * It returns a new function that is the composition of the provided functions.
- * The composition order is from right to left, meaning the rightmost function is executed first.
- *
- * Here's how function composition works:
- *  - If no functions are provided (empty array), the function simply returns the argument passed to it.
- *  - If only one function is provided, the function returns that function itself.
- *  - For multiple functions:
- *      - The function uses `reduce` to create the composed function.
- *      - The reducer takes two arguments:
- *          - `a`: The accumulator function (initially the last function in the argument list).
- *          - `b`: The current function being processed.
- *      - The reducer returns a new function that takes any number of arguments:
- *          - It calls `a` with the result of calling `b` with the provided arguments.
- *          - Effectively, the result of the current function (`b`) becomes the argument for the next function (`a`) in the composition chain.
- *
- * @param funcs - A variable number of functions to be composed.
- * @returns AnyFn - A new function that is the composition of the provided functions.
- */
-function compose(...funcs: AnyFn[]): AnyFn {
-  if (funcs.length === 0) {
-    return (arg: any): any => arg;
-  }
-
-  if (funcs.length === 1) {
-    return funcs[0];
-  }
-
-  return funcs.reduce((a, b) => (...args: any[]) => a(b(...args)));
-}
-
-/**
- * Creates a deep copy of an object.
- *
- * This function takes an object as input and returns a new object that is a copy of the original.
- * It performs a deep copy, meaning it copies the entire object structure and nested objects.
- *
- * The function handles different object types:
- *  - If the input is `null` or a primitive type (not an object), it returns the original value.
- *  - For arrays: It creates a new empty array and copies the elements using deep copy.
- *  - For objects: It creates a new object of the same type (empty object for plain objects).
- *      - Iterates over each own property of the original object.
- *      - For each property, it calls itself recursively (`deepCopy`) to create a deep copy of the property value.
- *      - Adds the copied property key-value pair to the new object.
- *
- * @param obj - The object to be deep copied.
- * @returns any - A new object that is a deep copy of the original object.
- */
-function deepCopy(obj: any) {
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-
-  let copy: any = Array.isArray(obj) ? [] : {};
-
-  for (let key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      copy[key] = deepCopy(obj[key]);
-    }
-  }
-
-  return copy;
-}
 
