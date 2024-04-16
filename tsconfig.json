@@ -4,6 +4,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitOverride": true,
@@ -19,9 +20,13 @@
     "target": "ES2022",
     "module": "ES2022",
     "paths": {
-      "actionstack": [
+      "@actioncrew/actionstack": [
         "./dist/actionstack",
         "./projects/actionstack/src/public-api.ts"
+      ],
+      "@actioncrew/actionstack/tools": [
+        "./dist/actionstack/tools",
+        "./projects/actionstack/tools/src/public-api.ts"
       ]
     },
     "useDefineForClassFields": false,

@@ -2,7 +2,7 @@ import { Location } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
-import { Store } from 'actionstack';
+import { Store } from '@actioncrew/actionstack';
 import { Observable } from 'rxjs';
 import { Hero } from '../hero';
 import { heroSelector, loadHero } from './hero-details.slice';

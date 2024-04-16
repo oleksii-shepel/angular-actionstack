@@ -1,5 +1,5 @@
+import { Store } from '@actioncrew/actionstack';
 import { Injectable } from '@angular/core';
-import { Store } from 'actionstack';
 
 @Injectable({ providedIn: 'root' })
 export class MessageService {

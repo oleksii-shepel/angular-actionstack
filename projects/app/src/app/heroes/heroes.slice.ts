@@ -1,4 +1,4 @@
-import { Action, action, effect, featureSelector, selector } from "actionstack";
+import { Action, action, effect, featureSelector, selector } from "@actioncrew/actionstack";
 import { map } from "rxjs";
 import { Hero } from "../hero";
 

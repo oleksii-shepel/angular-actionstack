@@ -1,7 +1,8 @@
+import { Action, provideStore } from '@actioncrew/actionstack';
+import { perfmon } from '@actioncrew/actionstack/tools';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
-import { Action, perfmon, provideStore } from 'actionstack';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { MessagesModule } from './messages/messages.module';

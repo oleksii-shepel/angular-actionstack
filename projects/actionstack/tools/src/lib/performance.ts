@@ -1,6 +1,4 @@
-import { salt } from './hash';
-import { isSystemActionType } from './store';
-import { Action } from "./types";
+import { Action, isSystemActionType, salt } from '@actioncrew/actionstack';
 
 /**
  * Creates a middleware function for logging action performance data.

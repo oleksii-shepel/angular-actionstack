@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 
 import { Observable, from } from 'rxjs';
 
-import { Store } from 'actionstack';
+import { Store } from '@actioncrew/actionstack';
 import { Hero } from './hero';
 import { addMessage } from './messages/messages.slice';
 import { HEROES } from './mock-heroes';
