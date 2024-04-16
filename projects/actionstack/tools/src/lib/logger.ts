@@ -1,87 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/ban-types */
 
-import differ from 'deep-diff';
-
-interface Dictionary {
-  [key: string]: {
-    color: string;
-    text: string;
-  };
-}
-
-const dictionary: Dictionary = {
-  E: {
-    color: '#2196F3',
-    text: 'CHANGED:',
-  },
-  N: {
-    color: '#4CAF50',
-    text: 'ADDED:',
-  },
-  D: {
-    color: '#F44336',
-    text: 'DELETED:',
-  },
-  A: {
-    color: '#2196F3',
-    text: 'ARRAY:',
-  },
-};
-
-export function style(kind: string): string {
-  return `color: ${dictionary[kind].color}; font-weight: bold`;
-}
-
-export function render(diff: any): any[] {
-  const { kind, path, lhs, rhs, index, item } = diff;
-
-  switch (kind) {
-    case 'E':
-      return [path.join('.'), lhs, '→', rhs];
-    case 'N':
-      return [path.join('.'), rhs];
-    case 'D':
-      return [path.join('.')];
-    case 'A':
-      return [`${path.join('.')}[${index}]`, item];
-    default:
-      return [];
-  }
-}
-
-export function diffLogger(prevState: any, newState: any, logger: any, isCollapsed: boolean): void {
-  const diff = differ(prevState, newState);
-
-  try {
-    if (isCollapsed) {
-      logger.groupCollapsed('diff');
-    } else {
-      logger.group('diff');
-    }
-  } catch (e) {
-    logger.log('diff');
-  }
-
-  if (diff) {
-    diff.forEach((elem: any) => {
-      const { kind } = elem;
-      const output = render(elem);
-
-      logger.log(`%c ${dictionary[kind].text}`, style(kind), ...output);
-    });
-  } else {
-    logger.log('—— no diff ——');
-  }
-
-  try {
-    logger.groupEnd();
-  } catch (e) {
-    logger.log('—— diff end —— ');
-  }
-}
-
-export function getLogLevel(level: string | Function | object & any, action: object, payload: any[], type: string): string {
+function getLogLevel(level: string | Function | object & any, action: object, payload: any[], type: string): string {
   switch (typeof level) {
     case 'object':
       return typeof level[type] === 'function' ? level[type](...payload) : level[type];
@@ -92,7 +12,7 @@ export function getLogLevel(level: string | Function | object & any, action: obj
   }
 }
 
-export function defaultTitleFormatter(options: any): Function {
+function defaultTitleFormatter(options: any): Function {
   const { timestamp, duration } = options;
 
   return (action: any, time: any, took: any): string => {
@@ -106,15 +26,14 @@ export function defaultTitleFormatter(options: any): Function {
   };
 }
 
-export function printBuffer(buffer: any[], options: any): void {
+function printBuffer(buffer: any[], options: any): void {
   const {
     logger,
     actionTransformer,
     titleFormatter = defaultTitleFormatter(options),
     collapsed,
     colors,
-    level,
-    diff,
+    level
   } = options;
 
   const isUsingDefaultFormatter = typeof options.titleFormatter === 'undefined';
@@ -195,10 +114,6 @@ export function printBuffer(buffer: any[], options: any): void {
       } else logger[nextStateLevel]('next state', nextState);
     }
 
-    if (diff) {
-      diffLogger(prevState, nextState, logger, isCollapsed);
-    }
-
     try {
       logger.groupEnd();
     } catch (e) {
@@ -207,14 +122,12 @@ export function printBuffer(buffer: any[], options: any): void {
   });
 }
 
-export const repeat = (str: string, times: number): string => (new Array(times + 1)).join(str);
-
-export const pad = (num: number, maxLength: number): string => repeat('0', maxLength - num.toString().length) + num;
-
-export const formatTime = (time: Date): string => `${pad(time.getHours(), 2)}:${pad(time.getMinutes(), 2)}:${pad(time.getSeconds(), 2)}.${pad(time.getMilliseconds(), 3)}`;
+const repeat = (str: string, times: number): string => (new Array(times + 1)).join(str);
+const pad = (num: number, maxLength: number): string => repeat('0', maxLength - num.toString().length) + num;
+const formatTime = (time: Date): string => `${pad(time.getHours(), 2)}:${pad(time.getMinutes(), 2)}:${pad(time.getSeconds(), 2)}.${pad(time.getMilliseconds(), 3)}`;
 
 // Use performance API if it's available in order to get better precision
-export const timer =
+const timer =
 (typeof performance !== 'undefined' && performance !== null) && typeof performance.now === 'function' ?
   performance :
   Date;
@@ -237,8 +150,6 @@ interface LoggerOptions {
     nextState?: Function;
     error?: Function;
   };
-  diff?: boolean;
-  diffPredicate?: any;
   transformer?: any;
 }
 
@@ -285,8 +196,6 @@ const defaults: LoggerOptions = {
     nextState: () => '#4CAF50',
     error: () => '#F20404',
   },
-  diff: false,
-  diffPredicate: undefined,
   transformer: undefined,
 };
 
@@ -304,8 +213,7 @@ const createLogger = (options: CreateLoggerOptions = {}) => {
     stateTransformer,
     errorTransformer,
     predicate,
-    logErrors,
-    diffPredicate,
+    logErrors
   } = loggerOptions;
 
   if (logger !== 'undefined') {
@@ -340,11 +248,7 @@ const createLogger = (options: CreateLoggerOptions = {}) => {
       logEntry.took = timer.now() - logEntry.started;
       logEntry.nextState = stateTransformer!(getState());
 
-      const diff = loggerOptions.diff && typeof diffPredicate === 'function'
-        ? diffPredicate(getState, action)
-        : loggerOptions.diff;
-
-      printBuffer(logBuffer, Object.assign({}, loggerOptions, { diff }));
+      printBuffer(logBuffer, loggerOptions);
       logBuffer.length = 0;
 
       if (logEntry.error) throw logEntry.error;
@@ -356,7 +260,7 @@ const createLogger = (options: CreateLoggerOptions = {}) => {
   return loggerCreator;
 }
 
-const defaultLogger = createLogger();
+const logger = createLogger();
 
-export { defaults, defaultLogger as logger };
+export { logger };
 
