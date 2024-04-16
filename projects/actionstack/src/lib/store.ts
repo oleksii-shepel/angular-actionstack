@@ -518,7 +518,7 @@ export class Store {
       return source.pipe(
         concatMap(async (action: Action<any>) => {
           try {
-            return await this.updateState("@global", async (state) => this.pipeline.reducer(state, action), action);
+            return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
           } finally {
             this.actionStack.pop();
             if (this.actionStack.length === 0) {
@@ -637,7 +637,7 @@ export class Store {
         // Inject dependencies
         this.injectDependencies(injector);
       }),
-      concatMap(async () => await this.updateState("@global", async (state) => this.setupReducer(state), systemActions.updateState())),
+      concatMap(async () => await this.updateState("@global", async (state) => await this.setupReducer(state), systemActions.updateState())),
       tap(() => this.systemActions.moduleLoaded(module)),
     ));
 
