@@ -20,11 +20,10 @@ export const createStarter = () => {
    *   * dispatch - Function to dispatch actions.
    *   * getState - Function to get the current state.
    *   * dependencies - Function to get dependencies.
-   *   * actionStack - Array representing the current stack of actions.
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const exclusive = ({ dispatch, getState, dependencies, actionStack, isProcessing }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const exclusive = ({ dispatch, getState, dependencies, isProcessing }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       isProcessing.next(true);
       if (typeof action === 'function') {
@@ -36,13 +35,6 @@ export const createStarter = () => {
       }
     }
 
-    if(typeof action !== 'function' && !actionStack.length) {
-      actionStack.push(action);
-    }
-    // Delay new actions if processing or another action is in the stack
-    if (actionStack.length > 0 && actionStack.peek() !== action && isProcessing.value === true) {
-      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-    }
     await lock.acquire()
     try {
       await processAction(action);
@@ -60,7 +52,7 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const concurrent = ({ dispatch, getState, dependencies, actionStack, isProcessing }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const concurrent = ({ dispatch, getState, dependencies, isProcessing }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       isProcessing.next(true);
       if (typeof action === 'function') {
@@ -78,13 +70,6 @@ export const createStarter = () => {
       }
     }
 
-    if(typeof action !== 'function' && !actionStack.length) {
-      actionStack.push(action);
-    }
-    // Delay new actions if processing or another action is in the stack
-    if (actionStack.length > 0 && actionStack.peek() !== action && isProcessing.value === true) {
-      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-    }
     await lock.acquire()
     try {
       await processAction(action);
@@ -100,12 +85,12 @@ export const createStarter = () => {
   };
 
   // Create a method to select the strategy
-  const selectStrategy = ({ dispatch, getState, dependencies, actionStack, isProcessing, strategy }: any) => (next: Function) => async (action: Action<any>) => {
+  const selectStrategy = ({ dispatch, getState, dependencies, isProcessing, strategy }: any) => (next: Function) => async (action: Action<any>) => {
     const strategyFunc = strategies[strategy()];
     if (!strategyFunc) {
       throw new Error(`Unknown strategy: ${strategy}`);
     }
-    return strategyFunc({ dispatch, getState, dependencies, actionStack, isProcessing })(next)(action);
+    return strategyFunc({ dispatch, getState, dependencies, isProcessing })(next)(action);
   };
 
   selectStrategy.signature = 'i.p.5.j.7.0.2.1.8.b';
