@@ -41,14 +41,15 @@ export const createStarter = () => {
     }
 
     if(typeof action !== 'function' && !actionStack.length) {
-      actionStack.push(action);
       isProcessing.next(true);
+      actionStack.push(action);
     }
 
     // Queue new actions if processing or another action is in the stack
     if (actionStack.length > 0 && actionStack.peek() !== action) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
+      isProcessing.next(true);
       actionQueue.dequeue();
     }
 
@@ -88,14 +89,15 @@ export const createStarter = () => {
     }
 
     if(typeof action !== 'function' && !actionStack.length) {
-      actionStack.push(action);
       isProcessing.next(true);
+      actionStack.push(action);
     }
 
     // Queue new actions if processing or another action is in the stack
     if (actionStack.length > 0 && actionStack.peek() !== action) {
       actionQueue.enqueue(action as any);
       await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
+      isProcessing.next(true);
       actionQueue.dequeue();
     }
 
