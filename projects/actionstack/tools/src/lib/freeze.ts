@@ -1,5 +1,4 @@
-import { Action } from "@actioncrew/actionstack";
-import { AsyncReducer } from './../../../src/lib/types';
+import { Action, AsyncReducer } from "@actioncrew/actionstack";
 
 function deepFreeze (o: any) {
   Object.freeze(o);
