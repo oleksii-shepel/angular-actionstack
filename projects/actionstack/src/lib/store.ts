@@ -197,7 +197,7 @@ export class Store {
     }
 
     this.actionStream.next(action);
-    return await firstValueFrom(this.isProcessing.pipe(filter(value => value === false)));
+    this.isProcessing.value && await firstValueFrom(this.isProcessing.pipe(filter(value => value === false)));
   }
 
   /**
