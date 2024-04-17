@@ -206,7 +206,7 @@ const defaults: LoggerOptions = {
  */
 const createLogger = (options: CreateLoggerOptions = {}) => {
   const loggerOptions = Object.assign({}, defaults, options);
-  let loggerCreator: any = () => (next: any)  => (action: any) => next(action);
+  let loggerCreator: any = () => (next: any)  => async (action: any) => await next(action);
 
   const {
     logger,
@@ -219,10 +219,10 @@ const createLogger = (options: CreateLoggerOptions = {}) => {
   if (logger !== 'undefined') {
     const logBuffer: LogEntry[] = [];
 
-    loggerCreator = ({ getState }: any) => (next: any) => (action: any) => {
+    loggerCreator = ({ getState }: any) => (next: any) => async (action: any) => {
       // Exit early if predicate function returns 'false'
       if (typeof predicate === 'function' && !predicate(getState, action)) {
-        return next(action);
+        return await next(action);
       }
 
       const logEntry: LogEntry = {} as any;
@@ -237,12 +237,12 @@ const createLogger = (options: CreateLoggerOptions = {}) => {
       let returnedValue;
       if (logErrors) {
         try {
-          returnedValue = next(action);
+          returnedValue = await next(action);
         } catch (e) {
           logEntry.error = errorTransformer!(e);
         }
       } else {
-        returnedValue = next(action);
+        returnedValue = await next(action);
       }
 
       logEntry.took = timer.now() - logEntry.started;

@@ -8,7 +8,7 @@ import { Action, isSystemActionType, salt } from '@actioncrew/actionstack';
 export const createPerformanceMonitor = () => {
   let actionGroup: { action: Action<any>, label: string, duration: number, date: Date }[] = [];
 
-  const perfmon = () => (next: Function) => async (action: Action<any>) => {
+  const perfmon = () => (next: Function) => async (action: Action<any>): Promise<any> => {
     async function processAction(action: Action<any>) {
       const startTime = performance.now(); // Capture the start time
 
@@ -45,7 +45,7 @@ export const createPerformanceMonitor = () => {
       }
     }
 
-    await processAction(action);
+    return await processAction(action);
   };
 
   perfmon.signature = '2.m.z.d.u.x.w.l.v.e';

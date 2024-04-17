@@ -78,7 +78,7 @@ export type MetaReducer = (reducer: AsyncReducer) => Promise<AsyncReducer>;
  *      aiding in type checking and documentation.
  */
 export interface Middleware {
-  (store: any): (next: (action: any) => any) => Promise<(action: any) => any> | any;
+  (store: any): (next: Function) => (action: Action<any>) => Promise<any>;
   signature?: string;
 }
 

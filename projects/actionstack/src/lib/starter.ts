@@ -1,5 +1,3 @@
-import { filter, firstValueFrom } from "rxjs";
-import { Queue } from "./collections";
 import { Lock } from "./lock";
 import { Action, AsyncAction } from "./types";
 
@@ -10,7 +8,6 @@ import { Action, AsyncAction } from "./types";
  * @returns Function - The middleware creator function.
  */
 export const createStarter = () => {
-  const actionQueue = new Queue();
   let asyncActions: Promise<any>[] = [];
   let lock = new Lock();
 
@@ -23,12 +20,11 @@ export const createStarter = () => {
    *   * dispatch - Function to dispatch actions.
    *   * getState - Function to get the current state.
    *   * dependencies - Function to get dependencies.
-   *   * isProcessing - Observable indicating if an action is currently being processed.
    *   * actionStack - Array representing the current stack of actions.
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const exclusive = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const exclusive = ({ dispatch, getState, dependencies, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
 
       if (typeof action === 'function') {
@@ -41,16 +37,7 @@ export const createStarter = () => {
     }
 
     if(typeof action !== 'function' && !actionStack.length) {
-      isProcessing.next(true);
       actionStack.push(action);
-    }
-
-    // Queue new actions if processing or another action is in the stack
-    if (actionStack.length > 0 && actionStack.peek() !== action) {
-      actionQueue.enqueue(action as any);
-      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-      isProcessing.next(true);
-      actionQueue.dequeue();
     }
 
     await lock.acquire()
@@ -70,7 +57,7 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const concurrent = ({ dispatch, getState, dependencies, isProcessing, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const concurrent = ({ dispatch, getState, dependencies, actionStack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
 
       if (typeof action === 'function') {
@@ -89,16 +76,7 @@ export const createStarter = () => {
     }
 
     if(typeof action !== 'function' && !actionStack.length) {
-      isProcessing.next(true);
       actionStack.push(action);
-    }
-
-    // Queue new actions if processing or another action is in the stack
-    if (actionStack.length > 0 && actionStack.peek() !== action) {
-      actionQueue.enqueue(action as any);
-      await firstValueFrom(isProcessing.pipe(filter(value => value === false)));
-      isProcessing.next(true);
-      actionQueue.dequeue();
     }
 
     await lock.acquire()
@@ -116,12 +94,12 @@ export const createStarter = () => {
   };
 
   // Create a method to select the strategy
-  const selectStrategy = ({ dispatch, getState, dependencies, isProcessing, actionStack, strategy }: any) => (next: Function) => async (action: Action<any>) => {
+  const selectStrategy = ({ dispatch, getState, dependencies, actionStack, strategy }: any) => (next: Function) => async (action: Action<any>) => {
     const strategyFunc = strategies[strategy()];
     if (!strategyFunc) {
       throw new Error(`Unknown strategy: ${strategy}`);
     }
-    return strategyFunc({ dispatch, getState, dependencies, isProcessing, actionStack })(next)(action);
+    return strategyFunc({ dispatch, getState, dependencies, actionStack })(next)(action);
   };
 
   selectStrategy.signature = 'i.p.5.j.7.0.2.1.8.b';
