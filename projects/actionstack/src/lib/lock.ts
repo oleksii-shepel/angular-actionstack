@@ -1,3 +1,5 @@
+import { Observable } from "rxjs";
+
 /**
  * Implements a lock using promises to ensure mutual exclusion.
  */
@@ -48,4 +50,27 @@ export class Lock {
       this.isLocked = false;
     }
   }
+}
+
+export function sequential<T, R>(project: (value: T, index: number) => Promise<R>): (source: Observable<T>) => Observable<R> {
+  let lock = new Lock();
+
+  return (source: Observable<T>) => new Observable<R>(observer => {
+
+    let index = 0;
+    const subscription = source.subscribe({
+      next(value: any) {
+        lock.acquire()
+          .then(() => { observer.next(value); return value;})
+          .then((value) => project(value, index++))
+          .finally(() => lock.release());
+      },
+      error(err) { observer.error(err); lock.release(); },
+      complete() { observer.complete(); lock.release(); }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  });
 }
