@@ -552,6 +552,7 @@ export class Store {
       getState: () => this.getState(),
       dispatch: async (action: any) => await dispatch(action),
       actionStack: this.actionStack,
+      isProcessing: this.isProcessing,
       dependencies: () => this.pipeline.dependencies,
       strategy: () => this.pipeline.strategy
     };
