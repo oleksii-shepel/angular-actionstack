@@ -105,7 +105,6 @@ export class Store {
     strategy: "exclusive" as ProcessingStrategy
   };
   protected actionStream = new Subject<Action<any>>();
-  protected actionStack = new Stack();
   protected currentAction = new CustomAsyncSubject<Action<any>>();
   protected currentState = new CustomAsyncSubject<any>();
   protected isProcessing = new BehaviorSubject<boolean>(false);
@@ -521,10 +520,7 @@ export class Store {
           try {
             return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
           } finally {
-            this.actionStack.pop();
-            if (this.actionStack.length === 0) {
-              this.isProcessing.next(false);
-            }
+            this.isProcessing.next(false);
           }
         }),
         ignoreElements(),
@@ -551,7 +547,6 @@ export class Store {
     const starterAPI = {
       getState: () => this.getState(),
       dispatch: async (action: any) => await dispatch(action),
-      actionStack: this.actionStack,
       isProcessing: this.isProcessing,
       dependencies: () => this.pipeline.dependencies,
       strategy: () => this.pipeline.strategy
