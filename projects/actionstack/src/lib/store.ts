@@ -152,7 +152,6 @@ export class Store {
       // Subscribe to action stream and process actions
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        tap(() => store.tracker.reset()),
         concatMap(async ({count, action}: any) => (count === 1) ? (console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
           await store.updateState("@global", async () => await store.setupReducer(), action)) : action),
         store.processAction()
