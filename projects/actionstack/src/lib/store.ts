@@ -1,3 +1,4 @@
+import { Middleware, ProcessingStrategy } from "@actioncrew/actionstack";
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap } from "rxjs";
 import { action, bindActionCreators } from "./actions";
@@ -91,25 +92,25 @@ const systemActions = {
 export class Store {
   protected mainModule: MainModule = {
     slice: "main",
-    middleware: [],
+    middleware: [] as Middleware[],
     reducer: (state = {}) => state as Reducer,
     metaReducers: [],
     dependencies: {},
-    strategy: "exclusive",
+    strategy: "exclusive" as ProcessingStrategy,
   };
   protected modules: FeatureModule[] = [];
   protected pipeline = {
-    middleware: [],
-    reducer: async (state = {}) => state as AsyncReducer,
+    middleware: [] as Middleware[],
+    reducer: ((state = {}) => state) as AsyncReducer,
     dependencies: {},
-    strategy: "exclusive",
+    strategy: "exclusive" as ProcessingStrategy,
   };
   protected actionStream = new Subject<Action<any>>();
   protected currentAction = new CustomAsyncSubject<Action<any>>();
   protected currentState = new CustomAsyncSubject<any>();
   protected isProcessing = new BehaviorSubject(false);
   protected subscription = Subscription.EMPTY;
-  protected systemActions = { ...systemActions }; // Assuming systemActions is a constant
+  protected systemActions = { ...systemActions };
   protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
   /**
@@ -135,12 +136,12 @@ export class Store {
       store.mainModule = mainModule;
 
       // Configure store pipeline
-      store.pipeline = Object.assign(store.pipeline, {
+      store.pipeline = {...store.pipeline, ...{
         middleware: Array.from(mainModule.middleware ?? []),
         reducer: store.combineReducers({[mainModule.slice!]: mainModule.reducer}),
-        dependencies: Object.assign({}, mainModule.dependencies),
-        strategy: mainModule.strategy,
-      });
+        dependencies: { ...mainModule.dependencies },
+        strategy: mainModule.strategy!,
+      }};
 
       // Apply middleware
       store.applyMiddleware();
