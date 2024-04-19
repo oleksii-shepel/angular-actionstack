@@ -4,6 +4,7 @@ import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
+import { Tracker } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
@@ -110,6 +111,7 @@ export class Store {
   protected subscription = Subscription.EMPTY;
   protected systemActions: Record<keyof typeof systemActions, any> = { ...systemActions };
   protected settings = Object.assign({}, new StoreSettings(), inject(StoreSettings));
+  protected tracker = new Tracker();
 
   /**
    * Creates a new store instance with the provided mainModule and optional enhancer.
@@ -150,6 +152,7 @@ export class Store {
       // Subscribe to action stream and process actions
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
+        tap(() => store.tracker.reset()),
         concatMap(async ({count, action}: any) => (count === 1) ? (console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
           await store.updateState("@global", async () => await store.setupReducer(), action)) : action),
         store.processAction()
@@ -298,7 +301,8 @@ export class Store {
     let actionHandled = this.currentAction.next(action);
 
     if (this.settings.awaitStatePropagation) {
-      await Promise.allSettled([stateUpdated, actionHandled]);
+      await Promise.allSettled([stateUpdated, actionHandled, this.tracker.checkAllExecuted()]);
+      this.tracker.reset();
     }
 
     return newState;
@@ -591,7 +595,7 @@ export class Store {
     const dependencies = this.pipeline.dependencies;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
-    const effects$ = this.isProcessing.pipe(
+    const effects$: Observable<any> = this.isProcessing.pipe(
       filter(value => value === false),
       take(1),
       tap(() => this.systemActions.effectsRegistered(args)),
@@ -604,9 +608,14 @@ export class Store {
           )
         )
       )),
-      finalize(() => this.systemActions.effectsUnregistered(args))
+      tap(() => this.tracker.setStatus(effects$, true)),
+      finalize(() => {
+        this.tracker.remove(effects$);
+        this.systemActions.effectsUnregistered(args)
+      })
     );
 
+    this.tracker.track(effects$);
     return effects$;
   }
 
