@@ -1,4 +1,3 @@
-import { Middleware, ProcessingStrategy } from "@actioncrew/actionstack";
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap } from "rxjs";
 import { action, bindActionCreators } from "./actions";
@@ -6,7 +5,7 @@ import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
 import { Tracker } from "./tracker";
-import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
 
@@ -92,27 +91,28 @@ const systemActions = {
 export class Store {
   protected mainModule: MainModule = {
     slice: "main",
-    middleware: [] as Middleware[],
-    reducer: (state = {}) => state as Reducer,
+    middleware: [],
+    reducer: (state: any = {}, action: Action<any>) => state as Reducer,
     metaReducers: [],
     dependencies: {},
-    strategy: "exclusive" as ProcessingStrategy,
+    strategy: "exclusive" as ProcessingStrategy
   };
   protected modules: FeatureModule[] = [];
   protected pipeline = {
-    middleware: [] as Middleware[],
-    reducer: ((state = {}) => state) as AsyncReducer,
-    dependencies: {},
-    strategy: "exclusive" as ProcessingStrategy,
+    middleware: [] as any[],
+    reducer: ((state: any = {}, action: Action<any>) => state) as AsyncReducer,
+    dependencies: {} as Tree<Type<any> | InjectionToken<any>>,
+    strategy: "exclusive" as ProcessingStrategy
   };
   protected actionStream = new Subject<Action<any>>();
   protected currentAction = new CustomAsyncSubject<Action<any>>();
   protected currentState = new CustomAsyncSubject<any>();
-  protected isProcessing = new BehaviorSubject(false);
+  protected isProcessing = new BehaviorSubject<boolean>(false);
   protected subscription = Subscription.EMPTY;
   protected systemActions = { ...systemActions };
   protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
+
   /**
    * Creates a new store instance with the provided mainModule and optional enhancer.
    * @param {MainModule} mainModule - The main module containing middleware, reducer, dependencies, and strategy.
@@ -132,14 +132,14 @@ export class Store {
       let store = new Store();
 
       // Assign mainModule properties to store
-      mainModule = Object.assign(store.mainModule, mainModule);
+      mainModule = {...store.mainModule, ...mainModule};
       store.mainModule = mainModule;
 
       // Configure store pipeline
       store.pipeline = {...store.pipeline, ...{
         middleware: Array.from(mainModule.middleware ?? []),
         reducer: store.combineReducers({[mainModule.slice!]: mainModule.reducer}),
-        dependencies: { ...mainModule.dependencies },
+        dependencies: {...mainModule.dependencies},
         strategy: mainModule.strategy!,
       }};
 
