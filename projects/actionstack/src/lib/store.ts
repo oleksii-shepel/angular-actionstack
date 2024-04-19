@@ -184,10 +184,9 @@ export class Store {
   /**
    * Dispatches an action to be processed by the store's reducer.
    * @param {Action<any>} action - The action to dispatch.
-   * @returns {Promise<any>} A promise that resolves once the processing completes.
    * @throws {Error} Throws an error if the action is not a plain object, does not have a defined "type" property, or if the "type" property is not a string.
    */
-  dispatch(action: Action<any>): Promise<any> {
+  dispatch(action: Action<any>) {
     if (!isPlainObject(action)) {
       throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
     }
@@ -199,7 +198,6 @@ export class Store {
     }
 
     this.actionStream.next(action);
-    return firstValueFrom(this.isProcessing.pipe(filter(value => value === false)));
   }
 
   /**
