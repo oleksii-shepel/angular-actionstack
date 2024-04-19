@@ -5,7 +5,7 @@ import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
 import { Tracker } from "./tracker";
-import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
+import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
 
@@ -92,27 +92,26 @@ export class Store {
   protected mainModule: MainModule = {
     slice: "main",
     middleware: [],
-    reducer: (state: any = {}, action: Action<any>) => state as Reducer,
+    reducer: (state = {}) => state as Reducer,
     metaReducers: [],
     dependencies: {},
-    strategy: "exclusive" as ProcessingStrategy
+    strategy: "exclusive",
   };
   protected modules: FeatureModule[] = [];
   protected pipeline = {
-    middleware: [] as any[],
-    reducer: async (state: any = {}, action: Action<any>) => state as AsyncReducer,
-    dependencies: {} as Tree<Type<any> | InjectionToken<any>>,
-    strategy: "exclusive" as ProcessingStrategy
+    middleware: [],
+    reducer: async (state = {}) => state as AsyncReducer,
+    dependencies: {},
+    strategy: "exclusive",
   };
   protected actionStream = new Subject<Action<any>>();
   protected currentAction = new CustomAsyncSubject<Action<any>>();
   protected currentState = new CustomAsyncSubject<any>();
-  protected isProcessing = new BehaviorSubject<boolean>(false);
+  protected isProcessing = new BehaviorSubject(false);
   protected subscription = Subscription.EMPTY;
-  protected systemActions: Record<keyof typeof systemActions, any> = { ...systemActions };
-  protected settings = Object.assign({}, new StoreSettings(), inject(StoreSettings));
+  protected systemActions = { ...systemActions }; // Assuming systemActions is a constant
+  protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
-
   /**
    * Creates a new store instance with the provided mainModule and optional enhancer.
    * @param {MainModule} mainModule - The main module containing middleware, reducer, dependencies, and strategy.
