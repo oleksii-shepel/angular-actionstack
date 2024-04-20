@@ -596,14 +596,16 @@ export class Store {
       take(1),
       tap(() => this.systemActions.effectsRegistered(args)),
       tap(() => this.tracker.track(effects$)),
-      concatMap(() => this.currentAction.asObservable().pipe(tap(() => this.tracker.setStatus(effects$, false)), () => from([...args]).pipe(
+      concatMap(() => this.currentAction.asObservable().pipe(
+        tap(() => this.tracker.setStatus(effects$, false)),
+        concatMap(() => from([...args]).pipe(
           // Combine side effects and map in a single pipe
           mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies) as Observable<Action<any>>),
           // Flatten child actions and dispatch directly
           mergeMap((childAction: any) =>
             isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY
           )
-        )
+        ))
       )),
       tap(() => this.tracker.setStatus(effects$, true)),
       finalize(() => {
