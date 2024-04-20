@@ -33,28 +33,13 @@ export class Tracker {
   /**
    * Tracks the execution status of the provided Observable.
    * @param {Observable<any>} observable - The Observable to track.
-   * @returns {Promise<boolean>} An Observable that emits a boolean indicating if the tracked Observable has been executed.
+   * @returns {void} This method does not return a value.
    */
   track(observable: Observable<any>): Promise<boolean> {
-    /**
-     * BehaviorSubject to track the execution status of the Observable.
-     * @type {BehaviorSubject<boolean>}
-     */
-    const subject = new BehaviorSubject<boolean>(false);
-    this.entries.set(observable, subject);
-
-    observable.pipe(
-      takeWhile(() => subject.value === false) // Unsubscribe when subject completes
-    ).subscribe({
-      next: () => subject.next(true), // Emit true on next emission
-      error: (error) => {
-        subject.error(error); // Propagate errors
-        subject.complete();
-      },
-      complete: () => subject.complete(),
-    });
-
-    return firstValueFrom(subject);
+    if (!this.entries.has(observable)) {
+      const subject = new BehaviorSubject<boolean>(false);
+      this.entries.set(observable, subject);
+    }
   }
 
   /**
