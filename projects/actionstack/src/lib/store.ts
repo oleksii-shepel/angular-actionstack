@@ -299,7 +299,6 @@ export class Store {
 
     if (this.settings.awaitStatePropagation) {
       await Promise.allSettled([stateUpdated, actionHandled, this.tracker.checkAllExecuted()]);
-      this.tracker.reset();
     }
 
     return newState;
@@ -597,7 +596,7 @@ export class Store {
       take(1),
       tap(() => this.systemActions.effectsRegistered(args)),
       tap(() => this.tracker.track(effects$)),
-      concatMap(() => this.currentAction.asObservable().pipe(() => from([...args]).pipe(
+      concatMap(() => (this.tracker.setStatus(effects$, false), this.currentAction.asObservable().pipe(() => from([...args]).pipe(
           // Combine side effects and map in a single pipe
           mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies) as Observable<Action<any>>),
           // Flatten child actions and dispatch directly
@@ -605,7 +604,7 @@ export class Store {
             isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY
           )
         )
-      )),
+      ))),
       tap(() => this.tracker.setStatus(effects$, true)),
       finalize(() => {
         this.tracker.remove(effects$);
