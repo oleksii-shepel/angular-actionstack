@@ -605,9 +605,9 @@ export class Store {
           mergeMap((childAction: any) =>
             isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY
           )
-        ))
+        )),
+        tap(() => this.tracker.setStatus(effects$, true)),
       )),
-      tap(() => this.tracker.setStatus(effects$, true)),
       finalize(() => {
         this.tracker.remove(effects$);
         this.systemActions.effectsUnregistered(args)
