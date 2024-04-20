@@ -596,6 +596,7 @@ export class Store {
       filter(value => value === false),
       take(1),
       tap(() => this.systemActions.effectsRegistered(args)),
+      tap(() => this.tracker.track(effects$)),
       concatMap(() => this.currentAction.asObservable().pipe(() => from([...args]).pipe(
           // Combine side effects and map in a single pipe
           mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies) as Observable<Action<any>>),
@@ -611,8 +612,6 @@ export class Store {
         this.systemActions.effectsUnregistered(args)
       })
     );
-
-    this.tracker.track(effects$);
     return effects$;
   }
 
