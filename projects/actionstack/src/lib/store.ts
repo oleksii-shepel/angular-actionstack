@@ -113,7 +113,7 @@ export class Store {
   protected systemActions = { ...systemActions };
   protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
-
+  protected lock = new Lock();
   /**
    * Creates a new store instance with the provided mainModule and optional enhancer.
    * @param {MainModule} mainModule - The main module containing middleware, reducer, dependencies, and strategy.
@@ -615,7 +615,7 @@ export class Store {
    * Loads a feature module into the store.
    * @param {FeatureModule} module - The feature module to load.
    * @param {Injector} injector - The injector to use for dependency injection.
-   * @returns {Store} The store instance with the loaded module.
+   * @returns {Promise<void>}
    */
   async loadModule(module: FeatureModule, injector: Injector): Promise<void> {
     // Check if the module already exists
@@ -623,29 +623,34 @@ export class Store {
       return; // Module already exists, return without changes
     }
 
-    await this.waitForIdle();
-    
-    // Create a new array with the module added
-    const newModules = [...this.modules, module];
+    await lock.acquire();
+    try {
+      await this.waitForIdle();
+      
+      // Create a new array with the module added
+      const newModules = [...this.modules, module];
 
-    // Update internal state
-    this.modules = newModules;
+      // Update internal state
+      this.modules = newModules;
 
-    // Inject dependencies
-    await this.injectDependencies(injector);
+      // Inject dependencies
+      await this.injectDependencies(injector);
 
-    // Update global state with setup reducer (assuming setupReducer is async)
-    await this.updateState("@global", async (state) => await this.setupReducer(state));
+      // Update global state with setup reducer (assuming setupReducer is async)
+      await this.updateState("@global", async (state) => await this.setupReducer(state));
 
-    // Dispatch module loaded action
-    this.systemActions.moduleLoaded(module);
+      // Dispatch module loaded action
+      this.systemActions.moduleLoaded(module);
+    } finally {
+      lock.release();
+    }
   }
 
   /**
    * Unloads a feature module from the store.
    * @param {FeatureModule} module - The feature module to unload.
    * @param {boolean} [clearState=false] - A flag indicating whether to clear the module's state.
-   * @returns {Store} The store instance with the unloaded module
+   * @returns {Promise<void>}
    */
   async unloadModule(module: FeatureModule, clearState: boolean = false): Promise<void> {
     // Find the module index in the modules array
@@ -657,26 +662,31 @@ export class Store {
       return; // Module not found, nothing to unload
     }
 
-    await this.waitForIdle();
-    
-    // Remove the module from the internal state
-    this.modules.splice(moduleIndex, 1);
-
-    // Eject dependencies
-    await this.ejectDependencies(module);
+    await lock.acquire();
+    try {
+      await this.waitForIdle();
       
-    // Update global state with optional state clearing
-    await this.updateState("@global", async (state) => {
-      if (clearState) {
-        // Create a copy and delete the module's slice from state
-        return { ...state, [module.slice]: undefined };
-      } else {
-        return await this.setupReducer(state); // No state clearing
-      }
-    }, systemActions.initializeState());
+      // Remove the module from the internal state
+      this.modules.splice(moduleIndex, 1);
 
-    // Dispatch module unloaded action
-    this.systemActions.moduleUnloaded(module);
+      // Eject dependencies
+      await this.ejectDependencies(module);
+      
+      // Update global state with optional state clearing
+      await this.updateState("@global", async (state) => {
+        if (clearState) {
+          // Create a copy and delete the module's slice from state
+          return { ...state, [module.slice]: undefined };
+        } else {
+          return await this.setupReducer(state); // No state clearing
+        }
+      }, systemActions.initializeState());
+
+      // Dispatch module unloaded action
+      this.systemActions.moduleUnloaded(module);
+    } finally {
+      lock.release();
+    }
   }
 }
 
