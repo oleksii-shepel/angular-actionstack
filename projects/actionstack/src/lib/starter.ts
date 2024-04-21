@@ -9,7 +9,6 @@ import { Action, AsyncAction } from "./types";
  */
 export const createStarter = () => {
   let asyncActions: Promise<any>[] = [];
-  let lock = new Lock();
 
   /**
    * Middleware function for handling actions exclusively.
@@ -23,7 +22,7 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const exclusive = ({ dispatch, getState, dependencies, isProcessing }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const exclusive = ({ dispatch, getState, dependencies, isProcessing, lock}: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       isProcessing.next(true);
       if (typeof action === 'function') {
@@ -35,11 +34,11 @@ export const createStarter = () => {
       }
     }
 
-    await lock.acquire()
+    await lock().acquire()
     try {
       await processAction(action);
     } finally {
-      lock.release();
+      lock().release();
     }
   };
 
@@ -52,7 +51,7 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const concurrent = ({ dispatch, getState, dependencies, isProcessing }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const concurrent = ({ dispatch, getState, dependencies, isProcessing, lock }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       isProcessing.next(true);
       if (typeof action === 'function') {
@@ -70,11 +69,11 @@ export const createStarter = () => {
       }
     }
 
-    await lock.acquire()
+    await lock().acquire()
     try {
       await processAction(action);
     } finally {
-      lock.release();
+      lock().release();
     }
   };
 
@@ -85,12 +84,12 @@ export const createStarter = () => {
   };
 
   // Create a method to select the strategy
-  const selectStrategy = ({ dispatch, getState, dependencies, isProcessing, strategy }: any) => (next: Function) => async (action: Action<any>) => {
+  const selectStrategy = ({ dispatch, getState, dependencies, isProcessing, strategy, lock }: any) => (next: Function) => async (action: Action<any>) => {
     const strategyFunc = strategies[strategy()];
     if (!strategyFunc) {
       throw new Error(`Unknown strategy: ${strategy}`);
     }
-    return strategyFunc({ dispatch, getState, dependencies, isProcessing })(next)(action);
+    return strategyFunc({ dispatch, getState, dependencies, isProcessing, lock })(next)(action);
   };
 
   selectStrategy.signature = 'i.p.5.j.7.0.2.1.8.b';
