@@ -294,6 +294,8 @@ export class Store {
       throw new Error("Unsupported type of slice parameter");
     }
 
+    this.tracker.reset();
+    
     let stateUpdated = this.currentState.next(newState);
     let actionHandled = this.currentAction.next(action);
 
@@ -597,7 +599,6 @@ export class Store {
       tap(() => this.systemActions.effectsRegistered(args)),
       tap(() => this.tracker.track(effects$)),
       concatMap(() => this.currentAction.asObservable().pipe(
-        tap(() => this.tracker.setStatus(effects$, false)),
         concatMap(() => from([...args]).pipe(
           // Combine side effects and map in a single pipe
           mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies) as Observable<Action<any>>),
@@ -606,8 +607,8 @@ export class Store {
             isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY
           )
         )),
-        tap(() => this.tracker.setStatus(effects$, true)),
       )),
+      tap(() => this.tracker.setStatus(effects$, true)),
       finalize(() => {
         this.tracker.remove(effects$);
         this.systemActions.effectsUnregistered(args)
