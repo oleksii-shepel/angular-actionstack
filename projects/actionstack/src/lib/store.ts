@@ -633,28 +633,28 @@ export class Store {
    * @param {Injector} injector - The injector to use for dependency injection.
    * @returns {Store} The store instance with the loaded module.
    */
-  loadModule(module: FeatureModule, injector: Injector) {
-    this.processSystemAction((obs) => obs.pipe(
-      tap(() => {
-        // Check if the module already exists in the this's modules
-        if (this.modules.some(m => m.slice === module.slice)) {
-          // If the module already exists, return the this without changes
-          return;
-        }
-        // Create a new array with the module added to the this's modules
-        const newModules = [...this.modules, module];
+  async loadModule(module: FeatureModule, injector: Injector): Promise<void> {
+    // Check if the module already exists
+    if (this.modules.some(m => m.slice === module.slice)) {
+      return; // Module already exists, return without changes
+    }
 
-        // Return a new this with the updated properties
-        this.modules = newModules;
+    await this.waitForIdle();
+    
+    // Create a new array with the module added
+    const newModules = [...this.modules, module];
 
-        // Inject dependencies
-        this.injectDependencies(injector);
-      }),
-      concatMap(async () => await this.updateState("@global", async (state) => await this.setupReducer(state), systemActions.updateState())),
-      tap(() => this.systemActions.moduleLoaded(module)),
-    ));
+    // Update internal state
+    this.modules = newModules;
 
-    return this;
+    // Inject dependencies
+    await this.injectDependencies(injector);
+
+    // Update global state with setup reducer (assuming setupReducer is async)
+    await this.updateState("@global", async (state) => await this.setupReducer(state));
+
+    // Dispatch module loaded action
+    this.systemActions.moduleLoaded(module);
   }
 
   /**
@@ -663,29 +663,36 @@ export class Store {
    * @param {boolean} [clearState=false] - A flag indicating whether to clear the module's state.
    * @returns {Store} The store instance with the unloaded module
    */
-  unloadModule(module: FeatureModule, clearState: boolean = false) {
-    this.processSystemAction((obs) => obs.pipe(
-      tap(() => {
-        // Create a new array with the module removed from the this's modules
-        const newModules = this.modules.filter(m => m.slice !== module.slice);
+  async unloadModule(module: FeatureModule, clearState: boolean = false): Promise<void> {
+    // Find the module index in the modules array
+    const moduleIndex = this.modules.findIndex(m => m === module);
 
-        // Return a new this with the updated properties
-        this.modules = newModules;
+    // Check if the module exists
+    if (moduleIndex === -1) {
+      console.warn(`Module ${module.name} not found, cannot unload.`);
+      return; // Module not found, nothing to unload
+    }
 
-        // Eject dependencies
-        this.ejectDependencies(module);
-      }),
-      concatMap(async () => await this.updateState("@global", async (state) => {
-        if (clearState) {
-          state = { ...state };
-          delete state[module.slice];
-        }
-        return await this.setupReducer(state);
-      }, systemActions.initializeState())),
-      tap(() => this.systemActions.moduleUnloaded(module)),
-    ));
+    await this.waitForIdle();
+    
+    // Remove the module from the internal state
+    this.modules.splice(moduleIndex, 1);
 
-    return this;
+    // Eject dependencies
+    await this.ejectDependencies(module);
+      
+    // Update global state with optional state clearing
+    await this.updateState("@global", async (state) => {
+      if (clearState) {
+        // Create a copy and delete the module's slice from state
+        return { ...state, [module.slice]: undefined };
+      } else {
+        return await this.setupReducer(state); // No state clearing
+      }
+    }, systemActions.initializeState());
+
+    // Dispatch module unloaded action
+    this.systemActions.moduleUnloaded(module);
   }
 }
 
