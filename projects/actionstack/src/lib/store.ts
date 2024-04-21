@@ -3,7 +3,7 @@ import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, 
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
-import { CustomAsyncSubject } from "./subject";
+import { CustomAsyncSubject, waitFor } from "./subject";
 import { Tracker, withStatusTracking } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
@@ -201,6 +201,14 @@ export class Store {
     this.actionStream.next(action);
   }
 
+  /**
+   * Waits for the store to become idle.
+   * @returns {Promise<boolean>} A promise that resolves to true when the store is idle (not processing any actions), or false if the store completes without becoming idle.
+   */
+  waitForIdle() {
+    return waitFor(this.isProcessing.asObservable(), value => value === false);
+  }
+  
   /**
    * Selects a value from the store's state using the provided selector function.
    * @param {(obs: Observable<any>) => Observable<any>} selector - The selector function to apply on the state observable.
