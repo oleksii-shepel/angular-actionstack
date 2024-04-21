@@ -27,6 +27,34 @@ export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Obse
 }
 
 /**
+ * Waits for a condition to be met in an observable stream.
+ * @param {Observable<any>} obs - The observable stream to wait for.
+ * @param {(value: any) => boolean} predicate - The predicate function to evaluate the values emitted by the observable stream.
+ * @returns {Promise<boolean>} A promise that resolves to true when the predicate condition is met, or false if the observable completes without satisfying the predicate.
+ */
+export function waitFor(obs: Observable<any>, predicate: (value: any) => boolean): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    let resolved = false;
+    const subscription = obs.subscribe( // Internal subscription
+      value => {
+        if (predicate(value) === true) {
+          subscription.unsubscribe();
+          resolved = true;
+          resolve(true);
+        }
+      },
+      err => reject(err),
+      () => {
+        if (!resolved) {
+          subscription.unsubscribe(); // Unsubscribe after completion
+          throw new Error("Promise is not resolved.")
+        }
+      }
+    );
+  });
+}
+
+/**
  * Interface defining the signature for asynchronous observers.
  *
  * This interface specifies the callback functions for handling next values, errors, and completion events asynchronously.
