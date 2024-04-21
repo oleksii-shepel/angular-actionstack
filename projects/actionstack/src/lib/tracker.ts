@@ -93,6 +93,13 @@ export class Tracker {
   }
 }
 
+/**
+ * Creates an observable that mirrors the source observable with an additional
+ * side effect function `onExecuted` executed after each emitted value.
+ * @param {Observable} source The source observable to mirror.
+ * @param {Function} onExecuted The function to execute after each value is emitted.
+ * @returns {Observable} The new observable with the side effect.
+ */
 export function withStatusTracking(onExecuted?: () => void): OperatorFunction<any, any> {
   return source => new Observable(observer => {
     const subscription = source.subscribe({
