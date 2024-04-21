@@ -4,7 +4,7 @@ import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
-import { Tracker } from "./tracker";
+import { Tracker, withStatusTracking } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
@@ -607,8 +607,8 @@ export class Store {
             isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY
           )
         )),
+        withStatusTracking(() => this.tracker.setStatus(effects$, true))
       )),
-      tap(() => this.tracker.setStatus(effects$, true)),
       finalize(() => {
         this.tracker.remove(effects$);
         this.systemActions.effectsUnregistered(args)
