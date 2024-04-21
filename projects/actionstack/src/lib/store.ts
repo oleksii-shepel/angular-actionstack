@@ -145,24 +145,26 @@ export class Store {
 
       // Apply middleware
       store.applyMiddleware();
-
+      
+      // Bind system actions
+      store.systemActions = bindActionCreators(systemActions, (action: Action<any>) => store.settings.dispatchSystemActions && store.dispatch(action));
+      
       // Create action stream observable
       let action$ = store.actionStream.asObservable();
 
       // Subscribe to action stream and process actions
       store.subscription = action$.pipe(
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        concatMap(async ({count, action}: any) => (count === 1) ? (console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
-          await store.updateState("@global", async () => await store.setupReducer(), action)) : action),
+        concatMap(async ({count, action}: any) => (count === 1) ? (
+          console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
+          await store.updateState("@global", async () => await store.setupReducer(), action),
+          store.systemActions.storeInitialized(),
+          action) : action),
         store.processAction()
       ).subscribe();
 
-      // Bind system actions
-      store.systemActions = bindActionCreators(systemActions, (action: Action<any>) => store.settings.dispatchSystemActions && store.dispatch(action));
-
       // Initialize state and mark store as initialized
       store.systemActions.initializeState();
-      store.systemActions.storeInitialized();
 
       return store;
     }
