@@ -2,6 +2,7 @@ import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
+import { Lock } from "./lock";
 import { starter } from "./starter";
 import { CustomAsyncSubject, waitFor } from "./subject";
 import { Tracker, withStatusTracking } from "./tracker";
@@ -579,21 +580,6 @@ export class Store {
   }
 
   /**
-   * Processes system actions using the provided operator.
-   * @param {(obs: Observable<any>) => Observable<any>} operator - The operator function to apply on the observable stream.
-   * @returns {Promise<void>} A promise that resolves after processing the system action.
-   * @protected
-   */
-  protected processSystemAction(operator: (obs: Observable<any>) => Observable<any>) {
-    return (async() => await firstValueFrom(this.isProcessing.pipe(filter(value => value === false),
-      tap(() => this.isProcessing.next(true)),
-      operator,
-      catchError(error => { console.warn(error.message); return EMPTY; }),
-      finalize(() => this.isProcessing.next(false))
-    )))();
-  }
-
-  /**
    * Extends the observable stream with the provided side effects.
    * @param {...SideEffect[]} args - The side effect functions to extend the stream.
    * @returns {Observable<any>} An observable stream extended with the specified side effects.
@@ -603,9 +589,7 @@ export class Store {
     const dependencies = this.pipeline.dependencies;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
-    const effects$: Observable<any> = this.isProcessing.pipe(
-      filter(value => value === false),
-      take(1),
+    const effects$: Observable<any> = from(this.waitForIdle()).pipe(
       tap(() => this.systemActions.effectsRegistered(args)),
       tap(() => this.tracker.track(effects$)),
       concatMap(() => this.currentAction.asObservable().pipe(
