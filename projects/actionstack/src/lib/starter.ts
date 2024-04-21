@@ -22,7 +22,7 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const exclusive = ({ dispatch, getState, dependencies, isProcessing, lock}: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const exclusive = ({ dispatch, getState, dependencies, isProcessing, lock }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       isProcessing.next(true);
       if (typeof action === 'function') {
