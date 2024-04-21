@@ -206,7 +206,7 @@ export class Store {
    * Waits for the store to become idle.
    * @returns {Promise<boolean>} A promise that resolves to true when the store is idle (not processing any actions), or false if the store completes without becoming idle.
    */
-  waitForIdle() {
+  waitForIdle(): Promise<boolean> {
     return waitFor(this.isProcessing.asObservable(), value => value === false);
   }
   
