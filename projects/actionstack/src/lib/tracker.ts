@@ -1,4 +1,4 @@
-import { BehaviorSubject, Observable, every, firstValueFrom, from, race, take, takeWhile, timer } from "rxjs";
+import { BehaviorSubject, Observable, OperatorFunction, every, firstValueFrom, from, race, take, takeWhile, timer } from "rxjs";
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -92,3 +92,24 @@ export class Tracker {
     });
   }
 }
+
+export function withStatusTracking(onExecuted?: () => void): OperatorFunction<any, any> {
+  return source => new Observable(observer => {
+    const subscription = source.subscribe({
+      async next(value) {
+        await observer.next(value);
+        onExecuted();
+      },
+      error(err) {
+        observer.error(err);
+      },
+      complete() {
+        observer.complete();
+      }
+    });
+
+    // Unsubscribe on unsubscribe
+    return () => subscription.unsubscribe();
+  });
+}
+
