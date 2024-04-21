@@ -563,7 +563,7 @@ export class Store {
       isProcessing: this.isProcessing,
       dependencies: () => this.pipeline.dependencies,
       strategy: () => this.pipeline.strategy,
-      lock: () => this.lock
+      lock: this.lock
     };
 
     const middlewareAPI = {
