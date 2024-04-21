@@ -34,11 +34,11 @@ export const createStarter = () => {
       }
     }
 
-    await lock().acquire()
+    await lock.acquire()
     try {
       await processAction(action);
     } finally {
-      lock().release();
+      lock.release();
     }
   };
 
@@ -69,11 +69,11 @@ export const createStarter = () => {
       }
     }
 
-    await lock().acquire()
+    await lock.acquire()
     try {
       await processAction(action);
     } finally {
-      lock().release();
+      lock.release();
     }
   };
 
