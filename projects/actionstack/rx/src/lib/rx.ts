@@ -11,12 +11,12 @@ class Subscription {
  * Observer and enforces the Observable contract `(next)*(error|complete)?`
  * by cancelling the execution whenever error or complete occurs.
  */
-class Subscriber extends Subscription {
-  constructor(private observer: Observer<any>) {
+class Subscriber<T> extends Subscription {
+  constructor(private observer: Observer<T>) {
     super(() => {});
   }
 
-  next(x: any) {
+  next(x: T) {
     this.observer.next(x);
   }
 
@@ -44,12 +44,12 @@ interface Observer<T> {
  * An Observable is an invokable collection of values pushed to an Observer.
  */
 class Observable<T> {
-  constructor(public subscribe: (subscriber: Subscriber) => Subscription) {}
+  constructor(public subscribe: (subscriber: Subscriber<T>) => Subscription) {}
 
   /**
    * Observable create is the only contract-abiding way of creating Observables.
    */
-  static create<T>(subscribe: (subscriber: Subscriber) => Subscription): Observable<T> {
+  static create<T>(subscribe: (subscriber: Subscriber<T>) => Subscription): Observable<T> {
     return new Observable(function internalSubscribe(observer: Observer<T>) {
       const subscriber = new Subscriber(observer);
       const subscription = subscribe(subscriber);
