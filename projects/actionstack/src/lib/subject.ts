@@ -1,4 +1,4 @@
-import { Observable, Subscription, asapScheduler, shareReplay } from 'rxjs';
+import { Observable, Subscription, shareReplay } from 'rxjs';
 
 /**
  * Function to convert a custom `CustomAsyncSubject` instance into a standard RxJS `Observable`.
@@ -34,19 +34,19 @@ export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Obse
  */
 export function waitFor(obs: Observable<any>, predicate: (value: any) => boolean): Promise<boolean> {
   return new Promise((resolve, reject) => {
+    let resolved = false;
     const subscription = obs.subscribe({
       next: value => {
         if (predicate(value) === true) {
+          resolved = true;
           resolve(true);
-          asapScheduler.schedule(() => subscription.unsubscribe());
         }
       },
-      error: err => {
-        reject(err);
-        asapScheduler.schedule(() => subscription.unsubscribe());
-      },
+      error: err => reject(err),
       complete: () => {
-        reject(new Error("Promise not resolved."));
+        if (!resolved) {
+          throw new Error("Promise is not resolved.")
+        }
       }
     });
   });
