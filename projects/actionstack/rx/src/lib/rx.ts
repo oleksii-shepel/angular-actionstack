@@ -8,6 +8,31 @@ export class Subscription {
   constructor(public unsubscribe: () => void) {}
 }
 
+
+export class GroupSubscription {
+  private subscriptions: Subscription[] = [];
+  private closed: boolean = false;
+
+  add(subscription: Subscription) {
+    if (!this.closed) {
+      this.subscriptions.push(subscription);
+    } else {
+      subscription.unsubscribe(); // Unsubscribe immediately if closed
+    }
+  }
+
+  unsubscribe() {
+    if (!this.closed) {
+      this.closed = true;
+      this.subscriptions.forEach(subscription => subscription.unsubscribe());
+    }
+  }
+
+  // Optional: Check if this group is closed
+  isClosed(): boolean {
+    return this.closed;
+  }
+}
 /**
  * A Subscriber is both an Observer and a Subscription. It wraps a given
  * Observer and enforces the Observable contract `(next)*(error|complete)?`
@@ -59,10 +84,10 @@ export class Observable<T> {
     });
   }
 
-  pipe(...operators: OperatorFunction<T>[]): Observable<T> {
-    let source: Observable<T> = this; // Assuming 'this' refers to the source observable
+  pipe<U>(...operators: OperatorFunction<T, U>[]): Observable<U> {
+    let source = this as any;
     for (const operator of operators) {
-      source = operator(source) as Observable<T>; // Type assertion for clarity
+      source = operator(source);
     }
     return source;
   }
