@@ -45,7 +45,7 @@ export function waitFor(obs: Observable<any>, predicate: (value: any) => boolean
       error: err => reject(err),
       complete: () => {
         if (!resolved) {
-          throw new Error("Promise is not resolved.")
+          reject("Promise is not resolved.");
         }
       }
     });
