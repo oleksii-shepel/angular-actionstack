@@ -42,12 +42,14 @@ export function waitFor(obs: Observable<any>, predicate: (value: any) => boolean
           resolve(true);
         }
       },
-      error: err => reject(err),
-      complete: () => {
-        if (!resolved) {
-          reject("Promise is not resolved.");
-        }
+      error: err => reject(err)
+    });
+
+    subscription.add(() => {
+      if (!resolved) {
+        reject(new Error("Promise not resolved."));
       }
+      subscription.unsubscribe();
     });
   });
 }
