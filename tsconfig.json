@@ -26,7 +26,11 @@
       ],
       "@actioncrew/actionstack/tools": [
         "./dist/actionstack/tools",
-        "./projects/actionstack/tools/src/public-api.ts"
+        "projects/actionstack/tools/src/public-api.ts"
+      ],
+      "@actioncrew/actionstack/rx": [
+        "./dist/actionstack/rx",
+        "projects/actionstack/rx/src/public-api.ts"
       ]
     },
     "useDefineForClassFields": false,
