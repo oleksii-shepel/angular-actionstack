@@ -1,4 +1,4 @@
-import { Observable, Subscription, shareReplay } from 'rxjs';
+import { Observable, Subscription, filter, map } from 'rxjs';
 
 /**
  * Function to convert a custom `CustomAsyncSubject` instance into a standard RxJS `Observable`.
@@ -9,9 +9,14 @@ import { Observable, Subscription, shareReplay } from 'rxjs';
  * @returns Observable<T> - The resulting RxJS `Observable`.
  */
 export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Observable<T> {
+  let lastValue: T | undefined;
+  let hasValue = false;
+
   return new Observable<T>((subscriber) => {
     const subscription = customAsyncSubject.subscribe({
       next: async (value) => {
+        lastValue = value;
+        hasValue = true;
         subscriber.next(value);
       },
       error: async (error) => {
@@ -23,7 +28,10 @@ export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Obse
     });
 
     return () => subscription.unsubscribe();
-  }).pipe(shareReplay(1));
+  }).pipe(
+    filter(() => hasValue), // Emit only if there's a last value
+    map(() => lastValue!) // Emit the lastValue (cast to non-nullable)
+  );
 }
 
 /**
