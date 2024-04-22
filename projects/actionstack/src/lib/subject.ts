@@ -9,9 +9,6 @@ import { Observable, Subscription, shareReplay } from 'rxjs';
  * @returns Observable<T> - The resulting RxJS `Observable`.
  */
 export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Observable<T> {
-  let lastValue: T | undefined;
-  let hasValue = false;
-
   return new Observable<T>((subscriber) => {
     const subscription = customAsyncSubject.subscribe({
       next: async (value) => {
