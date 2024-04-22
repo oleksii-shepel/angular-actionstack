@@ -1,4 +1,4 @@
-import { BehaviorSubject, Observable, OperatorFunction, every, firstValueFrom, from, race, take, takeWhile, timer } from "rxjs";
+import { BehaviorSubject, Observable, OperatorFunction, every, from, race, take, timer } from "rxjs";
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -35,7 +35,7 @@ export class Tracker {
    * @param {Observable<any>} observable - The Observable to track.
    * @returns {void} This method does not return a value.
    */
-  track(observable: Observable<any>): Promise<boolean> {
+  track(observable: Observable<any>): void {
     if (!this.entries.has(observable)) {
       const subject = new BehaviorSubject<boolean>(false);
       this.entries.set(observable, subject);
@@ -100,7 +100,7 @@ export class Tracker {
  * @param {Function} onExecuted The function to execute after each value is emitted.
  * @returns {Observable} The new observable with the side effect.
  */
-export function withStatusTracking(onExecuted?: () => void): OperatorFunction<any, any> {
+export function withStatusTracking(onExecuted = () => {}): OperatorFunction<any, any> {
   return source => new Observable(observer => {
     const subscription = source.subscribe({
       async next(value) {

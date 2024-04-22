@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, firstValueFrom, from, ignoreElements, map, mergeMap, of, scan, take, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
@@ -146,10 +146,10 @@ export class Store {
 
       // Apply middleware
       store.applyMiddleware();
-      
+
       // Bind system actions
       store.systemActions = bindActionCreators(systemActions, (action: Action<any>) => store.settings.dispatchSystemActions && store.dispatch(action));
-      
+
       // Create action stream observable
       let action$ = store.actionStream.asObservable();
 
@@ -209,7 +209,7 @@ export class Store {
   waitForIdle(): Promise<boolean> {
     return waitFor(this.isProcessing.asObservable(), value => value === false);
   }
-  
+
   /**
    * Selects a value from the store's state using the provided selector function.
    * @param {(obs: Observable<any>) => Observable<any>} selector - The selector function to apply on the state observable.
@@ -306,7 +306,7 @@ export class Store {
     }
 
     this.tracker.reset();
-    
+
     let stateUpdated = this.currentState.next(newState);
     let actionHandled = this.currentAction.next(action);
 
@@ -624,10 +624,10 @@ export class Store {
       return; // Module already exists, return without changes
     }
 
-    await lock.acquire();
+    await this.lock.acquire();
     try {
       await this.waitForIdle();
-      
+
       // Create a new array with the module added
       const newModules = [...this.modules, module];
 
@@ -643,7 +643,7 @@ export class Store {
       // Dispatch module loaded action
       this.systemActions.moduleLoaded(module);
     } finally {
-      lock.release();
+      this.lock.release();
     }
   }
 
@@ -655,24 +655,24 @@ export class Store {
    */
   async unloadModule(module: FeatureModule, clearState: boolean = false): Promise<void> {
     // Find the module index in the modules array
-    const moduleIndex = this.modules.findIndex(m => m === module);
+    const moduleIndex = this.modules.findIndex(m => m.slice === module.slice);
 
     // Check if the module exists
     if (moduleIndex === -1) {
-      console.warn(`Module ${module.name} not found, cannot unload.`);
+      console.warn(`Module ${module.slice} not found, cannot unload.`);
       return; // Module not found, nothing to unload
     }
 
-    await lock.acquire();
+    await this.lock.acquire();
     try {
       await this.waitForIdle();
-      
+
       // Remove the module from the internal state
       this.modules.splice(moduleIndex, 1);
 
       // Eject dependencies
       await this.ejectDependencies(module);
-      
+
       // Update global state with optional state clearing
       await this.updateState("@global", async (state) => {
         if (clearState) {
@@ -686,7 +686,7 @@ export class Store {
       // Dispatch module unloaded action
       this.systemActions.moduleUnloaded(module);
     } finally {
-      lock.release();
+      this.lock.release();
     }
   }
 }
