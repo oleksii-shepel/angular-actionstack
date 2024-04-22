@@ -1,8 +1,10 @@
+import { OperatorFunction } from "./operators";
+
 /**
  * A Subscription represents the ongoing execution of an Observable
  * and the possibility to cancel such execution.
  */
-class Subscription {
+export class Subscription {
   constructor(public unsubscribe: () => void) {}
 }
 
@@ -11,7 +13,7 @@ class Subscription {
  * Observer and enforces the Observable contract `(next)*(error|complete)?`
  * by cancelling the execution whenever error or complete occurs.
  */
-class Subscriber<T> extends Subscription {
+export class Subscriber<T> extends Subscription {
   constructor(private observer: Observer<T>) {
     super(() => {});
   }
@@ -34,7 +36,7 @@ class Subscriber<T> extends Subscription {
 /**
  * An Observer defines functions to handle emissions from an Observable.
  */
-interface Observer<T> {
+export interface Observer<T> {
   next(value: T): void;
   error(error: Error): void;
   complete(): void;
@@ -43,7 +45,7 @@ interface Observer<T> {
 /**
  * An Observable is an invokable collection of values pushed to an Observer.
  */
-class Observable<T> {
+export class Observable<T> {
   constructor(public subscribe: (subscriber: Subscriber<T>) => Subscription) {}
 
   /**
@@ -51,11 +53,18 @@ class Observable<T> {
    */
   static create<T>(subscribe: (subscriber: Subscriber<T>) => Subscription): Observable<T> {
     return new Observable(function internalSubscribe(observer: Observer<T>) {
-      const subscriber = new Subscriber(observer);
+      const subscriber = new Subscriber<T>(observer); // Use typed Subscriber
       const subscription = subscribe(subscriber);
-      subscriber.unsubscribe = subscription.unsubscribe.bind(subscription);
       return subscription;
     });
+  }
+
+  pipe(...operators: OperatorFunction<T>[]): Observable<T> {
+    let source: Observable<T> = this; // Assuming 'this' refers to the source observable
+    for (const operator of operators) {
+      source = operator(source) as Observable<T>; // Type assertion for clarity
+    }
+    return source;
   }
 }
 
@@ -63,7 +72,7 @@ class Observable<T> {
  * A Subject is both an Observable and an Observer.
  * It is the only concept in RxJS that maintains a list of Observers.
  */
-class Subject<T> extends Observable<T> {
+export class Subject<T> extends Observable<T> {
   private observers: Observer<T>[] = [];
 
   constructor() {
@@ -89,10 +98,4 @@ class Subject<T> extends Observable<T> {
   }
 }
 
-const Rx = {
-  Subscription,
-  Observable,
-  Subject,
-};
 
-export default Rx;
