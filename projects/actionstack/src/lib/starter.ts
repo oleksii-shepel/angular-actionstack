@@ -1,4 +1,4 @@
-import { Lock } from "./lock";
+import { waitFor } from "@actioncrew/actionstack";
 import { Action, AsyncAction } from "./types";
 
 /**
@@ -37,6 +37,7 @@ export const createStarter = () => {
     await lock.acquire()
     try {
       await processAction(action);
+      await waitFor(isProcessing, value => value === false);
     } finally {
       lock.release();
     }
@@ -72,6 +73,7 @@ export const createStarter = () => {
     await lock.acquire()
     try {
       await processAction(action);
+      await waitFor(isProcessing, value => value === false);
     } finally {
       lock.release();
     }
