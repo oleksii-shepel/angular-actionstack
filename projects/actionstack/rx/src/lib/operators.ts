@@ -98,52 +98,46 @@ export function mergeMap<T, U>(transformFn: (value: T) => Observable<U>): Operat
   };
 }
 
-export function concatMap<T, U>(transformFn: (value: T) => Observable<U>): OperatorFunction<T, U> {
-  return function concatMapOperator(source: Observable<T>): Observable<U> {
-    return new Observable(observer => {
-      const groupSubscription = new GroupSubscription();
-      let active = 0; // Track active inner subscriptions
 
-      const innerObserver = {
-        next(innerValue: U) {
-          observer.next(innerValue);
-        },
-        error(error: any) {
-          observer.error(error);
-        },
-        complete() {
-          if (--active === 0 && groupSubscription.isClosed()) {
-            observer.complete();
+function concatMap<TIn, TOut>(source: Observable<TIn>, projector: (value: TIn) => Promise<TOut>): Observable<TOut> {
+  return new Observable(subscriber => {
+    let isProcessing = false;
+    let queue: Promise<TOut>[] = [];
+
+    const next = (value: TIn) => {
+      if (isProcessing) {
+        queue.push(projector(value));
+      } else {
+        isProcessing = true;
+        projector(value).then((result) => {
+          subscriber.next(result);
+          isProcessing = false;
+          if (queue.length) {
+            next(queue.shift() as TIn); // Recursively process queued items
+          } else {
+            subscriber.complete();
           }
+        }).catch(error => {
+          subscriber.error(error);
+          isProcessing = false;
+        });
+      }
+    };
+
+    const subscription = source.subscribe({
+      next: next,
+      error: (err: any) => subscriber.error(err),
+      complete: () => {
+        if (!queue.length) {
+          subscriber.complete();
         }
-      };
+      },
+    } as Subscriber<TIn>);
 
-      const sourceSubscription = source.subscribe({
-        next(value: T) {
-          try {
-            const innerObservable = transformFn(value);
-            if (!innerObservable) {
-              return;
-            }
-            active++; // Increment active count before subscribing
-            groupSubscription.add(innerObservable.subscribe(innerObserver as Subscriber<U>));
-          } catch (error: any) {
-            observer.error(error);
-          }
-        },
-        error(error: any) {
-          observer.error(error);
-        },
-        complete() {
-          if (--active === 0 && groupSubscription.isClosed()) {
-            observer.complete();
-          }
-        }
-      } as Subscriber<T>);
-
-      return groupSubscription;
+    return new Subscription(() => {
+      subscription.unsubscribe();
     });
-  };
+  });
 }
 
 export function fromPromise<T>(promise: Promise<T>): Observable<T> {

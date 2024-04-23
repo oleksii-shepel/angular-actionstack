@@ -1,10 +1,11 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concat, concatMap, ignoreElements, merge, scan } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concat, ignoreElements, merge } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
+import { concatMap, waitFor } from "./operators";
 import { starter } from "./starter";
-import { CustomAsyncSubject, waitFor } from "./subject";
+import { CustomAsyncSubject } from "./subject";
 import { Tracker } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
@@ -155,7 +156,6 @@ export class Store {
 
       // Subscribe to action stream and process actions
       store.subscription = action$.pipe(
-        scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
         concatMap(async ({count, action}: any) => (count === 1) ? (
           console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
           await store.currentState.next(await store.setupReducer()),

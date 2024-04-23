@@ -1,5 +1,5 @@
 import { Observable, map } from "rxjs";
-import { sequential } from "./lock";
+import { sequential } from "./operators";
 import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
@@ -169,7 +169,7 @@ function createSelectorAsync<U = any, T = any> (
       const sliceState$ = (featureSelector$ === "@global" ? state$ : (featureSelector$ as Function)(state$)).pipe(
 
         // Use concatMap to handle asynchronous operations within selectors
-        sequential(async sliceState => {
+        sequential(async (sliceState: any) => {
 
           // Handle undefined slice state
           if (sliceState === undefined) { return sliceState; }
