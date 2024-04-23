@@ -15,8 +15,8 @@ export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Obse
     subscriber.next(lastValue!);
     const subscription = customAsyncSubject.subscribe({
       next: async (value) => {
-        await subscriber.next(value);
         lastValue = value;
+        await subscriber.next(value);
       },
       error: async (error) => {
         await subscriber.error(error);
