@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, from, ignoreElements, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concat, concatMap, ignoreElements, merge, scan } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
@@ -596,7 +596,6 @@ export class Store {
    */
   extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
-    const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
     const effects$ = new Observable<any>(subscriber => {
       let effectsSubscription: Subscription | undefined;
@@ -612,17 +611,23 @@ export class Store {
       this.waitForIdle().then(() => {
         this.systemActions.effectsRegistered(args);
         this.tracker.track(effects$);
-        effectsSubscription = this.currentAction.asObservable().subscribe({
-          next: () => {
-            from([...args]).pipe(
-              mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies)),
-              mergeMap(childAction => isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY)
-            ).subscribe({
-              error: err => subscriber.error(err),
-              complete: () => subscriber.complete()
-            });
-          }
+
+        const sideEffects = args.map(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies));
+
+        effectsSubscription = (this.pipeline.strategy === "concurrent" ? merge : concat)(...sideEffects).subscribe({
+          next: childAction => {
+            if (isAction(childAction)) {
+              this.dispatch(childAction);
+            }
+          },
+          error: err => subscriber.error(err),
+          complete: () => subscriber.complete(),
         });
+
+        return () => {
+          effectsSubscription?.unsubscribe();
+          unregisterEffects();
+        };
       }).catch(err => subscriber.error(err));
 
       return () => unregisterEffects();
