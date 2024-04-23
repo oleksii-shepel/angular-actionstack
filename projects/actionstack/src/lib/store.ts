@@ -158,7 +158,7 @@ export class Store {
         scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
         concatMap(async ({count, action}: any) => (count === 1) ? (
           console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
-          await store.updateState("@global", async () => await store.setupReducer(), action),
+          await store.currentState.next(await store.setupReducer()),
           store.systemActions.storeInitialized(),
           action) : action),
         store.processAction()
