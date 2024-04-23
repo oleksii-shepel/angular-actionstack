@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, distinctUntilChanged, filter, finalize, from, ignoreElements, map, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, finalize, from, ignoreElements, mergeMap, of, scan, tap } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
@@ -217,10 +217,18 @@ export class Store {
    * @returns {Observable<any>} An observable stream with the selected value.
    */
   select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
-    return selector(this.currentState.asObservable()).pipe(
-      map(value => value === undefined ? defaultValue : value),
-      filter(value => value !== undefined),
-      distinctUntilChanged());
+    let lastValue: any;
+    return new Observable(subscriber => {
+      const subscription = this.currentState.asObservable().pipe((state) => selector(state)).subscribe(selectedValue => {
+        const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
+        if(filteredValue !== lastValue) {
+          lastValue = filteredValue;
+          subscriber.next(filteredValue);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    });
   }
 
   /**
