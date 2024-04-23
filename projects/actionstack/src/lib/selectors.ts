@@ -1,4 +1,4 @@
-import { Observable, distinctUntilChanged, map, shareReplay } from "rxjs";
+import { Observable, map } from "rxjs";
 import { sequential } from "./lock";
 import { ProjectionFunction, SelectorFunction } from "./types";
 
@@ -21,28 +21,21 @@ export {
 function createFeatureSelector<U = any, T = any> (
   slice: keyof T | string[]
 ): (state$: Observable<T>) => Observable<U> {
-  return (state$: Observable<T>) => state$.pipe(
-    /**
-     * Applies the map operator to transform the state object.
-     * - Checks if the slice is an array (representing a path of keys).
-     *   - If it's an array, uses reduce to navigate through the state object using each key.
-     *   - If it's not an array (a single key), retrieves the value of that key from the state object.
-     */
-    map(state => (Array.isArray(slice))
+  let lastValue: U | undefined;
+  return (source: Observable<T>) => new Observable<U>(subscriber => {
+    subscriber.next(lastValue!);
+    const subscription = source.subscribe((state: T) => {
+      const selectedValue = (Array.isArray(slice)
       ? slice.reduce((acc, key) => (acc && Array.isArray(acc) ? acc[parseInt(key)] : (acc as any)[key]) || undefined, state)
-      : state && state[slice]),
-    /**
-     * Applies the distinctUntilChanged operator to ensure the observable only emits a new value if it's different from the previous value.
-     */
-    distinctUntilChanged(),
-    /**
-     * Applies the shareReplay operator to share a single subscription to the state observable and replay the latest value to multiple subscribers.
-     * - Options used:
-     *   - bufferSize: 1 - Limits the replay buffer to hold only the latest value.
-     *   - refCount: false - Keeps the observable running as long as there's at least one subscriber (be cautious, consider using takeUntil to avoid memory leaks).
-     */
-    shareReplay({bufferSize: 1, refCount: false})
-  ) as Observable<U>;
+      : state && state[slice]) as U;
+      if(lastValue !== selectedValue) {
+        lastValue = selectedValue;
+        subscriber.next(lastValue);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  });
 }
 
 /**
