@@ -1,11 +1,11 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, finalize, from, ignoreElements, mergeMap, of, scan, tap } from "rxjs";
+import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concatMap, from, ignoreElements, mergeMap, of, scan, tap } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
 import { starter } from "./starter";
 import { CustomAsyncSubject, waitFor } from "./subject";
-import { Tracker, withStatusTracking } from "./tracker";
+import { Tracker } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
@@ -598,25 +598,36 @@ export class Store {
     const dependencies = this.pipeline.dependencies;
     const mapMethod = this.pipeline.strategy === "concurrent" ? mergeMap : concatMap;
 
-    const effects$: Observable<any> = from(this.waitForIdle()).pipe(
-      tap(() => this.systemActions.effectsRegistered(args)),
-      tap(() => this.tracker.track(effects$)),
-      concatMap(() => this.currentAction.asObservable().pipe(
-        concatMap(() => from([...args]).pipe(
-          // Combine side effects and map in a single pipe
-          mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies) as Observable<Action<any>>),
-          // Flatten child actions and dispatch directly
-          mergeMap((childAction: any) =>
-            isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY
-          )
-        )),
-        withStatusTracking(() => this.tracker.setStatus(effects$, true))
-      )),
-      finalize(() => {
+    const effects$ = new Observable<any>(subscriber => {
+      let effectsSubscription: Subscription | undefined;
+      const unregisterEffects = () => {
+        if (effectsSubscription) {
+          effectsSubscription.unsubscribe();
+          effectsSubscription = undefined;
+        }
         this.tracker.remove(effects$);
-        this.systemActions.effectsUnregistered(args)
-      })
-    );
+        this.systemActions.effectsUnregistered(args);
+      };
+
+      this.waitForIdle().then(() => {
+        this.systemActions.effectsRegistered(args);
+        this.tracker.track(effects$);
+        effectsSubscription = this.currentAction.asObservable().subscribe({
+          next: () => {
+            from([...args]).pipe(
+              mapMethod(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies)),
+              mergeMap(childAction => isAction(childAction) ? of(childAction).pipe(tap(this.dispatch)) : EMPTY)
+            ).subscribe({
+              error: err => subscriber.error(err),
+              complete: () => subscriber.complete()
+            });
+          }
+        });
+      }).catch(err => subscriber.error(err));
+
+      return () => unregisterEffects();
+    });
+
     return effects$;
   }
 
