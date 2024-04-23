@@ -14,7 +14,7 @@ import { Lock } from "./lock";
 export function concatMap<TIn, TOut>(projector: (value: TIn) => Promise<TOut>): OperatorFunction<TIn, TOut> {
   return (source: Observable<TIn>) => new Observable(subscriber => {
     let isProcessing = false;
-    let queue: Promise<TOut>[] = [];
+    let queue: Promise<any>[] = [];
 
     const next = (value: TIn) => {
       if (isProcessing) {
@@ -26,9 +26,14 @@ export function concatMap<TIn, TOut>(projector: (value: TIn) => Promise<TOut>): 
             subscriber.next(result);
             isProcessing = false;
             if (queue.length) {
-              next(queue.shift() as TIn); // Recursively process queued items
+              const nextValue = queue.shift();
+              if (nextValue) {
+                nextValue.then(next); // Recursively process queued items
+              } else {
+                subscriber.complete(); // Complete when queue is empty
+              }
             } else {
-              subscriber.complete();
+              isProcessing = false;
             }
           })
           .catch(error => {
@@ -42,7 +47,7 @@ export function concatMap<TIn, TOut>(projector: (value: TIn) => Promise<TOut>): 
       next,
       error: (err: Error) => subscriber.error(err),
       complete: () => {
-        if (!queue.length) {
+        if (!queue.length && !isProcessing) {
           subscriber.complete();
         }
       },
