@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, Observable, Subject, Subscription, concat, merge, scan } from "rxjs";
+import { BehaviorSubject, Observable, Subject, Subscription, concat, merge } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
@@ -153,15 +153,19 @@ export class Store {
 
       // Create action stream observable
       let action$ = store.actionStream.asObservable();
+      let count = 0;
 
       // Subscribe to action stream and process actions
       store.subscription = action$.pipe(
-        scan((acc, action: any) => ({count: acc.count + 1, action}), {count: 0, action: undefined}),
-        concatMap(async ({count, action}: any) => (count === 1) ? (
-          console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;"),
-          await store.currentState.next(await store.setupReducer()),
-          store.systemActions.storeInitialized(),
-          action) : action),
+        concatMap(async (action: any) => {
+          if (count === 0) {
+            console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;");
+            await store.currentState.next(await store.setupReducer());
+            store.systemActions.storeInitialized();
+          }
+          count++;
+          return action;
+        }),
         store.processAction()
       ).subscribe();
 
