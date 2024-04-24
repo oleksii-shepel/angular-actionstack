@@ -1,9 +1,9 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, Observable, Subject, Subscription, concat, merge } from "rxjs";
+import { BehaviorSubject, Observable, Subject, Subscription } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
-import { concatMap, waitFor } from "./operators";
+import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
 import { Tracker } from "./tracker";
@@ -629,12 +629,12 @@ export class Store {
         const sideEffects = args.map(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies));
 
         effectsSubscription = (this.pipeline.strategy === "concurrent" ? merge : concat)(...sideEffects).subscribe({
-          next: childAction => {
+          next: (childAction: any) => {
             if (isAction(childAction)) {
               this.dispatch(childAction);
             }
           },
-          error: err => subscriber.error(err),
+          error: (err: any) => subscriber.error(err),
           complete: () => subscriber.complete(),
         });
 

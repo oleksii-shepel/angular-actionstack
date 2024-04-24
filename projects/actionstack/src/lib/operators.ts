@@ -59,6 +59,47 @@ export function concatMap<TIn, TOut>(projector: (value: TIn) => Promise<TOut>): 
   });
 }
 
+export function concat<T>(...sources: Observable<T>[]): Observable<T> {
+  return new Observable<T>(subscriber => {
+    let index = 0;
+
+    const next = () => {
+      if (index < sources.length) {
+        const source = sources[index++];
+        source.subscribe({
+          next: value => subscriber.next(value),
+          error: error => subscriber.error(error),
+          complete: () => next()
+        });
+      } else {
+        subscriber.complete();
+      }
+    };
+
+    next();
+  });
+}
+
+export function merge<T>(...sources: Observable<T>[]): Observable<T> {
+  return new Observable<T>(subscriber => {
+    let completedCount = 0;
+
+    const completeIfAllCompleted = () => {
+      if (++completedCount === sources.length) {
+        subscriber.complete();
+      }
+    };
+
+    sources.forEach(source => {
+      source.subscribe({
+        next: value => subscriber.next(value),
+        error: error => subscriber.error(error),
+        complete: completeIfAllCompleted
+      });
+    });
+  });
+}
+
 /**
  * Waits for a condition to be met in an observable stream.
  * @param {Observable<any>} obs - The observable stream to wait for.
