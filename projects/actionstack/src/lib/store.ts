@@ -1,5 +1,5 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, EMPTY, Observable, Subject, Subscription, catchError, concat, ignoreElements, merge, scan } from "rxjs";
+import { BehaviorSubject, Observable, Subject, Subscription, concat, merge, scan } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
@@ -535,24 +535,33 @@ export class Store {
    * @returns {Observable<any>} An observable stream that processes actions.
    * @protected
    */
-  protected processAction() {
-    return (source: Observable<Action<any>>) => {
-      return source.pipe(
+  processAction() {
+  return (source: Observable<Action<any>>) =>
+    new Observable<void>(subscriber => {
+      const unsubscribe$ = new Subject<void>();
+
+      const subscription = source.pipe(
         concatMap(async (action: Action<any>) => {
           try {
-            return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
+            await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
           } finally {
             this.isProcessing.next(false);
           }
-        }),
-        ignoreElements(),
-        catchError((error) => {
-          console.warn(error.message);
-          return EMPTY;
         })
-      );
-    };
-  }
+      ).subscribe({
+        error: (error) => {
+          console.warn(error.message);
+          subscriber.complete(); // Complete the observable on error
+        },
+        complete: () => {
+          subscriber.complete(); // Complete the observable when the source completes
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    });
+}
+
 
   /**
    * Applies middleware to the store's dispatch method.
