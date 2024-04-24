@@ -59,6 +59,13 @@ export function concatMap<TIn, TOut>(projector: (value: TIn) => Promise<TOut>): 
   });
 }
 
+/**
+ * Concatenates multiple source Observables sequentially.
+ *
+ * @template T The type of the elements in the source Observables.
+ * @param {...Observable<T>[]} sources The source Observables to concatenate.
+ * @returns {Observable<T>} An Observable that emits values from the source Observables in order as they are concatenated.
+ */
 export function concat<T>(...sources: Observable<T>[]): Observable<T> {
   return new Observable<T>(subscriber => {
     let index = 0;
@@ -80,6 +87,13 @@ export function concat<T>(...sources: Observable<T>[]): Observable<T> {
   });
 }
 
+/**
+ * Combines multiple source Observables into one Observable that emits all the values from each of the source Observables.
+ *
+ * @template T The type of the elements in the source Observables.
+ * @param {...Observable<T>[]} sources The source Observables to merge.
+ * @returns {Observable<T>} An Observable that emits all the values from the source Observables.
+ */
 export function merge<T>(...sources: Observable<T>[]): Observable<T> {
   return new Observable<T>(subscriber => {
     let completedCount = 0;
@@ -119,12 +133,12 @@ export function waitFor(obs: Observable<any>, predicate: (value: any) => boolean
       error: err => reject(err)
     });
 
-    subscription.add(() => {
+    return () => {
       if (!resolved) {
         reject(new Error("Promise not resolved."));
       }
       subscription.unsubscribe();
-    });
+    };
   });
 }
 
