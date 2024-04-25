@@ -8,6 +8,7 @@ export class Lock {
    */
   public isLocked: boolean = false;
 
+  private availableSlots: number = 1;
   /**
    * Internal queue to store waiting promises when the lock is acquired.
    */
@@ -25,13 +26,12 @@ export class Lock {
    *                             or resolves later when the lock becomes available for the caller.
    */
   public async acquire(): Promise<void> {
-    // Return a promise that resolves immediately if not locked
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (!this.isLocked) {
         this.isLocked = true;
-        resolve();
+        resolve(); // Lock acquired, resolve the promise
       } else {
-        this.queue.push(resolve);
+        this.queue.push(() => resolve()); // Add resolve to queue
       }
     });
   }
@@ -39,15 +39,12 @@ export class Lock {
   /**
    * Releases the lock, allowing the next waiting promise in the queue to acquire it.
    */
-  public release(): void {
-     // Resolve all waiting promises
-     while (this.queue.length > 0) {
-       const nextResolve = this.queue.shift();
-       nextResolve && nextResolve();
-     }
-
-     // Release the lock
-     this.isLocked = false;
+  release() {
+    this.isLocked = false;
+    // Process the waiting requests (if any)
+    if (this.queue.length > 0) {
+      const nextResolve = this.queue.shift()!;
+      nextResolve(); // Resolve the first waiting promise
+    };
   }
 }
-
