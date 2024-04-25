@@ -662,7 +662,7 @@ export class Store {
       return Promise.resolve(); // Module already exists, return without changes
     }
 
-    // Dispatch module unloaded action
+    // Dispatch module loaded action
     this.systemActions.moduleLoaded(module);
 
     return this.lock.acquire()
