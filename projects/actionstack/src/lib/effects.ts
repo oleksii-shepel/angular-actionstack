@@ -1,4 +1,4 @@
-import { Observable, OperatorFunction, filter, isObservable } from 'rxjs';
+import { Observable, OperatorFunction, isObservable } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 export { createEffect as effect };
@@ -87,11 +87,31 @@ function createEffect(
  * @param {...string} types - A variable number of strings representing the action types to filter by.
  * @returns {OperatorFunction<Action<any>, Action<any>>} - An RxJS operator function that filters actions.
  */
-export function ofType(types: string | string[]): OperatorFunction<Action<any>, Action<any>> {
-  return filter((action): action is Action<any> => {
-    if (isAction(action)) {
-      return typeof types === 'string' ? types === action.type : types.includes(action.type);
-    }
-    return false;
-  });
+export function ofType(types: string | string[]): (source: Observable<Action<any>>) => Observable<Action<any>> {
+  return (source: Observable<Action<any>>) => {
+    return new Observable<Action<any>>(observer => {
+      const subscription = source.subscribe({
+        next: (action) => {
+          if (isAction(action)) {
+            if (typeof types === 'string') {
+              if (types === action.type) {
+                observer.next(action);
+              }
+            } else {
+              if (types.includes(action.type)) {
+                observer.next(action);
+              }
+            }
+          }
+        },
+        error: (err) => observer.error(err),
+        complete: () => observer.complete()
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    });
+  };
 }
+

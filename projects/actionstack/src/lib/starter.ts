@@ -1,4 +1,4 @@
-import { waitFor } from "@actioncrew/actionstack";
+import { waitFor } from "./operators";
 import { Action, AsyncAction } from "./types";
 
 /**

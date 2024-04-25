@@ -1,4 +1,4 @@
-import { BehaviorSubject, Observable, OperatorFunction, every, from, race, take, timer } from "rxjs";
+import { BehaviorSubject, Observable, OperatorFunction } from "rxjs";
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -68,27 +68,24 @@ export class Tracker {
    * @returns {Promise<void>} A Promise that resolves when all tracked Observables have been executed within the timeout period, or rejects if the timeout is reached.
    */
   checkAllExecuted(timeoutMs = 30000): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const allExecuted$ = from(this.entries.values()) // Convert checkAllExecuted call to Observable
-        .pipe(
-          every(executed => executed.value === true), // Combined filter for all executed
-          take(1) // Take only the first emission
-        );
-
-      const timeout$ = timer(timeoutMs).pipe(take(1)); // Emit after timeout
-
-      race(allExecuted$, timeout$).pipe(take(1)).subscribe({
-        next: (value) => {
-          if (value === true) {
-            resolve(); // Resolve on allExecuted emission
-          } else {
-            reject('Timeout reached'); // Reject on timeout emission
-          }
-        },
-        error: (error) => {
-          reject(error); // Handle other errors
-        },
+    return new Promise<void>((resolve, reject) => {
+      const allExecutedPromise = new Promise<void>((innerResolve, innerReject) => {
+        const entries = Array.from(this.entries.values());
+        const areAllExecuted = entries.every(executed => executed.value === true);
+        if (areAllExecuted) {
+          innerResolve();
+        } else {
+          innerReject('Not all entries are executed');
+        }
       });
+
+      const timeoutPromise = new Promise((innerResolve, innerReject) => {
+        setTimeout(() => innerReject('Timeout reached'), timeoutMs);
+      });
+
+      Promise.race([allExecutedPromise, timeoutPromise])
+        .then(() => resolve())
+        .catch((error) => reject(error));
     });
   }
 }
