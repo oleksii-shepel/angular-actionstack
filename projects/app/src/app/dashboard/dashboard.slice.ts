@@ -36,4 +36,4 @@ export function reducer(state = initialState, action: any): any {
 }
 
 export const feature = featureSelector(slice);
-export const selectTopHeroes = selector<typeof initialState>(feature, state => state.heroes.slice(1, 5));
+export const selectTopHeroes = selector(feature, state => state.heroes.slice(1, 5));
