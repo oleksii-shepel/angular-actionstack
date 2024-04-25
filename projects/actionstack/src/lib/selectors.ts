@@ -1,4 +1,4 @@
-import { Observable } from "rxjs";
+import { CustomObservable, Subscribable } from "./observable";
 import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
@@ -15,13 +15,13 @@ export {
  * @param slice - This can be either:
  *                 * A string key representing the property name of the feature slice within the state object.
  *                 * An array of strings representing a path of keys to navigate within the state object to reach the desired feature slice.
- * @returns A function that takes an Observable of the entire state object and returns an Observable of the selected feature data.
+ * @returns A function that takes an Subscribable of the entire state object and returns an Subscribable of the selected feature data.
  */
 function createFeatureSelector<U = any, T = any> (
   slice: keyof T | string[]
-): (state$: Observable<T>) => Observable<U> {
+): (state$: Subscribable<T>) => Subscribable<U> {
   let lastValue: U | undefined;
-  return (source: Observable<T>) => new Observable<U>(subscriber => {
+  return (source: Subscribable<T>) => new CustomObservable<U>(subscriber => {
     subscriber.next(lastValue!);
     const subscription = source.subscribe((state: T) => {
       const selectedValue = (Array.isArray(slice)
@@ -54,10 +54,10 @@ function createFeatureSelector<U = any, T = any> (
  * @returns A function that takes optional props and projection props as arguments and returns another function that takes the state observable as input and returns an observable of the projected data.
  */
 function createSelector<U = any, T = any>(
-  featureSelector$: ((state: Observable<T>) => Observable<U>) | "@global",
+  featureSelector$: ((state: Subscribable<T>) => Subscribable<U>) | "@global",
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction
-): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
+): (props?: any[] | any, projectionProps?: any) => (store: Subscribable<T>) => Subscribable<U> {
 
   const isSelectorArray = Array.isArray(selectors);
   const projection = typeof projectionOrOptions === "function" ? projectionOrOptions : undefined;
@@ -71,9 +71,9 @@ function createSelector<U = any, T = any>(
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
 
-    return (state$: Observable<T>) => {
-      return new Observable(observer => {
-        let sliceState$: Observable<U>;
+    return (state$: Subscribable<T>) => {
+      return new CustomObservable(observer => {
+        let sliceState$: Subscribable<U>;
         if (featureSelector$ === "@global") {
           sliceState$ = state$ as any;
         } else {
@@ -125,18 +125,18 @@ function createSelector<U = any, T = any>(
  *                             * A selector function that retrieves a slice of the state based on the entire state object.
  *                             * The string "@global" indicating the entire state object should be used.
  * @param selectors - This can be either:
- *                    * A single selector function that takes the state slice and optional props as arguments and can return a Promise or Observable.
- *                    * An array of selector functions, each taking the state slice and a corresponding prop (from props argument) as arguments and can return a Promise or Observable.
+ *                    * A single selector function that takes the state slice and optional props as arguments and can return a Promise or Subscribable.
+ *                    * An array of selector functions, each taking the state slice and a corresponding prop (from props argument) as arguments and can return a Promise or Subscribable.
  * @param projectionOrOptions - This can be either:
  *                             * A projection function that takes an array of results from the selector(s) and optional projection props as arguments and returns the final result.
  *                             * An options object (not currently implemented).
  * @returns A function that takes optional props and projection props as arguments and returns another function that takes the state observable as input and returns an observable of the projected data.
  */
 function createSelectorAsync<U = any, T = any>(
-  featureSelector$: ((state: Observable<T>) => Observable<U>) | "@global",
+  featureSelector$: ((state: Subscribable<T>) => Subscribable<U>) | "@global",
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction
-): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
+): (props?: any[] | any, projectionProps?: any) => (store: Subscribable<T>) => Subscribable<U> {
 
   const isSelectorArray = Array.isArray(selectors);
   const projection = typeof projectionOrOptions === "function" ? projectionOrOptions : undefined;
@@ -150,13 +150,13 @@ function createSelectorAsync<U = any, T = any>(
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
 
-    return (state$: Observable<T>) => {
-      const sliceState$ = new Observable<U>((observer) => {
+    return (state$: Subscribable<T>) => {
+      const sliceState$ = new CustomObservable<U>((observer) => {
         let unsubscribed = false;
         let didCancel = false;
 
         const runSelectors = async (sliceState: any) => {
-          if (sliceState === undefined) { return observer.next(undefined); }
+          if (sliceState === undefined) { return observer.next(undefined as any); }
 
           let selectorResults: U[] | U;
 

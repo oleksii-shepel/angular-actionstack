@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 
 import { Store } from '@actioncrew/actionstack';
-import { Subscription } from 'rxjs';
+import { Unsubscribable } from 'rxjs';
 import { Hero } from '../hero';
 import { getHeroesRequest, loadHeroes, selectHeroes } from './heroes.slice';
 
@@ -12,8 +12,8 @@ import { getHeroesRequest, loadHeroes, selectHeroes } from './heroes.slice';
 })
 export class HeroesComponent implements OnInit, OnDestroy {
   heroes: Hero[] = [];
-  subscriptionA!: Subscription;
-  subscriptionB!: Subscription;
+  subscriptionA!: Unsubscribable;
+  subscriptionB!: Unsubscribable;
 
   constructor(private store: Store) { }
 

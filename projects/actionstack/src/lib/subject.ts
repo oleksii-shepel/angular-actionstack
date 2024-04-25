@@ -1,4 +1,5 @@
-import { Observable, Subscription } from 'rxjs';
+import { Unsubscribable } from 'rxjs';
+import { CustomObservable, Subscribable } from './observable';
 
 /**
  * Function to convert a custom `CustomAsyncSubject` instance into a standard RxJS `Observable`.
@@ -8,9 +9,9 @@ import { Observable, Subscription } from 'rxjs';
  * @param customAsyncSubject - The `CustomAsyncSubject` instance to convert.
  * @returns Observable<T> - The resulting RxJS `Observable`.
  */
-export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Observable<T> {
+export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Subscribable<T> {
   let lastValue = undefined;
-  return new Observable<T>((subscriber) => {
+  return new CustomObservable<T>((subscriber) => {
 
     subscriber.next(lastValue!);
     const subscription = customAsyncSubject.subscribe({
@@ -57,7 +58,7 @@ export class AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  subscribe(observer: AsyncObserver<T>): Subscription {
+  subscribe(observer: AsyncObserver<T>): Unsubscribable {
     this.observers.push(observer);
     return {
       unsubscribe: () => {
@@ -66,7 +67,7 @@ export class AsyncObservable<T> {
           this.observers.splice(index, 1);
         }
       }
-    } as Subscription;
+    } as Unsubscribable;
   }
 
   /**
@@ -101,7 +102,7 @@ export class AsyncObservable<T> {
  */
 export class CustomAsyncSubject<T> extends AsyncObservable<T> {
   private _value!: T;
-  private _observable!: Observable<T>;
+  private _observable!: CustomObservable<T>;
 
   constructor() {
     super();
@@ -126,7 +127,7 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  override subscribe(observer: Partial<AsyncObserver<T>>): Subscription {
+  override subscribe(observer: Partial<AsyncObserver<T>>): Unsubscribable {
     // Convert the unsubscribe function to a Subscription object
     return super.subscribe(observer as AsyncObserver<T>);
   }

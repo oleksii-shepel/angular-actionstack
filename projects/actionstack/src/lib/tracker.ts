@@ -1,4 +1,5 @@
 import { BehaviorSubject, Observable, OperatorFunction } from "rxjs";
+import { CustomBehaviorSubject, Subscribable } from "./observable";
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -9,14 +10,14 @@ export class Tracker {
    * @type {Map<Observable<any>, BehaviorSubject<boolean>>}
    * @private
    */
-  private entries = new Map<Observable<any>, BehaviorSubject<boolean>>();
+  private entries = new Map<Subscribable<any>, CustomBehaviorSubject<boolean>>();
 
   /**
    * Returns the execution status of the provided Observable.
    * @param {Observable<any>} entry - The Observable to check the execution status for.
    * @returns {boolean} The execution status of the provided Observable. Returns `true` if executed, `false` otherwise.
    */
-  getStatus(entry: Observable<any>) {
+  getStatus(entry: Subscribable<any>) {
     return this.entries.get(entry)?.value === true;
   }
 
@@ -26,7 +27,7 @@ export class Tracker {
    * @param {boolean} value - The execution status to set.
    * @returns {void} This method does not return a value.
    */
-  setStatus(entry: Observable<any>, value: boolean) {
+  setStatus(entry: Subscribable<any>, value: boolean) {
     this.entries.get(entry)?.next(value);
   }
 
@@ -35,9 +36,9 @@ export class Tracker {
    * @param {Observable<any>} observable - The Observable to track.
    * @returns {void} This method does not return a value.
    */
-  track(observable: Observable<any>): void {
+  track(observable: Subscribable<any>): void {
     if (!this.entries.has(observable)) {
-      const subject = new BehaviorSubject<boolean>(false);
+      const subject = new CustomBehaviorSubject<boolean>(false);
       this.entries.set(observable, subject);
     }
   }
@@ -46,7 +47,7 @@ export class Tracker {
    * Removes a tracked observable and unsubscribes from it.
    * @param observable The observable to remove.
    */
-  remove(observable: Observable<any>) {
+  remove(observable: Subscribable<any>) {
     const subject = this.entries.get(observable);
     if (subject) {
       this.entries.delete(observable);

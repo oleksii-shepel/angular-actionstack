@@ -1,11 +1,31 @@
-import { Observer, Unsubscribable } from "rxjs";
+
+export interface Observer<T> {
+  next: (value: T) => void;
+  error: (err: any) => void;
+  complete: () => void;
+}
+
+export interface Unsubscribable {
+  unsubscribe(): void;
+}
+
+export interface OperatorFunction<T, R>{
+  (source: Subscribable<T>): Subscribable<R>;
+};
 
 export interface Subscribable<T> {
-  subscribe(observer: Partial<Observer<T>> | ((value: T) => void)
-  ): Unsubscribable;
+  subscribe(observerOrNext: Partial<Observer<T>> | ((value: T) => void) | void): Unsubscribable;
 }
-// Custom implementation of Observable
+
 export type Subscriber<T> = Unsubscribable & Observer<T>;
+
+export function isObservable(obj: any): obj is Subscribable<unknown> {
+  // The !! is to ensure that this publicly exposed function returns
+  // `false` if something like `null` or `0` is passed.
+  return !!obj && (typeof obj?.subscribe === 'function');
+}
+
+// Custom implementation of Observable
 export class CustomObservable<T> implements Subscribable<T>{
   private observers: Observer<T>[] = [];
 
@@ -86,6 +106,12 @@ export class CustomSubscription implements Unsubscribable {
       this.subscriptions.splice(index, 1);
     }
   }
+
+  public static EMPTY = (() => {
+    const empty = new CustomSubscription();
+    empty.closed = true;
+    return empty;
+  })()
 }
 // Custom implementation of Subject
 export class CustomSubject<T> extends CustomObservable<T> {

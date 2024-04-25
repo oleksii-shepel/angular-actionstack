@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
 import { Store } from '@actioncrew/actionstack';
-import { Observable } from 'rxjs';
+import { Subscribable } from 'rxjs';
 import { Hero } from '../hero';
 import { heroSelector, loadHero } from './hero-details.slice';
 
@@ -13,7 +13,7 @@ import { heroSelector, loadHero } from './hero-details.slice';
   styleUrls: [ './hero-details.component.css' ]
 })
 export class HeroDetailsComponent implements OnInit {
-  hero$: Observable<Hero | undefined>;
+  hero$: Subscribable<Hero | undefined>;
 
   constructor(
     private store: Store,

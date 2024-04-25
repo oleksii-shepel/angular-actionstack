@@ -1,8 +1,9 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, Observable, Subject, Subscription } from "rxjs";
+import { Unsubscribable } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
+import { CustomBehaviorSubject, CustomObservable, CustomSubject, CustomSubscription, Subscribable } from './observable';
 import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
@@ -106,11 +107,11 @@ export class Store {
     dependencies: {} as Tree<Type<any> | InjectionToken<any>>,
     strategy: "exclusive" as ProcessingStrategy
   };
-  protected actionStream = new Subject<Action<any>>();
+  protected actionStream = new CustomSubject<Action<any>>();
   protected currentAction = new CustomAsyncSubject<Action<any>>();
   protected currentState = new CustomAsyncSubject<any>();
-  protected isProcessing = new BehaviorSubject<boolean>(false);
-  protected subscription = Subscription.EMPTY;
+  protected isProcessing = new CustomBehaviorSubject<boolean>(false);
+  protected subscription = CustomSubscription.EMPTY as Unsubscribable;
   protected systemActions = { ...systemActions };
   protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
@@ -167,7 +168,7 @@ export class Store {
           return action;
         }),
         store.processAction()
-      ).subscribe();
+      ).subscribe(() => {});
 
       // Initialize state and mark store as initialized
       store.systemActions.initializeState();
@@ -221,9 +222,9 @@ export class Store {
    * @param {*} [defaultValue] - The default value to use if the selected value is undefined.
    * @returns {Observable<any>} An observable stream with the selected value.
    */
-  select(selector: (obs: Observable<any>) => Observable<any>, defaultValue?: any): Observable<any> {
+  select(selector: (obs: Subscribable<any>) => Subscribable<any>, defaultValue?: any): Subscribable<any> {
     let lastValue: any;
-    return new Observable(subscriber => {
+    return new CustomObservable<any>(subscriber => {
       const subscription = this.currentState.asObservable().pipe((state) => selector(state)).subscribe(selectedValue => {
         const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
         if(filteredValue !== lastValue) {
@@ -540,20 +541,20 @@ export class Store {
    * @protected
    */
   processAction() {
-  return (source: Observable<Action<any>>) =>
-    new Observable<void>(subscriber => {
-      const unsubscribe$ = new Subject<void>();
+  return (source: CustomObservable<Action<any>>) =>
+    new CustomObservable<void>(subscriber => {
+      const unsubscribe$ = new CustomSubject<void>();
 
       const subscription = source.pipe(
         concatMap(async (action: Action<any>) => {
           try {
-            await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
+            return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
           } finally {
             this.isProcessing.next(false);
           }
         })
       ).subscribe({
-        error: (error) => {
+        error: (error: any) => {
           console.warn(error.message);
           subscriber.complete(); // Complete the observable on error
         },
@@ -608,11 +609,11 @@ export class Store {
    * @returns {Observable<any>} An observable stream extended with the specified side effects.
    * @protected
    */
-  extend(...args: SideEffect[]): Observable<any> {
+  extend(...args: SideEffect[]): Subscribable<any> {
     const dependencies = this.pipeline.dependencies;
 
-    const effects$ = new Observable<any>(subscriber => {
-      let effectsSubscription: Subscription | undefined;
+    const effects$ = new CustomObservable<any>(subscriber => {
+      let effectsSubscription: Unsubscribable | undefined;
       const unregisterEffects = () => {
         if (effectsSubscription) {
           effectsSubscription.unsubscribe();
