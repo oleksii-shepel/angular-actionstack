@@ -1,4 +1,4 @@
-import { EMPTY, Observable, OperatorFunction, concatMap, filter, isObservable, map, of, withLatestFrom } from 'rxjs';
+import { Observable, OperatorFunction, filter, isObservable } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 export { createEffect as effect };
@@ -23,44 +23,63 @@ function createEffect(
   effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | Observable<Action<any>>
 ): () => SideEffect {
   function effectCreator(action$: Observable<Action<any>>, state$: Observable<any>, dependencies: Record<string, any>) {
-    return action$.pipe(
-      ofType(actionType),
-      withLatestFrom(state$),
-      concatMap(([action, state]) => {
-        try {
-          const result = effectFn(action, state, dependencies);
-          if (result === null || result === undefined) {
-            throw new Error(`The effect for action type "${actionType}" must return an action or an observable. It currently does not return anything.`);
-          }
-          if (isObservable(result)) {
-            return result.pipe(
-              map((resultAction) => {
-                if (action.type === resultAction?.type) {
-                  throw new Error(`The effect for action type "${actionType}" may result in an infinite loop as it returns an action of the same type.`);
+    return new Observable<Action<any>>((observer) => {
+      let currentState: any;
+      const stateSubscription = state$.subscribe(state => currentState = state);
+      const actionSubscription = action$.subscribe({
+        next(action) {
+          if (!isAction(action)) return;
+          if (Array.isArray(actionType) ? actionType.includes(action.type) : action.type === actionType) {
+            try {
+              const result = effectFn(action, currentState, dependencies);
+              if (result === null || result === undefined) {
+                throw new Error(`The effect for action type "${actionType}" must return an action or an observable. It currently does not return anything.`);
+              }
+              if (isObservable(result)) {
+                result.subscribe({
+                  next(resultAction) {
+                    if (action.type === resultAction?.type) {
+                      throw new Error(`The effect for action type "${actionType}" may result in an infinite loop as it returns an action of the same type.`);
+                    }
+                    observer.next(resultAction);
+                  },
+                  error(err) {
+                    console.warn(`Error in effect: ${err.message}`);
+                    observer.complete();
+                  }
+                });
+              } else {
+                if (result?.type === action.type) {
+                  throw new Error(`The effect for action type "${actionType}" returns an action of the same type, this can lead to an infinite loop.`);
                 }
-                return resultAction;
-              })
-            );
+                observer.next(result);
+              }
+            }
+            catch (error: any) {
+              console.warn(`Error in effect: ${error.message}`);
+              observer.complete();
+            }
           }
-          if (result?.type === action.type) {
-            throw new Error(`The effect for action type "${actionType}" returns an action of the same type, this can lead to an infinite loop.`);
-          }
-          return of(result);
+        },
+        error(err) {
+          console.warn(`Error in effect: ${err.message}`);
+          observer.complete();
         }
-        catch (error: any) {
-          console.warn(`Error in effect: ${error.message}`);
-          return EMPTY;
-        }
-      })
-    );
+      });
+      return () => {
+        actionSubscription.unsubscribe();
+        stateSubscription.unsubscribe();
+      };
+    });
   }
 
   effectCreator.toString = () => `${actionType}`;
   effectCreator.trigger = actionType;
-  effectCreator.match = (action: any) => isAction(action) && action.type === actionType;
+  effectCreator.match = (action: any) => isAction(action) && (Array.isArray(actionType) ? actionType.includes(action.type) : action.type === actionType);
 
   return () => effectCreator;
 }
+
 
 /**
  * Creates an RxJS operator function that filters actions based on their type.
