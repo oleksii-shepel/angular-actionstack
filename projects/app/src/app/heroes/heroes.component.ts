@@ -1,7 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 
-import { Store } from '@actioncrew/actionstack';
-import { Unsubscribable } from 'rxjs';
+import { Store, Unsubscribable } from '@actioncrew/actionstack';
 import { Hero } from '../hero';
 import { getHeroesRequest, loadHeroes, selectHeroes } from './heroes.slice';
 
