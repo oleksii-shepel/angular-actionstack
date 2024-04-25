@@ -655,33 +655,33 @@ export class Store {
    * @param {Injector} injector - The injector to use for dependency injection.
    * @returns {Promise<void>}
    */
-  async loadModule(module: FeatureModule, injector: Injector): Promise<void> {
+  loadModule(module: FeatureModule, injector: Injector): Promise<void> {
+
     // Check if the module already exists
     if (this.modules.some(m => m.slice === module.slice)) {
-      return; // Module already exists, return without changes
+      return Promise.resolve(); // Module already exists, return without changes
     }
 
-    await this.lock.acquire();
-    try {
-      await this.waitForIdle();
+    // Dispatch module unloaded action
+    this.systemActions.moduleLoaded(module);
 
-      // Create a new array with the module added
-      const newModules = [...this.modules, module];
+    return this.lock.acquire()
+      .then(() => this.waitForIdle())
+      .then(() => {
+        // Create a new array with the module added
+        const newModules = [...this.modules, module];
 
-      // Update internal state
-      this.modules = newModules;
+        // Update internal state
+        this.modules = newModules;
 
-      // Inject dependencies
-      await this.injectDependencies(injector);
-
-      // Update global state with setup reducer (assuming setupReducer is async)
-      await this.updateState("@global", async (state) => await this.setupReducer(state));
-
-      // Dispatch module loaded action
-      this.systemActions.moduleLoaded(module);
-    } finally {
-      this.lock.release();
-    }
+        // Inject dependencies
+        return this.injectDependencies(injector);
+      })
+      .then(() => this.updateState("@global", state => this.setupReducer(state)))
+      .finally(() => {
+        // Release the lock
+        this.lock.release();
+      });
   }
 
   /**
@@ -690,43 +690,40 @@ export class Store {
    * @param {boolean} [clearState=false] - A flag indicating whether to clear the module's state.
    * @returns {Promise<void>}
    */
-  async unloadModule(module: FeatureModule, clearState: boolean = false): Promise<void> {
+  unloadModule(module: FeatureModule, clearState: boolean = false): Promise<void> {
     // Find the module index in the modules array
     const moduleIndex = this.modules.findIndex(m => m.slice === module.slice);
 
     // Check if the module exists
     if (moduleIndex === -1) {
       console.warn(`Module ${module.slice} not found, cannot unload.`);
-      return; // Module not found, nothing to unload
+      return Promise.resolve(); // Module not found, nothing to unload
     }
 
-    await this.lock.acquire();
-    try {
-      await this.waitForIdle();
+    // Dispatch module unloaded action
+    this.systemActions.moduleUnloaded(module);
 
-      // Remove the module from the internal state
-      this.modules.splice(moduleIndex, 1);
+    return this.lock.acquire()
+      .then(() => this.waitForIdle())
+      .then(() => {
+        // Remove the module from the internal state
+        this.modules.splice(moduleIndex, 1);
 
-      // Eject dependencies
-      await this.ejectDependencies(module);
-
-      // Update global state with optional state clearing
-      await this.updateState("@global", async (state) => {
+        // Eject dependencies
+        return this.ejectDependencies(module);
+      })
+      .then(() => this.updateState("@global", state => {
         if (clearState) {
           // Create a copy and delete the module's slice from state
           return { ...state, [module.slice]: undefined };
         } else {
-          return await this.setupReducer(state); // No state clearing
+          return this.setupReducer(state); // No state clearing
         }
-      }, systemActions.initializeState());
-
-      // Dispatch module unloaded action
-      this.systemActions.moduleUnloaded(module);
-    } finally {
-      this.lock.release();
-    }
+      }, this.systemActions.initializeState()))
+      .then(() => this.lock.release());
   }
 }
+
 
 /**
  * Creates a store instance with the specified main module and optional enhancer.

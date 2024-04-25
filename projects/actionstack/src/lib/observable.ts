@@ -59,6 +59,10 @@ export class CustomObservable<T> implements Subscribable<T>{
     return result instanceof CustomObservable ? result : this;
   }
 
+  complete() {
+    this.observers.forEach(observer => observer.complete());
+  }
+
   static createObserver<T>(observer?: Partial<Observer<T>> | ((value: T) => void)): Observer<T> {
     if (typeof observer === 'function') {
       return {
@@ -115,29 +119,41 @@ export class CustomSubscription implements Unsubscribable {
 }
 // Custom implementation of Subject
 export class CustomSubject<T> extends CustomObservable<T> {
+  protected _value: T | undefined; // Stores the current value of the subject
+
+  constructor(initialValue?: T) {
+    super();
+    this._value = initialValue;
+  }
+
   override next(value: T): void {
     super.next(value);
+    this._value = value; // Update the current value
+  }
+
+  get value(): T | undefined {
+    return this._value; // Expose the current value
   }
 
   asObservable(): CustomObservable<T> {
     return this;
   }
 
-  complete() {
-    this.observers.forEach(observer => observer.complete());
+  override complete() {
+    super.complete();
+    this._value = undefined; // Clear the value on completion
   }
 }
 
 // Custom implementation of BehaviorSubject
 export class CustomBehaviorSubject<T> extends CustomSubject<T> {
-  private _value: T;
 
   constructor(initialValue: T) {
     super();
     this._value = initialValue;
   }
 
-  get value(): T {
+  override get value(): T | undefined {
     return this._value;
   }
 
@@ -145,6 +161,4 @@ export class CustomBehaviorSubject<T> extends CustomSubject<T> {
     this._value = value;
     super.next(value);
   }
-
-
 }

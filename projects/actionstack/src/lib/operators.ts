@@ -1,6 +1,6 @@
 import { Subscribable } from "rxjs";
 import { Lock } from "./lock";
-import { CustomObservable, OperatorFunction } from "./observable";
+import { CustomObservable, CustomSubject, OperatorFunction } from "./observable";
 
 /**
  * Projects each source value to a Promise which is merged in the output Observable
@@ -118,26 +118,34 @@ export function merge<T>(...sources: Subscribable<T>[]): Subscribable<T> {
  */
 export function waitFor(obs: Subscribable<any>, predicate: (value: any) => boolean): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    let resolved = false;
+    let hasValueEmitted = false; // Flag to track if a value has been emitted
+    const value = (obs as CustomSubject<any>)?.value;
+
+    if(value !== undefined) {
+      resolve(value);
+    }
+
     const subscription = obs.subscribe({
       next: value => {
-        if (predicate(value) === true) {
-          resolved = true;
-          resolve(true);
+        if (!hasValueEmitted && predicate(value)) {
+          hasValueEmitted = true;
+          subscription.unsubscribe();
+          resolve(value);
         }
       },
-      error: err => reject(err)
+      error: err => reject(err),
+      complete: () => {
+        if (!hasValueEmitted) {
+          reject(new Error("Predicate not met before completion"));
+        }
+      },
     });
 
     return () => {
-      if (!resolved) {
-        reject(new Error("Promise not resolved."));
-      }
       subscription.unsubscribe();
     };
   });
 }
-
 /**
  * Projects each source value to a Promise which is merged in the output Observable
  * in a serialized fashion waiting for each one to complete before merging the next.
