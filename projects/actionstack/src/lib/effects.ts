@@ -1,4 +1,4 @@
-import { EMPTY, Observable, OperatorFunction, concatMap, filter, isObservable, map, of, withLatestFrom } from 'rxjs';
+import { Observable, OperatorFunction, Subscription, filter, isObservable } from 'rxjs';
 import { Action, SideEffect, isAction } from "./types";
 
 export { createEffect as effect };
@@ -22,38 +22,71 @@ function createEffect(
   actionType: string | string[],
   effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | Observable<Action<any>>
 ): () => SideEffect {
-  function effectCreator(action$: Observable<Action<any>>, state$: Observable<any>, dependencies: Record<string, any>) {
-    return action$.pipe(
-      ofType(actionType),
-      withLatestFrom(state$),
-      concatMap(([action, state]) => {
-        try {
-          const result = effectFn(action, state, dependencies);
-          if (result === null || result === undefined) {
-            throw new Error(`The effect for action type "${actionType}" must return an action or an observable. It currently does not return anything.`);
-          }
-          if (isObservable(result)) {
-            return result.pipe(
-              map((resultAction) => {
-                if (action.type === resultAction?.type) {
-                  throw new Error(`The effect for action type "${actionType}" may result in an infinite loop as it returns an action of the same type.`);
+  function effectCreator(
+    action$: Observable<Action<any>>,
+    state$: Observable<any>,
+    dependencies: Record<string, any>
+  ): Observable<Action<any>> {
+    return new Observable<Action<any>>((subscriber) => {
+      let actionSubscription: Subscription | undefined;
+      const unsubscribers: (() => void)[] = [];
+
+      actionSubscription = action$.subscribe({
+        next: (action) => {
+          if (action.type === actionType) {
+            const stateSubscription = state$.subscribe({
+              next: (state) => {
+                try {
+                  const result = effectFn(action, state, dependencies);
+                  if (result === null || result === undefined) {
+                    throw new Error(`The effect for action type "${actionType}" must return an action or an observable. It currently does not return anything.`);
+                  }
+                  if (isObservable(result)) {
+                    const resultSubscription = result.subscribe(
+                      (resultAction) => {
+                        if (action.type === resultAction?.type) {
+                          throw new Error(`The effect for action type "${actionType}" may result in an infinite loop as it returns an action of the same type.`);
+                        }
+                        subscriber.next(resultAction);
+                      },
+                      (error) => {
+                        console.warn(`Error in effect: ${error.message}`);
+                        subscriber.complete();
+                      }
+                    );
+                    unsubscribers.push(() => resultSubscription.unsubscribe());
+                  }
+                  else if (result?.type === action.type) {
+                    throw new Error(`The effect for action type "${actionType}" returns an action of the same type, this can lead to an infinite loop.`);
+                  } else {
+                    subscriber.next(result);
+                  }
+                } catch (error: any) {
+                  console.warn(`Error in effect: ${error.message}`);
+                  subscriber.complete();
                 }
-                return resultAction;
-              })
-            );
+              },
+              error: (error) => {
+                console.warn(`Error in effect: ${error.message}`);
+                subscriber.complete();
+              }
+            });
+            unsubscribers.push(() => stateSubscription.unsubscribe());
           }
-          if (result?.type === action.type) {
-            throw new Error(`The effect for action type "${actionType}" returns an action of the same type, this can lead to an infinite loop.`);
-          }
-          return of(result);
-        }
-        catch (error: any) {
+        },
+        error: (error) => {
           console.warn(`Error in effect: ${error.message}`);
-          return EMPTY;
+          subscriber.complete();
         }
-      })
-    );
+      });
+
+      return () => {
+        if (actionSubscription) actionSubscription.unsubscribe();
+        unsubscribers.forEach(unsubscribe => unsubscribe());
+      };
+    });
   }
+
 
   effectCreator.toString = () => `${actionType}`;
   effectCreator.trigger = actionType;
