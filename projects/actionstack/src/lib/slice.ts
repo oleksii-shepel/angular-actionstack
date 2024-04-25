@@ -1,7 +1,6 @@
 import { ElementRef, Injectable, OnDestroy, inject } from "@angular/core";
-import { Subscribable, Unsubscribable } from "rxjs";
 import { StoreModule } from "./module";
-import { CustomSubscription } from "./observable";
+import { CustomSubscription, Subscribable, Unsubscribable } from "./observable";
 import { Store } from "./store";
 import { Action, Reducer, SideEffect, SliceStrategy } from "./types";
 

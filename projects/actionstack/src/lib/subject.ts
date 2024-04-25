@@ -1,5 +1,4 @@
-import { Unsubscribable } from 'rxjs';
-import { CustomObservable, Subscribable } from './observable';
+import { CustomObservable, Subscribable, Unsubscribable } from './observable';
 
 /**
  * Function to convert a custom `CustomAsyncSubject` instance into a standard RxJS `Observable`.

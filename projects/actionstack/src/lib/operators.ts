@@ -1,6 +1,5 @@
-import { Subscribable } from "rxjs";
 import { Lock } from "./lock";
-import { CustomObservable, CustomSubject, OperatorFunction } from "./observable";
+import { CustomObservable, CustomSubject, OperatorFunction, Subscribable } from "./observable";
 
 /**
  * Projects each source value to a Promise which is merged in the output Observable

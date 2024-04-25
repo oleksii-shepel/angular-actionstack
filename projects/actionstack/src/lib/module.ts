@@ -1,7 +1,5 @@
 import { Injector, ModuleWithProviders, NgModule } from "@angular/core";
-import { Store } from "./store";
-import { asapScheduler } from "rxjs";
-import { StoreSettings } from "./store";
+import { Store, StoreSettings } from "./store";
 import { FeatureModule, MainModule } from "./types";
 
 
@@ -60,7 +58,7 @@ export class StoreModule {
               StoreModule.store = Store.create(module) as Store;
             }
 
-            asapScheduler.schedule(() => StoreModule.modulesFn.forEach(fn => fn()));
+            queueMicrotask(() => StoreModule.modulesFn.forEach(fn => fn()));
             return StoreModule.store;
           },
           deps: [StoreSettings]

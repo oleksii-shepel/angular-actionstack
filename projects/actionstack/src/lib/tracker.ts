@@ -1,5 +1,4 @@
-import { BehaviorSubject, Observable, OperatorFunction } from "rxjs";
-import { CustomBehaviorSubject, Subscribable } from "./observable";
+import { CustomBehaviorSubject, CustomObservable, OperatorFunction, Subscribable } from "./observable";
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -7,7 +6,7 @@ import { CustomBehaviorSubject, Subscribable } from "./observable";
 export class Tracker {
   /**
    * Map to store the relationship between Observables and their corresponding BehaviorSubjects.
-   * @type {Map<Observable<any>, BehaviorSubject<boolean>>}
+   * @type {Map<Observable<any>, CustomBehaviorSubject<boolean>>}
    * @private
    */
   private entries = new Map<Subscribable<any>, CustomBehaviorSubject<boolean>>();
@@ -99,7 +98,7 @@ export class Tracker {
  * @returns {Observable} The new observable with the side effect.
  */
 export function withStatusTracking(onExecuted = () => {}): OperatorFunction<any, any> {
-  return source => new Observable(observer => {
+  return source => new CustomObservable<any>(observer => {
     const subscription = source.subscribe({
       async next(value) {
         await observer.next(value);

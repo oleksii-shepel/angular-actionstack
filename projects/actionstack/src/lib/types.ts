@@ -1,6 +1,5 @@
 import { InjectionToken, Type } from "@angular/core";
-import { isObservable } from "rxjs";
-import { Subscribable } from "./observable";
+import { Subscribable, isObservable } from "./observable";
 import { Store } from "./store";
 
 /**

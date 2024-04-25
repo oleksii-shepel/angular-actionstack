@@ -14,8 +14,7 @@
   ],
   "peerDependencies": {
     "@angular/core": ">=14.0.0",
-    "@angular/forms": ">=14.0.0",
-    "rxjs": ">=7.5.0"
+    "@angular/forms": ">=14.0.0"
   },
   "devDependencies": {
     "tslib": ">=2.3.0"

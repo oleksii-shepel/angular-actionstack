@@ -1,9 +1,8 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { Unsubscribable } from "rxjs";
 import { action, bindActionCreators } from "./actions";
 import { isValidMiddleware } from "./hash";
 import { Lock } from "./lock";
-import { CustomBehaviorSubject, CustomObservable, CustomSubject, CustomSubscription, Subscribable } from './observable';
+import { CustomBehaviorSubject, CustomObservable, CustomSubject, CustomSubscription, Subscribable, Unsubscribable } from "./observable";
 import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
