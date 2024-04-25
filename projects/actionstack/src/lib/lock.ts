@@ -40,14 +40,14 @@ export class Lock {
    * Releases the lock, allowing the next waiting promise in the queue to acquire it.
    */
   public release(): void {
-    const nextResolve = this.queue.shift();
-    if (nextResolve) {
-      // Unlock the next promise in the queue
-      nextResolve();
-    } else {
-      // If the queue is empty, set isLocked to false
-      this.isLocked = false;
-    }
+     // Resolve all waiting promises
+     while (this.queue.length > 0) {
+       const nextResolve = this.queue.shift();
+       nextResolve && nextResolve();
+     }
+
+     // Release the lock
+     this.isLocked = false;
   }
 }
 
