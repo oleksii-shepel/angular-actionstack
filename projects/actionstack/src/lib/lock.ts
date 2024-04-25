@@ -8,7 +8,6 @@ export class Lock {
    */
   public isLocked: boolean = false;
 
-  private availableSlots: number = 1;
   /**
    * Internal queue to store waiting promises when the lock is acquired.
    */
