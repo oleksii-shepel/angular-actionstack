@@ -27,7 +27,7 @@ export function isObservable(obj: any): obj is Subscribable<unknown> {
 
 // Custom implementation of Observable
 export class CustomObservable<T> implements Subscribable<T>{
-  private observers: Observer<T>[] = [];
+  protected observers: Observer<T>[] = [];
 
   constructor(private _subscribe?: (subscriber: Observer<T>) => void) {}
 
@@ -51,8 +51,8 @@ export class CustomObservable<T> implements Subscribable<T>{
     this.observers.forEach(observer => observer.next(value));
   }
 
-  pipe(...operators: ((source: Subscribable<T>) => Subscribable<T>)[]): Subscribable<T> {
-    let result: CustomObservable<T> | Subscribable<T> = this;
+  pipe(...operators: ((source: CustomObservable<T>) => CustomObservable<T>)[]): CustomObservable<T> {
+    let result: CustomObservable<T> = this;
     for (const operator of operators) {
       result = operator(result);
     }
@@ -122,6 +122,10 @@ export class CustomSubject<T> extends CustomObservable<T> {
   asObservable(): CustomObservable<T> {
     return this;
   }
+
+  complete() {
+    this.observers.forEach(observer => observer.complete());
+  }
 }
 
 // Custom implementation of BehaviorSubject
@@ -141,4 +145,6 @@ export class CustomBehaviorSubject<T> extends CustomSubject<T> {
     this._value = value;
     super.next(value);
   }
+
+
 }

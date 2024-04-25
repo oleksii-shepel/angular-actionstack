@@ -18,7 +18,7 @@ export { createStore as store };
  * This class defines properties that control various behaviors of a store for managing application state.
  */
 export class StoreSettings {
-  dispatchSystemActions = false;
+  dispatchSystemActions = true;
   awaitStatePropagation = true;
   enableMetaReducers = true;
   enableAsyncReducers = true;
@@ -153,11 +153,10 @@ export class Store {
       store.systemActions = bindActionCreators(systemActions, (action: Action<any>) => store.settings.dispatchSystemActions && store.dispatch(action));
 
       // Create action stream observable
-      let action$ = store.actionStream.asObservable();
+      // Subscribe to action stream and process actions
       let count = 0;
 
-      // Subscribe to action stream and process actions
-      store.subscription = action$.pipe(
+      store.subscription = store.actionStream.pipe(
         concatMap(async (action: any) => {
           if (count === 0) {
             console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;");
@@ -225,7 +224,7 @@ export class Store {
   select(selector: (obs: Subscribable<any>) => Subscribable<any>, defaultValue?: any): Subscribable<any> {
     let lastValue: any;
     return new CustomObservable<any>(subscriber => {
-      const subscription = this.currentState.asObservable().pipe((state) => selector(state)).subscribe(selectedValue => {
+      const subscription = this.currentState.asObservable().pipe((state) => (selector(state) as CustomObservable<any>)).subscribe(selectedValue => {
         const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
         if(filteredValue !== lastValue) {
           lastValue = filteredValue;
@@ -541,31 +540,30 @@ export class Store {
    * @protected
    */
   processAction() {
-  return (source: CustomObservable<Action<any>>) =>
-    new CustomObservable<void>(subscriber => {
-      const unsubscribe$ = new CustomSubject<void>();
+    return (source: CustomObservable<Action<any>>) =>
+      new CustomObservable<Action<any>>(subscriber => {
 
-      const subscription = source.pipe(
-        concatMap(async (action: Action<any>) => {
-          try {
-            return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
-          } finally {
-            this.isProcessing.next(false);
+        const subscription = source.pipe(
+          concatMap(async (action: Action<any>) => {
+            try {
+              return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
+            } finally {
+              this.isProcessing.next(false);
+            }
+          })
+        ).subscribe({
+          error: (error) => {
+            console.warn(error.message);
+            subscriber.complete(); // Complete the observable on error
+          },
+          complete: () => {
+            subscriber.complete(); // Complete the observable when the source completes
           }
-        })
-      ).subscribe({
-        error: (error: any) => {
-          console.warn(error.message);
-          subscriber.complete(); // Complete the observable on error
-        },
-        complete: () => {
-          subscriber.complete(); // Complete the observable when the source completes
-        }
-      });
+        });
 
-      return () => subscription.unsubscribe();
-    });
-}
+        return () => subscription.unsubscribe();
+      });
+  }
 
 
   /**
