@@ -1,5 +1,4 @@
 import { Observable } from "rxjs";
-import { sequential } from "./operators";
 import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
@@ -133,69 +132,100 @@ function createSelector<U = any, T = any>(
  *                             * An options object (not currently implemented).
  * @returns A function that takes optional props and projection props as arguments and returns another function that takes the state observable as input and returns an observable of the projected data.
  */
-function createSelectorAsync<U = any, T = any> (
+function createSelectorAsync<U = any, T = any>(
   featureSelector$: ((state: Observable<T>) => Observable<U>) | "@global",
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction
 ): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
 
-  // Check if selectors is an array
   const isSelectorArray = Array.isArray(selectors);
-
-  // Extract the projection function if provided
   const projection = typeof projectionOrOptions === "function" ? projectionOrOptions : undefined;
 
-  // Validate arguments when selectors is an array
   if (isSelectorArray && !projection) {
     throw new Error("Invalid parameters: When 'selectors' is an array, 'projection' function should be provided.");
   }
 
-  // Return a function that takes props and projectionProps as arguments
   return (props?: any[] | any, projectionProps?: any) => {
-
-    // Validate prop lengths if using multiple selectors
     if(Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
 
-    // Return a function that takes the state observable as input
     return (state$: Observable<T>) => {
+      const sliceState$ = new Observable<U>((observer) => {
+        let unsubscribed = false;
+        let didCancel = false;
 
-      // Apply the feature selector or use the entire state
-      const sliceState$ = (featureSelector$ === "@global" ? state$ : (featureSelector$ as Function)(state$)).pipe(
-
-        // Use concatMap to handle asynchronous operations within selectors
-        sequential(async (sliceState: any) => {
-
-          // Handle undefined slice state
-          if (sliceState === undefined) { return sliceState; }
+        const runSelectors = async (sliceState: any) => {
+          if (sliceState === undefined) { return observer.next(undefined); }
 
           let selectorResults: U[] | U;
 
-          // Handle array of selectors
           if (Array.isArray(selectors)) {
-            // Use Promise.all to wait for all async selectors to resolve
-            selectorResults = await Promise.all(selectors.map((selector, index) => selector(sliceState, props[index])));
+            try {
+              selectorResults = await Promise.all(
+                selectors.map(async (selector, index) => {
+                  if (unsubscribed || didCancel) return;
+                  return selector(sliceState, props ? props[index] : undefined);
+                })
+              );
 
-            // Check if any selector result is undefined
-            return (selectorResults.some(result => result === undefined))
-              ? undefined as U  // Return undefined if any selector result is undefined
-              : projection ? projection(selectorResults, projectionProps) : selectorResults; // Apply projection or return results
+              if (unsubscribed || didCancel) return;
 
+              const isUndefined = (selectorResults as U[]).some(result => result === undefined);
+
+              observer.next(
+                isUndefined
+                  ? undefined
+                  : projection
+                  ? projection(selectorResults as U[], projectionProps)
+                  : selectorResults
+              );
+            } catch (error) {
+              if (!unsubscribed && !didCancel) {
+                observer.error(error);
+              }
+            }
           } else {
-            // Handle single selector
-            // Await the result of the single selector function (can be Promise or Observable)
-            selectorResults = await selectors(sliceState, props);
+            try {
+              selectorResults = await selectors(sliceState, props);
 
-            // Check if single selector result is undefined
-            return (selectorResults === undefined)
-              ? undefined as U  // Return undefined if single selector result is undefined
-              : projection ? projection(selectorResults, projectionProps) : selectorResults; // Apply projection or return result
+              if (unsubscribed || didCancel) return;
+
+              observer.next(
+                selectorResults === undefined
+                  ? undefined
+                  : projection
+                  ? projection(selectorResults, projectionProps)
+                  : selectorResults
+              );
+            } catch (error) {
+              if (!unsubscribed && !didCancel) {
+                observer.error(error);
+              }
+            }
           }
-        })
-      );
+        };
 
-      // Return the observable with projected or selected data
+        const subscription = (featureSelector$ === "@global" ? state$ : (featureSelector$(state$)) as any).subscribe({
+          next: (sliceState: any) => runSelectors(sliceState),
+          error: (error: any) => {
+            if (!unsubscribed && !didCancel) {
+              observer.error(error);
+            }
+          },
+          complete: () => {
+            if (!unsubscribed && !didCancel) {
+              observer.complete();
+            }
+          }
+        });
+
+        return () => {
+          unsubscribed = true;
+          subscription.unsubscribe();
+        };
+      });
+
       return sliceState$;
     };
   };
