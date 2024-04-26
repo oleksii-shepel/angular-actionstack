@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "minify": "node terser.mjs"
+    "minify": "node terser.mjs",
+    "bundle": "dts-bundle --name @actioncrew/actionstack --main ./dist/actionstack/public-api.d.ts && dts-bundle --name @actioncrew/actionstack/tools --main ./dist/actionstack/tools/public-api.d.ts && npm run minify"
   },
   "private": true,
   "dependencies": {

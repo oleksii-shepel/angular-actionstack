@@ -49,3 +49,16 @@ await deleteFiles(maps);
 
 let js = allFiles.filter(path => path.match(/\.[mc]?js$/));
 await minifyFiles(js);
+
+let definitions = allFiles.filter(path => !path.includes('@actioncrew') && path.match(/\.d\.ts$/));
+await deleteFiles(definitions);
+
+fs.rmdirSync('./dist/actionstack/lib', {recursive: true, force: true});
+fs.rmdirSync('./dist/actionstack/esm2022', {recursive: true, force: true});
+
+fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack.d.ts', './dist/actionstack/index.d.ts');
+fs.copyFileSync('./dist/actionstack/tools/@actioncrew/actionstack/tools.d.ts', './dist/actionstack/tools/index.d.ts');
+
+fs.rmdirSync('./dist/actionstack/@actioncrew', {recursive: true, force: true});
+fs.rmdirSync('./dist/actionstack/tools/@actioncrew', {recursive: true, force: true});
+fs.rmdirSync('./dist/actionstack/tools/lib', {recursive: true, force: true});
