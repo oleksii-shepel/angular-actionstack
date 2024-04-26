@@ -617,7 +617,6 @@ export class Store {
           effectsSubscription.unsubscribe();
           effectsSubscription = undefined;
         }
-        this.tracker.remove(effects$);
         this.systemActions.effectsUnregistered(args);
       };
 
@@ -635,13 +634,16 @@ export class Store {
             }
           },
           error: (err: any) => subscriber.error(err),
-          complete: () => subscriber.complete(),
+          complete: () => { this.tracker.setStatus(effects$, true); subscriber.complete() },
         });
 
         return () => unregisterEffects();
       }).catch(err => subscriber.error(err));
 
-      return () => unregisterEffects();
+      return () => {
+        unregisterEffects();
+        this.tracker.remove(effects$);
+      }
     });
 
     return effects$;
