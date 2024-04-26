@@ -192,7 +192,7 @@ export class Store {
    * @param {Action<any>} action - The action to dispatch.
    * @throws {Error} Throws an error if the action is not a plain object, does not have a defined "type" property, or if the "type" property is not a string.
    */
-  dispatch(action: Action<any>) {
+  dispatch(action: Action<any>): Promise<boolean> {
     if (!isPlainObject(action)) {
       throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
     }
@@ -204,6 +204,7 @@ export class Store {
     }
 
     this.actionStream.next(action);
+    return this.waitForIdle();
   }
 
   /**
@@ -620,8 +621,9 @@ export class Store {
         this.systemActions.effectsUnregistered(args);
       };
 
+      this.systemActions.effectsRegistered(args);
+
       this.waitForIdle().then(() => {
-        this.systemActions.effectsRegistered(args);
         this.tracker.track(effects$);
 
         const sideEffects = args.map(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies));
@@ -636,10 +638,7 @@ export class Store {
           complete: () => subscriber.complete(),
         });
 
-        return () => {
-          effectsSubscription?.unsubscribe();
-          unregisterEffects();
-        };
+        return () => unregisterEffects();
       }).catch(err => subscriber.error(err));
 
       return () => unregisterEffects();
