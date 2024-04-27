@@ -619,7 +619,7 @@ export class Store {
         this.systemActions.effectsUnregistered(args);
       };
 
-      const promise = this.waitForIdle().then(() => {
+      this.waitForIdle().then(() => {
         this.tracker.track(effects$);
 
         const sideEffects = args.map(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies));
