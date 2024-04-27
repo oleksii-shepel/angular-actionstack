@@ -619,9 +619,7 @@ export class Store {
         this.systemActions.effectsUnregistered(args);
       };
 
-      this.systemActions.effectsRegistered(args);
-
-      this.waitForIdle().then(() => {
+      const promise = this.waitForIdle().then(() => {
         this.tracker.track(effects$);
 
         const sideEffects = args.map(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies));
@@ -645,6 +643,7 @@ export class Store {
       }
     });
 
+    this.systemActions.effectsRegistered(args);
     return effects$;
   }
 
@@ -661,17 +660,11 @@ export class Store {
       return Promise.resolve(); // Module already exists, return without changes
     }
 
-    // Dispatch module loaded action
-    this.systemActions.moduleLoaded(module);
-
-    return this.lock.acquire()
+    const promise = this.lock.acquire()
       .then(() => this.waitForIdle())
       .then(() => {
         // Create a new array with the module added
-        const newModules = [...this.modules, module];
-
-        // Update internal state
-        this.modules = newModules;
+        this.modules = [...this.modules, module];
 
         // Inject dependencies
         return this.injectDependencies(injector);
@@ -681,6 +674,10 @@ export class Store {
         // Release the lock
         this.lock.release();
       });
+    
+    // Dispatch module loaded action
+    this.systemActions.moduleLoaded(module);
+    return promise;
   }
 
   /**
@@ -699,10 +696,7 @@ export class Store {
       return Promise.resolve(); // Module not found, nothing to unload
     }
 
-    // Dispatch module unloaded action
-    this.systemActions.moduleUnloaded(module);
-
-    return this.lock.acquire()
+    const promise = this.lock.acquire()
       .then(() => this.waitForIdle())
       .then(() => {
         // Remove the module from the internal state
@@ -720,6 +714,10 @@ export class Store {
         }
       }, this.systemActions.initializeState()))
       .then(() => this.lock.release());
+    
+    // Dispatch module unloaded action
+    this.systemActions.moduleUnloaded(module);
+    return promise;
   }
 }
 
