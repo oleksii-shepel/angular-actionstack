@@ -1,7 +1,6 @@
 export * from "./actions";
 export * from "./effects";
 export * from "./hash";
-export * from "./lock";
 export * from "./module";
 export * from "./observable";
 export * from "./operators";
