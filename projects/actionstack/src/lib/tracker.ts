@@ -4,6 +4,7 @@ import { CustomBehaviorSubject, CustomObservable, OperatorFunction, Subscribable
  * A utility class for tracking the execution status of Observables.
  */
 export class Tracker {
+  timeout = 30000;
   /**
    * Map to store the relationship between Observables and their corresponding BehaviorSubjects.
    * @type {Map<Observable<any>, CustomBehaviorSubject<boolean>>}
@@ -64,10 +65,9 @@ export class Tracker {
 
   /**
    * Asynchronously checks if all tracked Observables have been executed within a specified timeout period.
-   * @param {number} [timeoutMs=30000] - The timeout period in milliseconds. Defaults to 30000 milliseconds (30 seconds).
    * @returns {Promise<void>} A Promise that resolves when all tracked Observables have been executed within the timeout period, or rejects if the timeout is reached.
    */
-  checkAllExecuted(timeoutMs = 30000): Promise<void> {
+  get checkAllExecuted(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const allExecutedPromise = new Promise<void>((innerResolve, innerReject) => {
         const entries = Array.from(this.entries.values());
@@ -80,7 +80,7 @@ export class Tracker {
       });
 
       const timeoutPromise = new Promise((innerResolve, innerReject) => {
-        setTimeout(() => innerReject('Timeout reached'), timeoutMs);
+        setTimeout(() => innerReject('Timeout reached'), this.timeout);
       });
 
       Promise.race([allExecutedPromise, timeoutPromise])
