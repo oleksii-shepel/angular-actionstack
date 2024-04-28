@@ -41,6 +41,6 @@ export function signature() {
  * @param {string} sign  - The signature string to be validated.
  * @returns {boolean}    - True if the signature is a valid format and the internal hash check passes, false otherwise.
  */
-export function isValidMiddleware(sign: string) {
+export function isValidSignature(sign: string) {
   return typeof sign === 'string' && (sign = sign.replace(/\./g, '')).length === 10 && hash(sign.slice(0, 7)) === sign.slice(7, 10);
 }
