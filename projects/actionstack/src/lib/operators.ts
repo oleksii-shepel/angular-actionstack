@@ -114,28 +114,24 @@ export function merge<T>(...sources: Subscribable<T>[]): Subscribable<T> {
  * @param {(value: any) => boolean} predicate - The predicate function to evaluate the values emitted by the observable stream.
  * @returns {Promise<boolean>} A promise that resolves to true when the predicate condition is met, or false if the observable completes without satisfying the predicate.
  */
-export function waitFor(obs: Subscribable<any>, predicate: (value: any) => boolean): Promise<boolean> {
+export function waitFor<T>(obs: Subscribable<T>, predicate: (value: T) => boolean): Promise<T> {
+  const value = (obs as CustomSubject<T>)?.value;
+
+  if (value !== undefined && predicate(value)) {
+    return Promise.resolve(value);
+  }
+
   return new Promise((resolve, reject) => {
-    let hasValueEmitted = false; // Flag to track if a value has been emitted
-    const value = (obs as CustomSubject<any>)?.value;
-
-    if(value !== undefined) {
-      resolve(value);
-    }
-
     const subscription = obs.subscribe({
       next: value => {
-        if (!hasValueEmitted && predicate(value)) {
-          hasValueEmitted = true;
+        if (predicate(value)) {
           subscription.unsubscribe();
           resolve(value);
         }
       },
       error: err => reject(err),
       complete: () => {
-        if (!hasValueEmitted) {
-          reject(new Error("Predicate not met before completion"));
-        }
+        reject(new Error("Predicate not met before completion"));
       },
     });
 
