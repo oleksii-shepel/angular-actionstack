@@ -90,6 +90,40 @@ export class Tracker {
   }
 }
 
+export function startTracking(callback: (startTime: number) => void): OperatorFunction<any, any> {
+  return source => source.pipe(
+    tap(() => {
+      if (typeof performance !== 'undefined' && performance.now) {
+        const startTime = performance.now();
+        callback(startTime);
+      }
+    })
+  );
+}
+
+export function finishTracking(callback: (endTime: number) => void): OperatorFunction<any, any> {
+  return source => new CustomObservable<any>(observer => {
+    const subscription = source.subscribe({
+      async next(value) {
+        await observer.next(value);
+        if (typeof performance !== 'undefined' && performance.now) {
+          const endTime = performance.now();
+          callback(endTime);
+        }
+      },
+      error(err) {
+        observer.error(err);
+      },
+      complete() {
+        observer.complete();
+      }
+    });
+
+    // Unsubscribe on unsubscribe
+    return () => subscription.unsubscribe();
+  });
+}
+
 /**
  * Creates an observable that mirrors the source observable with an additional
  * side effect function `onExecuted` executed after each emitted value.
