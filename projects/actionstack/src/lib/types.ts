@@ -361,18 +361,6 @@ function isBoxed(value: any) {
 }
 
 /**
- * Checks if a value is a primitive type.
- *
- * This function checks if a value is `undefined`, `null`, or a non-object type.
- *
- * @param value - The value to check if it's primitive.
- * @returns boolean - True if the value is primitive, false otherwise.
- */
-function isPrimitive(value: any) {
-  return value === undefined || value === null || typeof value !== 'object';
-}
-
-/**
  * Checks if a value is a Promise object.
  *
  * This function uses a trick to identify promises. It resolves the value with `Promise.resolve` and compares the resolved value with the original value.
