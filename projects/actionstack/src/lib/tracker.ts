@@ -90,6 +90,11 @@ export class Tracker {
   }
 }
 
+/**
+ * A custom observable operator that starts tracking the time.
+ * @param {function} callback - The callback function to call when tracking starts.
+ * @returns {OperatorFunction<any, any>} The operator function.
+ */
 export function startTracking(callback: (startTime: number) => void): OperatorFunction<any, any> {
   return source => source.pipe(
     tap(() => {
@@ -101,6 +106,11 @@ export function startTracking(callback: (startTime: number) => void): OperatorFu
   );
 }
 
+/**
+ * A custom observable operator that finishes tracking the time.
+ * @param {function} callback - The callback function to call when tracking finishes.
+ * @returns {OperatorFunction<any, any>} The operator function.
+ */
 export function finishTracking(callback: (endTime: number) => void): OperatorFunction<any, any> {
   return source => new CustomObservable<any>(observer => {
     const subscription = source.subscribe({
