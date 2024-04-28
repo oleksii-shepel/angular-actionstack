@@ -581,8 +581,7 @@ export class Store {
       dispatch: async (action: any) => await dispatch(action),
       isProcessing: this.isProcessing,
       dependencies: () => this.pipeline.dependencies,
-      strategy: () => this.pipeline.strategy,
-      lock: this.lock
+      strategy: () => this.pipeline.strategy
     };
 
     const middlewareAPI = {
