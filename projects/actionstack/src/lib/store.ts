@@ -1,6 +1,6 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { action, bindActionCreators } from "./actions";
-import { isValidMiddleware } from "./hash";
+import { isValidSignature } from "./hash";
 import { CustomBehaviorSubject, CustomObservable, CustomSubject, CustomSubscription, Subscribable, Unsubscribable } from "./observable";
 import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
@@ -590,7 +590,7 @@ export class Store {
     };
 
     // Build middleware chain
-    const chain = [starter(isValidMiddleware(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
+    const chain = [starter(isValidSignature(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
     // Compose middleware chain with dispatch function
     dispatch = (chain.length === 1 ? chain[0] : chain.reduce((a, b) => (...args: any[]) => a(b(...args))))(this.dispatch.bind(this));
 
