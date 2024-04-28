@@ -1,6 +1,7 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { action, bindActionCreators } from "./actions";
 import { isValidSignature } from "./hash";
+import { Lock } from "./lock";
 import { CustomBehaviorSubject, CustomObservable, CustomSubject, CustomSubscription, Subscribable, Unsubscribable } from "./observable";
 import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
@@ -113,6 +114,8 @@ export class Store {
   protected systemActions = { ...systemActions };
   protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
+  protected lock = new Lock();
+  
   /**
    * Creates a new store instance with the provided mainModule and optional enhancer.
    * @param {MainModule} mainModule - The main module containing middleware, reducer, dependencies, and strategy.
@@ -563,7 +566,6 @@ export class Store {
       });
   }
 
-
   /**
    * Applies middleware to the store's dispatch method.
    * @returns {Store} The store instance with applied middleware.
@@ -581,7 +583,8 @@ export class Store {
       dispatch: async (action: any) => await dispatch(action),
       isProcessing: this.isProcessing,
       dependencies: () => this.pipeline.dependencies,
-      strategy: () => this.pipeline.strategy
+      strategy: () => this.pipeline.strategy,
+      lock: this.lock
     };
 
     const middlewareAPI = {
@@ -658,10 +661,9 @@ export class Store {
       return Promise.resolve(); // Module already exists, return without changes
     }
 
-    const promise = this.waitForIdle()
+    const promise = this.lock.acquire()
+      .then(() => this.waitForIdle())
       .then(() => {
-        this.isProcessing.next(true);
-        
         // Create a new array with the module added
         this.modules = [...this.modules, module];
 
@@ -671,7 +673,7 @@ export class Store {
       .then(() => this.updateState("@global", state => this.setupReducer(state)))
       .finally(() => {
         // Release the lock
-        this.isProcessing.next(false);
+        this.lock.release();
       });
     
     // Dispatch module loaded action
@@ -695,10 +697,9 @@ export class Store {
       return Promise.resolve(); // Module not found, nothing to unload
     }
 
-    const promise = this.waitForIdle()
+    const promise = this.lock.acquire()
+      .then(() => this.waitForIdle())
       .then(() => {
-        this.isProcessing.next(true);
-        
         // Remove the module from the internal state
         this.modules.splice(moduleIndex, 1);
 
@@ -713,14 +714,13 @@ export class Store {
           return this.setupReducer(state); // No state clearing
         }
       }, this.systemActions.initializeState()))
-      .then(() => this.isProcessing.next(false));
+      .then(() => this.lock.release());
     
     // Dispatch module unloaded action
     this.systemActions.moduleUnloaded(module);
     return promise;
   }
 }
-
 
 /**
  * Creates a store instance with the specified main module and optional enhancer.
@@ -731,5 +731,3 @@ export class Store {
 export function createStore(mainModule: MainModule, enhancer?: StoreEnhancer) {
   return Store.create(mainModule, enhancer);
 }
-
-
