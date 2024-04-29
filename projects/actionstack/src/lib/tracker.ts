@@ -72,21 +72,14 @@ export class Tracker {
    */
   get allExecuted(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const allExecutedPromise = new Promise<void>((innerResolve, innerReject) => {
-        const entries = Array.from(this.entries.values());
-        const areAllExecuted = entries.every(executed => executed.value === true);
-        if (areAllExecuted) {
-          innerResolve();
-        } else {
-          innerReject('Not all entries are executed');
-        }
-      });
-
       const timeoutPromise = new Promise((innerResolve, innerReject) => {
         setTimeout(() => innerReject('Timeout reached'), this.timeout);
       });
 
-      Promise.race([allExecutedPromise, timeoutPromise])
+      Promise.race([
+        Promise.all(this.entries.map(subject => new Promise(innerResolve => subject.subscribe(innerResolve)))),
+        timeoutPromise
+      ])
         .then(() => resolve())
         .catch((error) => reject(error));
     });
