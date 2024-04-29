@@ -76,7 +76,7 @@ export class Tracker {
         const timeoutId = setTimeout(() => innerReject('Timeout reached'), this.timeout);
         // Clear the timeout when the outer promise resolves or rejects (regardless of the source)
         Promise.race([
-          Promise.all(this.entries.map(subject => new Promise(innerResolve => subject.subscribe(innerResolve)))),
+          Promise.all(this.entries.map(subject => new Promise(innerResolve => subject.subscribe(value => value && innerResolve())))),
           timeoutPromise
         ]) // Combine both promises
           .then(() => {
