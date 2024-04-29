@@ -28,11 +28,11 @@ export const reducer = (state = initialState, action: Action<any>) => {
     case loadHeroSuccess.type:
       return { ...state, loading: false, hero: action.payload.hero };
     case loadHeroFailure.type:
-      return { ...state, loading: false, error: action.payload.hero };
+      return { ...state, loading: false, error: action.payload.error };
     default:
       return state;
   }
 };
 
 export const feature = featureSelector(slice);
-export const heroSelector = selector(feature, state => state.hero);
+export const heroSelector = selector(feature, (state) => state.hero);

@@ -624,15 +624,19 @@ export class Store {
         this.tracker.track(effects$);
 
         const sideEffects = args.map(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies));
-
+        let effectsExecutedCount = 0;
         effectsSubscription = (this.pipeline.strategy === "concurrent" ? merge : concat)(...sideEffects).subscribe({
           next: (childAction: any) => {
             if (isAction(childAction)) {
               this.dispatch(childAction);
             }
+            effectsExecutedCount++;
+            if(effectsExecutedCount === args.length) {
+              this.tracker.setStatus(effects$, true);
+            }
           },
           error: (err: any) => subscriber.error(err),
-          complete: () => { this.tracker.setStatus(effects$, true); subscriber.complete() },
+          complete: () => { subscriber.complete() },
         });
 
         return () => unregisterEffects();
