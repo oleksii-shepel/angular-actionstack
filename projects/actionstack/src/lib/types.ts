@@ -1,5 +1,5 @@
 import { InjectionToken, Type } from "@angular/core";
-import { Subscribable, isObservable } from "./observable";
+import { IObservable, isObservable } from "./observable";
 import { Store } from "./store";
 
 /**
@@ -135,7 +135,7 @@ export interface ProjectionFunction {
  *   The side effect function can use the provided observables and dependencies to perform its tasks
  *   and potentially emit new actions to be dispatched back to the store.
  */
-export type SideEffect = (action: Subscribable<Action<any>>, state: Subscribable<any>, dependencies: Record<string, any>) => Subscribable<Action<any>>;
+export type SideEffect = (action: IObservable<Action<any>>, state: IObservable<any>, dependencies: Record<string, any>) => IObservable<Action<any>>;
 
 /**
  * Type alias representing a recursive tree structure.

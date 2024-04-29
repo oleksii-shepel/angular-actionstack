@@ -2,7 +2,7 @@ import { InjectionToken, Injector, Type, inject } from "@angular/core";
 import { action, bindActionCreators } from "./actions";
 import { isValidSignature } from "./hash";
 import { Lock } from "./lock";
-import { CustomBehaviorSubject, CustomObservable, CustomSubject, CustomSubscription, Subscribable, Unsubscribable } from "./observable";
+import { CustomBehaviorSubject, CustomObservable, CustomSubject, CustomSubscription, IObservable, Unsubscribable } from "./observable";
 import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
@@ -115,7 +115,7 @@ export class Store {
   protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
   protected lock = new Lock();
-  
+
   /**
    * Creates a new store instance with the provided mainModule and optional enhancer.
    * @param {MainModule} mainModule - The main module containing middleware, reducer, dependencies, and strategy.
@@ -221,7 +221,7 @@ export class Store {
    * @param {*} [defaultValue] - The default value to use if the selected value is undefined.
    * @returns {Observable<any>} An observable stream with the selected value.
    */
-  select(selector: (obs: Subscribable<any>) => Subscribable<any>, defaultValue?: any): Subscribable<any> {
+  select(selector: (obs: IObservable<any>) => IObservable<any>, defaultValue?: any): IObservable<any> {
     let lastValue: any;
     return new CustomObservable<any>(subscriber => {
       const subscription = this.currentState.asObservable().pipe((state) => (selector(state) as CustomObservable<any>)).subscribe(selectedValue => {
@@ -323,7 +323,7 @@ export class Store {
     let stateUpdated = this.currentState.next(newState);
     let actionHandled = this.currentAction.next(action);
     let effectsExecuted = this.tracker.allExecuted;
-    
+
     if (this.settings.awaitStatePropagation) {
       await Promise.allSettled([stateUpdated, actionHandled, effectsExecuted]);
     }
@@ -541,7 +541,7 @@ export class Store {
    * @protected
    */
   processAction() {
-    return (source: CustomObservable<Action<any>>) =>
+    return (source: IObservable<Action<any>>) =>
       new CustomObservable<Action<any>>(subscriber => {
 
         const subscription = source.pipe(
@@ -607,7 +607,7 @@ export class Store {
    * @returns {Observable<any>} An observable stream extended with the specified side effects.
    * @protected
    */
-  extend(...args: SideEffect[]): Subscribable<any> {
+  extend(...args: SideEffect[]): IObservable<any> {
     const dependencies = this.pipeline.dependencies;
 
     const effects$ = new CustomObservable<any>(subscriber => {
@@ -675,7 +675,7 @@ export class Store {
         // Release the lock
         this.lock.release();
       });
-    
+
     // Dispatch module loaded action
     this.systemActions.moduleLoaded(module);
     return promise;
@@ -715,7 +715,7 @@ export class Store {
         }
       }, this.systemActions.initializeState()))
       .then(() => this.lock.release());
-    
+
     // Dispatch module unloaded action
     this.systemActions.moduleUnloaded(module);
     return promise;

@@ -1,6 +1,6 @@
 import { ElementRef, Injectable, OnDestroy, inject } from "@angular/core";
 import { StoreModule } from "./module";
-import { CustomSubscription, Subscribable, Unsubscribable } from "./observable";
+import { CustomSubscription, IObservable, ISubscription } from "./observable";
 import { Store } from "./store";
 import { Action, Reducer, SideEffect, SliceStrategy } from "./types";
 
@@ -29,7 +29,7 @@ export interface SliceOptions {
 @Injectable()
 export class Slice implements OnDestroy {
   private opts: SliceOptions;
-  private subscription = CustomSubscription.EMPTY as Unsubscribable;
+  private subscription = CustomSubscription.EMPTY as ISubscription;
   private elRef!: ElementRef<HTMLElement>;
 
   /**
@@ -84,7 +84,7 @@ export class Slice implements OnDestroy {
    * @param defaultValue - A default value to return if the selected portion of the state is undefined.
    * @returns An observable of the selected portion of the state.
    */
-  select<U = any, T = any>(selector: (obs: Subscribable<T>) => Subscribable<U>, defaultValue?: any): any {
+  select<U = any, T = any>(selector: (obs: IObservable<T>) => IObservable<U>, defaultValue?: any): any {
     return this.store.select(selector, defaultValue);
   }
 

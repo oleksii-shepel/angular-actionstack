@@ -1,4 +1,4 @@
-import { CustomObservable, Subscribable, Unsubscribable } from './observable';
+import { CustomObservable, IObservable, ISubscription } from './observable';
 
 /**
  * Function to convert a custom `CustomAsyncSubject` instance into a standard RxJS `Observable`.
@@ -8,7 +8,7 @@ import { CustomObservable, Subscribable, Unsubscribable } from './observable';
  * @param customAsyncSubject - The `CustomAsyncSubject` instance to convert.
  * @returns Observable<T> - The resulting RxJS `Observable`.
  */
-export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Subscribable<T> {
+export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): IObservable<T> {
   let lastValue = undefined;
   return new CustomObservable<T>((subscriber) => {
 
@@ -57,7 +57,7 @@ export class AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  subscribe(observer: AsyncObserver<T>): Unsubscribable {
+  subscribe(observer: AsyncObserver<T>): ISubscription {
     this.observers.push(observer);
     return {
       unsubscribe: () => {
@@ -66,7 +66,7 @@ export class AsyncObservable<T> {
           this.observers.splice(index, 1);
         }
       }
-    } as Unsubscribable;
+    } as ISubscription;
   }
 
   /**
@@ -126,7 +126,7 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  override subscribe(observer: Partial<AsyncObserver<T>>): Unsubscribable {
+  override subscribe(observer: Partial<AsyncObserver<T>>): ISubscription {
     // Convert the unsubscribe function to a Subscription object
     return super.subscribe(observer as AsyncObserver<T>);
   }

@@ -16,12 +16,18 @@ export interface Unsubscribable {
 }
 
 /**
- * Represents a function that takes a source `Subscribable<T>` and returns a new `Subscribable<R>`.
+ * Alias for the ISubscription interface.
+ * @type {ISubscription}
+ */
+export type ISubscription = Unsubscribable;
+
+/**
+ * Represents a function that takes a source `IObservable<T>` and returns a new `IObservable<R>`.
  * @typeParam T - The type of the elements that will be received.
  * @typeParam R - The type of the elements that will be emitted.
  */
 export interface OperatorFunction<T, R>{
-  (source: Subscribable<T>): Subscribable<R>;
+  (source: IObservable<T>): IObservable<R>;
 };
 
 /**
@@ -29,21 +35,36 @@ export interface OperatorFunction<T, R>{
  * @typeParam T - The type of the elements that will be received.
  */
 export interface Subscribable<T> {
-  subscribe(observerOrNext: Partial<Observer<T>> | ((value: T) => void) | void): Unsubscribable;
+  subscribe(observerOrNext: Partial<Observer<T>> | ((value: T) => void) | void): ISubscription;
+}
+
+/**
+ * Interface representing an object that can be piped through a series of operators.
+ */
+export interface Pipeable<T, R> {
+  pipe<T, R>(...operators: OperatorFunction<T, R>[]): IObservable<R>;
+}
+
+/**
+ * Represents an observable object that can be subscribed to and piped through a series of operators.
+ * @type {T} - The type of the elements that will be observed.
+ */
+export interface IObservable<T> extends Subscribable<T> {
+  pipe<R>(...operators: OperatorFunction<T, R>[]): IObservable<R>;
 }
 
 /**
  * Represents an object that can be both subscribed to and can act as an observer.
  * @typeParam T - The type of the elements that will be received.
  */
-export type Subscriber<T> = Unsubscribable & Observer<T>;
+export type Subscriber<T> = ISubscription & Observer<T>;
 
 /**
  * Checks if an object is subscribable.
  * @param obj - The object to check.
  * @returns `true` if the object is subscribable, otherwise `false`.
  */
-export function isObservable(obj: any): obj is Subscribable<unknown> {
+export function isObservable(obj: any): obj is IObservable<unknown> {
   // The !! is to ensure that this publicly exposed function returns
   // `false` if something like `null` or `0` is passed.
   return !!obj && (typeof obj?.subscribe === 'function');
@@ -53,7 +74,7 @@ export function isObservable(obj: any): obj is Subscribable<unknown> {
  * Custom implementation of Observable.
  * @typeParam T - The type of the elements that will be received.
  */
-export class CustomObservable<T> implements Subscribable<T> {
+export class CustomObservable<T> implements IObservable<T> {
   /**
    * Array to hold the observers.
    */
@@ -68,9 +89,9 @@ export class CustomObservable<T> implements Subscribable<T> {
   /**
    * Subscribes to the observable sequence.
    * @param observer - A partial observer or a callback function to receive `next` notifications.
-   * @returns An `Unsubscribable` object representing the subscription.
+   * @returns An `ISubscription` object representing the subscription.
    */
-  subscribe(observer?: Partial<Observer<T>> | ((value: T) => void)): Unsubscribable {
+  subscribe(observer?: Partial<Observer<T>> | ((value: T) => void)): ISubscription {
     const fullObserver = CustomObservable.createObserver(observer);
     this.observers.push(fullObserver);
 
@@ -99,12 +120,12 @@ export class CustomObservable<T> implements Subscribable<T> {
    * @param operators - Functions that take a source CustomObservable and return a new CustomObservable.
    * @returns A CustomObservable that is the result of the operations applied in sequence.
    */
-  pipe(...operators: ((source: CustomObservable<T>) => CustomObservable<T>)[]): CustomObservable<T> {
+  pipe<R>(...operators: OperatorFunction<T, R>[]): IObservable<R> {
     let result: CustomObservable<T> = this;
     for (const operator of operators) {
-      result = operator(result);
+      result = operator(result) as any;
     }
-    return result instanceof CustomObservable ? result : this;
+    return (result instanceof CustomObservable ? result : this) as any;
   }
 
   /**
@@ -145,7 +166,7 @@ export class CustomObservable<T> implements Subscribable<T> {
 /**
  * Represents a subscription that can be closed to release resources.
  */
-export class CustomSubscription implements Unsubscribable {
+export class CustomSubscription implements ISubscription {
   /**
    * Indicates whether the subscription is closed.
    */
@@ -154,7 +175,7 @@ export class CustomSubscription implements Unsubscribable {
   /**
    * Array to hold the child subscriptions.
    */
-  private subscriptions: Unsubscribable[] = [];
+  private subscriptions: ISubscription[] = [];
 
   /**
    * Creates an instance of CustomSubscription.
@@ -177,7 +198,7 @@ export class CustomSubscription implements Unsubscribable {
    * Adds a child subscription to the current subscription.
    * @param subscription - The subscription to add.
    */
-  add(subscription: Unsubscribable): void {
+  add(subscription: ISubscription): void {
     this.subscriptions.push(subscription);
   }
 
@@ -185,7 +206,7 @@ export class CustomSubscription implements Unsubscribable {
    * Removes a child subscription from the current subscription.
    * @param subscription - The subscription to remove.
    */
-  remove(subscription: Unsubscribable): void {
+  remove(subscription: ISubscription): void {
     const index = this.subscriptions.indexOf(subscription);
     if (index !== -1) {
       this.subscriptions.splice(index, 1);

@@ -1,4 +1,4 @@
-import { CustomObservable, OperatorFunction, Subscribable, isObservable } from './observable';
+import { CustomObservable, IObservable, OperatorFunction, isObservable } from './observable';
 import { Action, SideEffect, isAction } from "./types";
 
 export { createEffect as effect };
@@ -20,9 +20,9 @@ export { createEffect as effect };
  */
 function createEffect(
   actionType: string | string[],
-  effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | Subscribable<Action<any>>
+  effectFn: (action: Action<any>, state: any, dependencies: Record<string, any>) => Action<any> | IObservable<Action<any>>
 ): () => SideEffect {
-  function effectCreator(action$: Subscribable<Action<any>>, state$: Subscribable<any>, dependencies: Record<string, any>) {
+  function effectCreator(action$: IObservable<Action<any>>, state$: IObservable<any>, dependencies: Record<string, any>) {
     return new CustomObservable<Action<any>>((observer) => {
       let currentState: any;
       const stateSubscription = state$.subscribe(state => currentState = state);
@@ -31,7 +31,7 @@ function createEffect(
           if (!isAction(action)) return;
           if (Array.isArray(actionType) ? actionType.includes(action.type) : action.type === actionType) {
             try {
-              const result = effectFn(action, currentState, dependencies) as (Subscribable<Action<any>> | Action<any>);
+              const result = effectFn(action, currentState, dependencies) as (IObservable<Action<any>> | Action<any>);
               if (result === null || result === undefined) {
                 throw new Error(`The effect for action type "${actionType}" must return an action or an observable. It currently does not return anything.`);
               }
@@ -87,8 +87,8 @@ function createEffect(
  * @param {...string} types - A variable number of strings representing the action types to filter by.
  * @returns {OperatorFunction<Action<any>, Action<any>>} - An RxJS operator function that filters actions.
  */
-export function ofType(types: string | string[]): (source: Subscribable<Action<any>>) => Subscribable<Action<any>> {
-  return (source: Subscribable<Action<any>>) => {
+export function ofType(types: string | string[]): (source: IObservable<Action<any>>) => IObservable<Action<any>> {
+  return (source: IObservable<Action<any>>) => {
     return new CustomObservable<Action<any>>(observer => {
       const subscription = source.subscribe({
         next: (action) => {

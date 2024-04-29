@@ -1,4 +1,4 @@
-import { Slice, Subscribable } from '@actioncrew/actionstack';
+import { IObservable, Slice } from '@actioncrew/actionstack';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
@@ -15,7 +15,7 @@ import { loadHeroes, reducer, selectTopHeroes, slice } from './dashboard.slice';
   providers: [Slice]
 })
 export class DashboardComponent implements OnInit {
-  heroes$: Subscribable<Hero[]> = this.slice.select(selectTopHeroes());
+  heroes$: IObservable<Hero[]> = this.slice.select(selectTopHeroes());
 
   constructor(private slice: Slice) {
   }
