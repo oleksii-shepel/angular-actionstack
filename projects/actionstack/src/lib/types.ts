@@ -420,5 +420,5 @@ function isPlainObject(obj: any): boolean {
   return Object.getPrototypeOf(obj) === proto;
 }
 
-export { isAction, isAsync, isBoxed, isPlainObject, isPrimitive, kindOf };
+export { isAction, isAsync, isBoxed, isPlainObject, isPromise, kindOf };
 
