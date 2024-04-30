@@ -65,14 +65,22 @@ export function concatMap<T, R>(projector: (value: T) => Promise<R>) {
 export function concat<T>(...sources: Observable<T>[]): Observable<T> {
   return new Observable<T>(subscriber => {
     let index = 0;
+    let currentSubscription: Subscription | null = null;
 
     const next = () => {
+      if (subscriber.closed) {
+        return;
+      }
+
       if (index < sources.length) {
         const source = sources[index++];
-        source.subscribe({
+        currentSubscription = source.subscribe({
           next: value => subscriber.next(value),
           error: error => subscriber.error(error),
-          complete: () => next()
+          complete: () => {
+            currentSubscription = null;
+            next();
+          }
         });
       } else {
         subscriber.complete();
@@ -80,6 +88,13 @@ export function concat<T>(...sources: Observable<T>[]): Observable<T> {
     };
 
     next();
+
+    return () => {
+      // Unsubscribe if a source Observable is currently being subscribed to
+      if (currentSubscription) {
+        currentSubscription.unsubscribe();
+      }
+    };
   });
 }
 
@@ -93,6 +108,7 @@ export function concat<T>(...sources: Observable<T>[]): Observable<T> {
 export function merge<T>(...sources: Observable<T>[]): Observable<T> {
   return new Observable<T>(subscriber => {
     let completedCount = 0;
+    const subscriptions: Subscription[] = [];
 
     const completeIfAllCompleted = () => {
       if (++completedCount === sources.length) {
@@ -101,12 +117,23 @@ export function merge<T>(...sources: Observable<T>[]): Observable<T> {
     };
 
     sources.forEach(source => {
-      source.subscribe({
+      const subscription = source.subscribe({
         next: value => subscriber.next(value),
-        error: error => subscriber.error(error),
+        error: error => {
+          // Unsubscribe from all source Observables when an error occurs
+          subscriptions.forEach(subscription => subscription.unsubscribe());
+          subscriber.error(error);
+        },
         complete: completeIfAllCompleted
       });
+
+      subscriptions.push(subscription);
     });
+
+    return () => {
+      // Unsubscribe from all source Observables when the resulting Observable is unsubscribed
+      subscriptions.forEach(subscription => subscription.unsubscribe());
+    };
   });
 }
 
