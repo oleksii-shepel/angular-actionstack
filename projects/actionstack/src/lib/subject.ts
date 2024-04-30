@@ -126,9 +126,13 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  override subscribe(observer: Partial<AsyncObserver<T>>): ISubscription {
+  async override subscribe(observer: Partial<AsyncObserver<T>>) {
     // Convert the unsubscribe function to a Subscription object
-    return super.subscribe(observer as AsyncObserver<T>);
+    const subscription = super.subscribe(observer as AsyncObserver<T>);
+    if (this.value !== undefined) {
+      await observer.next(this.value);
+    }
+    return subscription;
   }
 
    /**
