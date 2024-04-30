@@ -1,5 +1,4 @@
-import { CustomObservable, IObservable, ISubscription } from './observable';
-
+import { Observable, Subscription } from 'rxjs';
 /**
  * Function to convert a custom `CustomAsyncSubject` instance into a standard RxJS `Observable`.
  *
@@ -8,9 +7,9 @@ import { CustomObservable, IObservable, ISubscription } from './observable';
  * @param customAsyncSubject - The `CustomAsyncSubject` instance to convert.
  * @returns Observable<T> - The resulting RxJS `Observable`.
  */
-export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): IObservable<T> {
+export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): Observable<T> {
   let lastValue = undefined;
-  return new CustomObservable<T>((subscriber) => {
+  return new Observable<T>((subscriber) => {
 
     subscriber.next(lastValue!);
     const subscription = customAsyncSubject.subscribe({
@@ -57,7 +56,7 @@ export class AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  async subscribe(observer: AsyncObserver<T>): Promise<ISubscription> {
+  async subscribe(observer: AsyncObserver<T>): Promise<Subscription> {
     this.observers.push(observer);
     return {
       unsubscribe: () => {
@@ -66,7 +65,7 @@ export class AsyncObservable<T> {
           this.observers.splice(index, 1);
         }
       }
-    } as ISubscription;
+    } as Subscription;
   }
 
   /**
@@ -101,7 +100,7 @@ export class AsyncObservable<T> {
  */
 export class CustomAsyncSubject<T> extends AsyncObservable<T> {
   private _value!: T;
-  private _observable!: CustomObservable<T>;
+  private _observable!: Observable<T>;
 
   constructor() {
     super();
@@ -126,7 +125,7 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  override async subscribe(observer: AsyncObserver<T>): Promise<ISubscription> {
+  override async subscribe(observer: AsyncObserver<T>): Promise<Subscription> {
     // Convert the unsubscribe function to a Subscription object
     const subscription = super.subscribe(observer as AsyncObserver<T>);
     if (this.value !== undefined) {

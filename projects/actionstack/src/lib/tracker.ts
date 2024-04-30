@@ -1,4 +1,4 @@
-import { CustomBehaviorSubject, IObservable } from "./observable";
+import { BehaviorSubject, Observable } from 'rxjs';
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -10,17 +10,17 @@ export class Tracker {
   timeout = 30000;
   /**
    * Map to store the relationship between Observables and their corresponding BehaviorSubjects.
-   * @type {Map<Observable<any>, CustomBehaviorSubject<boolean>>}
+   * @type {Map<Observable<any>, BehaviorSubject<boolean>>}
    * @private
    */
-  private entries = new Map<IObservable<any>, CustomBehaviorSubject<boolean>>();
+  private entries = new Map<Observable<any>, BehaviorSubject<boolean>>();
 
   /**
    * Returns the execution status of the provided Observable.
    * @param {Observable<any>} entry - The Observable to check the execution status for.
    * @returns {boolean} The execution status of the provided Observable. Returns `true` if executed, `false` otherwise.
    */
-  getStatus(entry: IObservable<any>) {
+  getStatus(entry: Observable<any>) {
     return this.entries.get(entry)?.value === true;
   }
 
@@ -30,7 +30,7 @@ export class Tracker {
    * @param {boolean} value - The execution status to set.
    * @returns {void} This method does not return a value.
    */
-  setStatus(entry: IObservable<any>, value: boolean) {
+  setStatus(entry: Observable<any>, value: boolean) {
     this.entries.get(entry)?.next(value);
   }
 
@@ -39,9 +39,9 @@ export class Tracker {
    * @param {Observable<any>} observable - The Observable to track.
    * @returns {void} This method does not return a value.
    */
-  track(observable: IObservable<any>): void {
+  track(observable: Observable<any>): void {
     if (!this.entries.has(observable)) {
-      const subject = new CustomBehaviorSubject<boolean>(false);
+      const subject = new BehaviorSubject<boolean>(false);
       this.entries.set(observable, subject);
     }
   }
@@ -50,7 +50,7 @@ export class Tracker {
    * Removes a tracked observable and unsubscribes from it.
    * @param observable The observable to remove.
    */
-  remove(observable: IObservable<any>) {
+  remove(observable: Observable<any>) {
     const subject = this.entries.get(observable);
     if (subject) {
       this.entries.delete(observable);

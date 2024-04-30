@@ -1,9 +1,9 @@
 import { Location } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { map, tap } from 'rxjs';
+import { Observable, Subscription, map, tap } from 'rxjs';
 
-import { IObservable, ISubscription, Store } from '@actioncrew/actionstack';
+import { Store } from '@actioncrew/actionstack';
 import { Hero } from '../hero';
 import { heroSelector, loadHero } from './hero-details.slice';
 
@@ -13,9 +13,8 @@ import { heroSelector, loadHero } from './hero-details.slice';
   styleUrls: [ './hero-details.component.css' ]
 })
 export class HeroDetailsComponent implements OnInit {
-  hero$!: IObservable<Hero | undefined>;
-  subscription: ISubscription | undefined;
-  subscriptionA: ISubscription | undefined;
+  hero$!: Observable<Hero | undefined>;
+  subscription: Subscription | undefined;
 
   constructor(
     private store: Store,
@@ -24,9 +23,6 @@ export class HeroDetailsComponent implements OnInit {
   ) {
 
     this.hero$ = this.store.select(heroSelector());
-
-    this.subscriptionA = this.store.select(heroSelector()).subscribe(
-      (value) => console.log(value));
   }
 
   ngOnInit(): void {
