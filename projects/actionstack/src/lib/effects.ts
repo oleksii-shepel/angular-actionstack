@@ -1,5 +1,5 @@
-import { Observable, isObservable } from 'rxjs';
-import { Action, SideEffect, isAction } from "./types";
+import { Observable } from 'rxjs';
+import { Action, SideEffect, isAction, isObservable } from "./types";
 
 export { createEffect as effect };
 
