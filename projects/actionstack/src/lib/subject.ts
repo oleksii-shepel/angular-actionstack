@@ -26,7 +26,7 @@ export function toObservable<T>(customAsyncSubject: CustomAsyncSubject<T>): IObs
       }
     });
 
-    return () => subscription.unsubscribe();
+    return async () => (await subscription).unsubscribe();
   });
 }
 
@@ -57,7 +57,7 @@ export class AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  subscribe(observer: AsyncObserver<T>): ISubscription {
+  async subscribe(observer: AsyncObserver<T>): Promise<ISubscription> {
     this.observers.push(observer);
     return {
       unsubscribe: () => {
@@ -126,7 +126,7 @@ export class CustomAsyncSubject<T> extends AsyncObservable<T> {
    * @param observer - The observer to subscribe.
    * @returns Subscription - An object representing the subscription.
    */
-  async override subscribe(observer: Partial<AsyncObserver<T>>) {
+  override async subscribe(observer: AsyncObserver<T>): Promise<ISubscription> {
     // Convert the unsubscribe function to a Subscription object
     const subscription = super.subscribe(observer as AsyncObserver<T>);
     if (this.value !== undefined) {

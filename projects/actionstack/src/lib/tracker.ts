@@ -72,22 +72,21 @@ export class Tracker {
    */
   get allExecuted(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const timeoutPromise = new Promise((innerResolve, innerReject) => {
-        const timeoutId = setTimeout(() => innerReject('Timeout reached'), this.timeout);
-        // Clear the timeout when the outer promise resolves or rejects (regardless of the source)
-        Promise.race([
-          Promise.all(this.entries.map(subject => new Promise(innerResolve => subject.subscribe(value => value && innerResolve())))),
-          timeoutPromise
-        ]) // Combine both promises
-          .then(() => {
-            clearTimeout(timeoutId);
-            resolve();
-          })
-          .catch(() => {
-            clearTimeout(timeoutId);
-            reject('Error occurred'); // Or handle specific errors differently
-          });
-      });
+      const timeoutId = setTimeout(() => reject('Timeout reached'), this.timeout);
+      Promise.race([
+        Promise.all([...this.entries.values()].map(subject => new Promise<void>(innerResolve => subject.subscribe(value => value && innerResolve())))),
+        new Promise((innerResolve, innerReject) => {
+          setTimeout(() => innerReject('Timeout reached'), this.timeout);
+        })
+      ])
+        .then(() => {
+          clearTimeout(timeoutId);
+          resolve();
+        })
+        .catch(() => {
+          clearTimeout(timeoutId);
+          reject('Error occurred'); // Or handle specific errors differently
+        });
     });
   }
 }
