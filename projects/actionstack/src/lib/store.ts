@@ -196,7 +196,7 @@ export class Store {
    * @param {Action<any>} action - The action to dispatch.
    * @throws {Error} Throws an error if the action is not a plain object, does not have a defined "type" property, or if the "type" property is not a string.
    */
-  async dispatch(action: Action<any>) {
+  dispatch(action: Action<any>) {
     if (!isPlainObject(action)) {
       throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
     }
@@ -208,7 +208,6 @@ export class Store {
     }
 
     this.actionStream.next(action);
-    await waitFor(this.isProcessing.asObservable(), value => value === false);
   }
 
   /**
@@ -551,6 +550,7 @@ export class Store {
         const subscription = source.pipe(
           concatMap(async (action: Action<any>) => {
             try {
+              this.isProcessing.next(true);
               return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
             } finally {
               this.isProcessing.next(false);
@@ -663,14 +663,12 @@ export class Store {
    * @returns {Promise<void>}
    */
   loadModule(module: FeatureModule, injector: Injector): Promise<void> {
-
     // Check if the module already exists
     if (this.modules.some(m => m.slice === module.slice)) {
       return Promise.resolve(); // Module already exists, return without changes
     }
 
-    const promise = this.lock.acquire()
-      .then(() => this.waitForIdle())
+    const promise = Promise.all([this.lock.acquire(), this.waitForIdle()])
       .then(() => {
         // Create a new array with the module added
         this.modules = [...this.modules, module];
@@ -679,10 +677,7 @@ export class Store {
         return this.injectDependencies(injector);
       })
       .then(() => this.updateState("@global", state => this.setupReducer(state)))
-      .finally(() => {
-        // Release the lock
-        this.lock.release();
-      });
+      .finally(() => this.lock.release());
 
     // Dispatch module loaded action
     this.systemActions.moduleLoaded(module);
@@ -705,8 +700,7 @@ export class Store {
       return Promise.resolve(); // Module not found, nothing to unload
     }
 
-    const promise = this.lock.acquire()
-      .then(() => this.waitForIdle())
+    const promise = Promise.all([this.lock.acquire(), this.waitForIdle()])
       .then(() => {
         // Remove the module from the internal state
         this.modules.splice(moduleIndex, 1);
@@ -721,8 +715,8 @@ export class Store {
         } else {
           return this.setupReducer(state); // No state clearing
         }
-      }, this.systemActions.initializeState()))
-      .then(() => this.lock.release());
+      }))
+      .finally(() => this.lock.release());
 
     // Dispatch module unloaded action
     this.systemActions.moduleUnloaded(module);
