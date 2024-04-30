@@ -72,21 +72,35 @@ export class Tracker {
    */
   get allExecuted(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
+      if (![...this.entries.values()].length) {
+        // No subjects, resolve immediately
+        resolve();
+        return;
+      }
+
       const timeoutId = setTimeout(() => reject('Timeout reached'), this.timeout);
-      Promise.race([
-        Promise.all([...this.entries.values()].map(subject => new Promise<void>(innerResolve => subject.subscribe(value => value && innerResolve())))),
-        new Promise((innerResolve, innerReject) => {
-          setTimeout(() => innerReject('Timeout reached'), this.timeout);
-        })
-      ])
-        .then(() => {
+      let numPending = [...this.entries.values()].length; // Track pending subscriptions
+
+      const handleCompletion = () => {
+        numPending--;
+        if (numPending === 0) {
           clearTimeout(timeoutId);
           resolve();
-        })
-        .catch(() => {
-          clearTimeout(timeoutId);
-          reject('Error occurred'); // Or handle specific errors differently
+        }
+      };
+
+      const handleError = (error: any) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      };
+
+      [...this.entries.values()].forEach(subject => {
+        subject.subscribe({
+          next: () => handleCompletion(),
+          error: handleError,
+          complete: handleCompletion, // Call handleCompletion on complete as well
         });
+      });
     });
   }
 }
