@@ -328,7 +328,7 @@ export class Store {
     let effectsExecuted = this.tracker.allExecuted;
 
     if (this.settings.awaitStatePropagation) {
-      await Promise.allSettled([stateUpdated, actionHandled]);
+      await Promise.allSettled([stateUpdated, actionHandled, effectsExecuted]);
     }
 
     return newState;
