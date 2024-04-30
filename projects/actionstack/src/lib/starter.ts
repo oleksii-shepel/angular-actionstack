@@ -24,18 +24,17 @@ export const createStarter = () => {
    */
   const exclusive = ({ dispatch, getState, dependencies, isProcessing, lock }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
+      isProcessing.next(true);
       if (typeof action === 'function') {
         // Process async actions (functions)
         await action(dispatch, getState, dependencies());
       } else {
         // Pass regular actions to the next middleware
-        isProcessing.next(true);
         await next(action);
-        await waitFor(isProcessing, value => value === false);
       }
     }
 
-    await lock.acquire()
+    Promise.all([lock.acquire(), waitFor(isProcessing, value => value === false)]);
     try {
       await processAction(action);
     } finally {
@@ -54,6 +53,7 @@ export const createStarter = () => {
    */
   const concurrent = ({ dispatch, getState, dependencies, isProcessing, lock }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
+      isProcessing.next(true);
       if (typeof action === 'function') {
         // Process async actions asynchronously and track them
         const asyncFunc = (async () => {
@@ -65,13 +65,11 @@ export const createStarter = () => {
         asyncActions.push(asyncFunc);
       } else {
         // Pass regular actions to the next middleware
-        isProcessing.next(true);
         await next(action);
-        await waitFor(isProcessing, value => value === false);
       }
     }
 
-    await lock.acquire()
+    Promise.all([lock.acquire(), waitFor(isProcessing, value => value === false)]);
     try {
       await processAction(action);
     } finally {
