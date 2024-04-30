@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
@@ -80,7 +80,7 @@ function createSelector<U = any, T = any>(
           sliceState$ = (featureSelector$ as Function)(state$);
         }
 
-        const subscription = sliceState$.subscribe(sliceState => {
+        const subscription: Subscription = sliceState$.subscribe(sliceState => {
           if (sliceState === undefined) {
             observer.next(sliceState);
             return;
@@ -89,13 +89,15 @@ function createSelector<U = any, T = any>(
           let selectorResults: U[] | U;
 
           if (Array.isArray(selectors)) {
-            selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]))
+            selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]));
 
+            // Check if any result is undefined and emit undefined immediately
             if (selectorResults.some(result => result === undefined)) {
               observer.next(undefined as U);
-              return;
+              return subscription.unsubscribe(); // Unsubscribe immediately to prevent further emissions
             }
 
+            // If all results are defined, continue with projection or emit results directly
             observer.next(projection ? projection(selectorResults, projectionProps) : selectorResults);
           } else {
             selectorResults = selectors && selectors(sliceState, props);
@@ -146,7 +148,7 @@ function createSelectorAsync<U = any, T = any>(
   }
 
   return (props?: any[] | any, projectionProps?: any) => {
-    if(Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
+    if (Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
       throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
     }
 
@@ -162,23 +164,23 @@ function createSelectorAsync<U = any, T = any>(
 
           if (Array.isArray(selectors)) {
             try {
-              selectorResults = await Promise.all(
-                selectors.map(async (selector, index) => {
-                  if (unsubscribed || didCancel) return;
-                  return selector(sliceState, props ? props[index] : undefined);
-                })
-              );
+              const promises = selectors.map(async (selector, index) => {
+                if (unsubscribed || didCancel) return;
+                return selector(sliceState, props ? props[index] : undefined);
+              });
+
+              selectorResults = await Promise.all(promises);
 
               if (unsubscribed || didCancel) return;
 
-              const isUndefined = (selectorResults as U[]).some(result => result === undefined);
+              const isUndefined = selectorResults.some(result => result === undefined);
 
               observer.next(
                 isUndefined
                   ? undefined
                   : projection
-                  ? projection(selectorResults as U[], projectionProps)
-                  : selectorResults
+                    ? projection(selectorResults as U[], projectionProps)
+                    : selectorResults
               );
             } catch (error) {
               if (!unsubscribed && !didCancel) {
@@ -195,8 +197,8 @@ function createSelectorAsync<U = any, T = any>(
                 selectorResults === undefined
                   ? undefined
                   : projection
-                  ? projection(selectorResults, projectionProps)
-                  : selectorResults
+                    ? projection(selectorResults, projectionProps)
+                    : selectorResults
               );
             } catch (error) {
               if (!unsubscribed && !didCancel) {
