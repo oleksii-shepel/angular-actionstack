@@ -20,12 +20,11 @@ export class HeroDetailsComponent implements OnInit {
     private store: Store,
     private route: ActivatedRoute,
     private location: Location
-  ) {
-
-    this.hero$ = this.store.select(heroSelector());
-  }
+  ) {}
 
   ngOnInit(): void {
+    this.hero$ = this.store.select(heroSelector());
+
     this.subscription = this.route.paramMap.pipe(
       map(params => Number(params.get('id'))),
       tap(id => this.store.dispatch(loadHero(id)))
