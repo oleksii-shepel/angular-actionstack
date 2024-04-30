@@ -708,13 +708,12 @@ export class Store {
         // Eject dependencies
         return this.ejectDependencies(module);
       })
-      .then(() => this.updateState("@global", state => {
+      .then(() => this.updateState("@global", async (state) => {
         if (clearState) {
-          // Create a copy and delete the module's slice from state
-          return { ...state, [module.slice]: undefined };
-        } else {
-          return this.setupReducer(state); // No state clearing
+          state = { ...state };
+          delete state[module.slice];
         }
+        return await this.setupReducer(state);
       }))
       .finally(() => this.lock.release());
 
