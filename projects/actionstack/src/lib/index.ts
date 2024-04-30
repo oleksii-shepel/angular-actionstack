@@ -1,4 +1,5 @@
 export * from "./actions";
+export * from "./collections";
 export * from "./effects";
 export * from "./hash";
 export * from "./lock";
