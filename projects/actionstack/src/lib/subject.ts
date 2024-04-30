@@ -1,4 +1,6 @@
-import { Observable, Subscription } from 'rxjs';
+import { Observable } from "rxjs/internal/Observable";
+import { Subscription } from "rxjs/internal/Subscription";
+
 /**
  * Function to convert a custom `CustomAsyncSubject` instance into a standard RxJS `Observable`.
  *

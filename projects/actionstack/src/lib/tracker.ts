@@ -1,4 +1,5 @@
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
+import { Observable } from "rxjs/internal/Observable";
 
 /**
  * A utility class for tracking the execution status of Observables.

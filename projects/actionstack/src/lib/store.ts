@@ -1,5 +1,8 @@
 import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
+import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
+import { Observable } from "rxjs/internal/Observable";
+import { Subject } from "rxjs/internal/Subject";
+import { Subscription } from "rxjs/internal/Subscription";
 import { action, bindActionCreators } from "./actions";
 import { isValidSignature } from "./hash";
 import { Lock } from "./lock";
@@ -193,7 +196,7 @@ export class Store {
    * @param {Action<any>} action - The action to dispatch.
    * @throws {Error} Throws an error if the action is not a plain object, does not have a defined "type" property, or if the "type" property is not a string.
    */
-  dispatch(action: Action<any>) {
+  async dispatch(action: Action<any>) {
     if (!isPlainObject(action)) {
       throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
     }
@@ -205,6 +208,7 @@ export class Store {
     }
 
     this.actionStream.next(action);
+    await waitFor(this.isProcessing.asObservable(), value => value === false);
   }
 
   /**

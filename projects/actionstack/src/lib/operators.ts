@@ -1,4 +1,6 @@
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
+import { Observable } from "rxjs/internal/Observable";
+import { Subscription } from "rxjs/internal/Subscription";
 
 /**
  * Projects each source value to a Promise which is merged in the output Observable
