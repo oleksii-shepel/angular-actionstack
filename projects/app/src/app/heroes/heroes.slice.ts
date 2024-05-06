@@ -5,14 +5,14 @@ import { Hero } from "../hero";
 
 export const slice = "heroes";
 
-export const getHeroesRequest = action("GET_HEROES_REQUEST", (heroes: Hero[]) => heroes);
-export const getHeroesSuccess = action("GET_HEROES_SUCCESS", (heroes: Hero[]) => heroes);
+export const getHeroesRequest = action("GET_HEROES_REQUEST", (heroes: Hero[]) => {heroes});
+export const getHeroesSuccess = action("GET_HEROES_SUCCESS", (heroes: Hero[]) => {heroes});
 
 export const loadHeroes = effect(getHeroesRequest.type, () => (actionType) => (action$, state$, { heroService }: any): Observable<Action<any>> => {
   return action$.pipe(
     ofType(actionType),
     withLatestFrom(state$!),
-    concatMap(([action, state]) => heroService.getHeroes().pipe(map(heroes => getHeroesSuccess({heroes}))) as Observable<Action<any>>)
+    concatMap(([action, state]) => heroService.getHeroes().pipe(map(heroes => getHeroesSuccess(heroes))) as Observable<Action<any>>)
   );
 });
 
