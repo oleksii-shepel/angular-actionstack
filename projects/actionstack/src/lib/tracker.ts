@@ -1,5 +1,7 @@
 import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
 import { Observable } from "rxjs/internal/Observable";
+import { Subscription } from 'rxjs/internal/Subscription';
+import { Observer } from "./types";
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -11,17 +13,17 @@ export class Tracker {
   timeout = 30000;
   /**
    * Map to store the relationship between Observables and their corresponding BehaviorSubjects.
-   * @type {Map<Observable<any>, BehaviorSubject<boolean>>}
+   * @type {Map<TrackableObservable<any>, BehaviorSubject<boolean>>}
    * @private
    */
-  private entries = new Map<Observable<any>, BehaviorSubject<boolean>>();
+  private entries = new Map<TrackableObservable<any>, BehaviorSubject<boolean>>();
 
   /**
    * Returns the execution status of the provided Observable.
    * @param {Observable<any>} entry - The Observable to check the execution status for.
    * @returns {boolean} The execution status of the provided Observable. Returns `true` if executed, `false` otherwise.
    */
-  getStatus(entry: Observable<any>) {
+  getStatus(entry: TrackableObservable<any>) {
     return this.entries.get(entry)?.value === true;
   }
 
@@ -31,7 +33,7 @@ export class Tracker {
    * @param {boolean} value - The execution status to set.
    * @returns {void} This method does not return a value.
    */
-  setStatus(entry: Observable<any>, value: boolean) {
+  setStatus(entry: TrackableObservable<any>, value: boolean) {
     this.entries.get(entry)?.next(value);
   }
 
@@ -40,7 +42,7 @@ export class Tracker {
    * @param {Observable<any>} observable - The Observable to track.
    * @returns {void} This method does not return a value.
    */
-  track(observable: Observable<any>): void {
+  track(observable: TrackableObservable<any>): void {
     if (!this.entries.has(observable)) {
       const subject = new BehaviorSubject<boolean>(false);
       this.entries.set(observable, subject);
@@ -51,7 +53,7 @@ export class Tracker {
    * Removes a tracked observable and unsubscribes from it.
    * @param observable The observable to remove.
    */
-  remove(observable: Observable<any>) {
+  remove(observable: TrackableObservable<any>) {
     const subject = this.entries.get(observable);
     if (subject) {
       this.entries.delete(observable);
@@ -61,11 +63,15 @@ export class Tracker {
   /**
    * Resets the execution status of all tracked Observables to false.
    */
-  reset() {
-    for (const value of this.entries.values()) {
-      value.next(false); // Reset all subjects to false
+    reset() {
+      for (const [key, value] of [...this.entries.entries()]) {
+        if (key.isCompleted) {
+          this.entries.delete(key); // Remove the entry if its value is true
+        } else {
+          value.next(false); // Reset the subject to false
+        }
+      }
     }
-  }
 
   /**
    * Asynchronously checks if all tracked Observables have been executed within a specified timeout period.
@@ -103,5 +109,53 @@ export class Tracker {
         });
       });
     });
+  }
+}
+
+/**
+ * Represents an observable sequence with the ability to track completion state.
+ * @template T The type of elements in the sequence.
+ */
+export class TrackableObservable<T> extends Observable<T> {
+  /** Indicates whether the observable sequence has completed. */
+  isCompleted: boolean = false;
+
+  /**
+   * Creates a new TrackableObservable.
+   * @param {function(observer: Observer<T>): () => void} subscribe The function that is called when the Observable is initially subscribed to. This function should be defined to handle the delivery of values to Observers.
+   */
+  constructor(subscribe?: (subscriber: Observer<T>) => (() => void) | void, tracker?: Tracker) {
+    super(subscribe);
+  }
+
+  /**
+   * Subscribes to the sequence with an observer and returns a subscription.
+   * @param {Observer<T>} observer An observer to be notified of emitted values, errors, or completion.
+   * @return {Subscription} The subscription representing the subscription of the observer to the observable sequence.
+   */
+  override subscribe(observerOrNext?: Partial<Observer<T>> | ((value: T) => void) | null, error?: (error: any) => void, complete?: () => void): Subscription {
+    const observer: Partial<Observer<T>> = {};
+
+    if (observerOrNext === null) {
+      observerOrNext = {}; // Assign an empty observer object
+    }
+
+    if (typeof observerOrNext === 'function') {
+      observer.next = observerOrNext;
+    } else {
+      Object.assign(observer, observerOrNext);
+    }
+
+    // Initialize error and complete callbacks if not provided
+    observer.error = observer.error || error;
+    observer.complete = observer.complete || complete;
+
+    const subscription = super.subscribe(observerOrNext);
+    const originalComplete = subscription.unsubscribe.bind(subscription);
+    subscription.unsubscribe = () => {
+      this.isCompleted = true;
+      originalComplete();
+    };
+    return subscription;
   }
 }
