@@ -9,7 +9,6 @@ export * from "./selectors";
 export * from "./slice";
 export * from "./starter";
 export * from "./store";
-export * from "./subject";
 export * from "./tracker";
 export * from "./types";
 

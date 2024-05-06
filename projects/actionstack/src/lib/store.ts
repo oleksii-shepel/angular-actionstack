@@ -8,7 +8,6 @@ import { isValidSignature } from "./hash";
 import { Lock } from "./lock";
 import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
-import { CustomAsyncSubject } from "./subject";
 import { TrackableObservable, Tracker } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, Observer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
@@ -110,8 +109,8 @@ export class Store {
     strategy: "exclusive" as ProcessingStrategy
   };
   protected actionStream = new Subject<Action<any>>();
-  protected currentAction = new CustomAsyncSubject<Action<any>>();
-  protected currentState = new CustomAsyncSubject<any>();
+  protected currentAction = new Subject<Action<any>>();
+  protected currentState = new BehaviorSubject<any>(undefined);
   protected isProcessing = new BehaviorSubject<boolean>(false);
   protected subscription = Subscription.EMPTY;
   protected systemActions = { ...systemActions };
@@ -349,8 +348,15 @@ export class Store {
 
     this.tracker.reset();
 
-    let stateUpdated = this.currentState.next(newState);
-    let actionHandled = this.currentAction.next(action);
+    const next = async <T>(subject: Subject<T>, value: T): Promise<void> => {
+      return new Promise<void>(async (resolve) => {
+        await subject.next(value);
+        resolve();
+      });
+    };
+
+    let stateUpdated = next(this.currentState, newState);
+    let actionHandled = next(this.currentAction, action);
     let effectsExecuted = this.tracker.allExecuted;
 
     if (this.settings.awaitStatePropagation) {
