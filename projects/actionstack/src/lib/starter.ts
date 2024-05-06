@@ -26,7 +26,11 @@ export const createStarter = () => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       if (typeof action === 'function') {
         // Process async actions (functions)
-        await action(dispatch, getState, dependencies());
+        await action(async (action: Action<any>) => {
+          isProcessing.next(true);
+          await next(action);
+          await waitFor(isProcessing, value => value === false);
+        }, getState, dependencies());
       } else {
         // Pass regular actions to the next middleware
         await next(action);
@@ -36,6 +40,7 @@ export const createStarter = () => {
     await Promise.all([lock.acquire(), waitFor(isProcessing, value => value === false)]);
     try {
       await processAction(action);
+      await waitFor(isProcessing, value => value === false);
     } finally {
       lock.release();
     }
