@@ -1,6 +1,8 @@
+import { Observer } from 'rxjs';
 import { Observable } from "rxjs/internal/Observable";
 import { Subscription } from "rxjs/internal/Subscription";
-
+import { EMPTY } from "./operators";
+import { TrackableObservable, Tracker } from "./tracker";
 import { ProjectionFunction, SelectorFunction } from "./types";
 
 export {
@@ -29,10 +31,8 @@ function createFeatureSelector<U = any, T = any> (
       const selectedValue = (Array.isArray(slice)
       ? slice.reduce((acc, key) => (acc && Array.isArray(acc) ? acc[parseInt(key)] : (acc as any)[key]) || undefined, state)
       : state && state[slice]) as U;
-      if(lastValue !== selectedValue) {
-        lastValue = selectedValue;
-        subscriber.next(lastValue);
-      }
+      lastValue = selectedValue;
+      subscriber.next(selectedValue);
     });
 
     return () => subscription.unsubscribe();
@@ -59,22 +59,25 @@ function createSelector<U = any, T = any>(
   featureSelector$: ((state: Observable<T>) => Observable<U>) | "@global",
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction
-): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
+): (props?: any[] | any, projectionProps?: any) => (state$: Observable<T>, tracker?: Tracker) => Observable<U> {
 
   const isSelectorArray = Array.isArray(selectors);
   const projection = typeof projectionOrOptions === "function" ? projectionOrOptions : undefined;
 
   if (isSelectorArray && !projection) {
-    throw new Error("Invalid parameters: When 'selectors' is an array, 'projection' function should be provided.");
+    console.warn("Invalid parameters: When 'selectors' is an array, 'projection' function should be provided.");
+    return () => () => EMPTY;
   }
 
   return (props?: any[] | any, projectionProps?: any) => {
     if(Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
-      throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
+      console.warn('Not all selectors are parameterized. The number of props does not match the number of selectors.');
+      return () => EMPTY;
     }
 
-    return (state$: Observable<T>) => {
-      return new Observable(observer => {
+    let lastSliceState: any, emitted = false;
+    return (state$: Observable<T>, tracker?: Tracker) => {
+      const trackable = new TrackableObservable<U>((observer: Observer<U>) => {
         let sliceState$: Observable<U>;
         if (featureSelector$ === "@global") {
           sliceState$ = state$ as any;
@@ -84,37 +87,50 @@ function createSelector<U = any, T = any>(
 
         const subscription: Subscription = sliceState$.subscribe(sliceState => {
           if (sliceState === undefined) {
-            observer.next(sliceState);
+            observer.next(undefined as U);
             return;
           }
 
-          let selectorResults: U[] | U;
-
-          if (Array.isArray(selectors)) {
-            selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]));
-
-            // Check if any result is undefined and emit undefined immediately
-            if (selectorResults.some(result => result === undefined)) {
-              observer.next(undefined as U);
-              return subscription.unsubscribe(); // Unsubscribe immediately to prevent further emissions
-            }
-
-            // If all results are defined, continue with projection or emit results directly
-            observer.next(projection ? projection(selectorResults, projectionProps) : selectorResults);
+          if (lastSliceState === sliceState) {
+            tracker && tracker.setStatus(trackable, true);
+            return;
           } else {
-            selectorResults = selectors && selectors(sliceState, props);
+            lastSliceState = sliceState;
+          }
 
-            if (selectorResults === undefined) {
-              observer.next(undefined as U);
-              return;
+          let selectorResults: U[] | U;
+          try {
+            if (Array.isArray(selectors)) {
+              selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]));
+
+              // Check if any result is undefined and emit undefined immediately
+              if (selectorResults.some(result => result === undefined)) {
+                subscription.unsubscribe(); // Unsubscribe immediately to prevent further emissions
+                observer.next(undefined as U);
+                return;
+              }
+
+              // If all results are defined, continue with projection or emit results directly
+              observer.next(projection ? projection(selectorResults, projectionProps) : selectorResults);
+            } else {
+              selectorResults = selectors && selectors(sliceState, props);
+
+              if (selectorResults === undefined) {
+                observer.next(undefined as U);
+                return;
+              }
+              observer.next(projection ? projection(projectionProps) : selectorResults);
             }
-
-            observer.next(projection ? projection(projectionProps) : selectorResults);
+          } catch(error: any) {
+            console.warn("Error during selector execution:", error.message);
+            tracker && tracker.setStatus(trackable, true);
           }
         });
 
         return () => subscription.unsubscribe();
-      });
+      }, tracker);
+
+      return trackable as Observable<U>;
     };
   };
 }
@@ -140,40 +156,60 @@ function createSelectorAsync<U = any, T = any>(
   featureSelector$: ((state: Observable<T>) => Observable<U>) | "@global",
   selectors: SelectorFunction | SelectorFunction[],
   projectionOrOptions?: ProjectionFunction
-): (props?: any[] | any, projectionProps?: any) => (store: Observable<T>) => Observable<U> {
+): (props?: any[] | any, projectionProps?: any) => (state$: Observable<T>, tracker?: Tracker) => Observable<U> {
 
   const isSelectorArray = Array.isArray(selectors);
   const projection = typeof projectionOrOptions === "function" ? projectionOrOptions : undefined;
 
   if (isSelectorArray && !projection) {
-    throw new Error("Invalid parameters: When 'selectors' is an array, 'projection' function should be provided.");
+    console.warn("Invalid parameters: When 'selectors' is an array, 'projection' function should be provided.");
+    return () => () => EMPTY;
   }
 
   return (props?: any[] | any, projectionProps?: any) => {
     if (Array.isArray(props) && Array.isArray(selectors) && props.length !== selectors.length) {
-      throw new Error('Not all selectors are parameterized. The number of props does not match the number of selectors.');
+      console.warn('Not all selectors are parameterized. The number of props does not match the number of selectors.');
+      return () => EMPTY;
     }
 
-    return (state$: Observable<T>) => {
-      const sliceState$ = new Observable<U>((observer) => {
+    let lastSliceState: any;
+    return (state$: Observable<T>, tracker?: Tracker) => {
+      const trackable = new TrackableObservable<U>((observer: Observer<U>) => {
+
         let unsubscribed = false;
         let didCancel = false;
 
         const runSelectors = async (sliceState: any) => {
-          if (sliceState === undefined) { return observer.next(undefined as any); }
+          if (sliceState === undefined) {
+            observer.next(undefined as any);
+            return;
+          }
+
+          if (lastSliceState === sliceState) {
+            tracker && tracker.setStatus(trackable, true);
+            return;
+          } else {
+            lastSliceState = sliceState;
+          }
 
           let selectorResults: U[] | U;
 
-          if (Array.isArray(selectors)) {
-            try {
+          try {
+            if (Array.isArray(selectors)) {
               const promises = selectors.map(async (selector, index) => {
-                if (unsubscribed || didCancel) return;
+                if (unsubscribed || didCancel) {
+                  tracker && tracker.setStatus(trackable, true);
+                  return;
+                }
                 return selector(sliceState, props ? props[index] : undefined);
               });
 
               selectorResults = await Promise.all(promises);
 
-              if (unsubscribed || didCancel) return;
+              if (unsubscribed || didCancel) {
+                tracker && tracker.setStatus(trackable, true);
+                return;
+              }
 
               const isUndefined = selectorResults.some(result => result === undefined);
 
@@ -184,16 +220,13 @@ function createSelectorAsync<U = any, T = any>(
                     ? projection(selectorResults as U[], projectionProps)
                     : selectorResults
               );
-            } catch (error) {
-              if (!unsubscribed && !didCancel) {
-                observer.error(error);
-              }
-            }
-          } else {
-            try {
+            } else {
               selectorResults = await selectors(sliceState, props);
 
-              if (unsubscribed || didCancel) return;
+              if (unsubscribed || didCancel) {
+                tracker && tracker.setStatus(trackable, true);
+                return;
+              }
 
               observer.next(
                 selectorResults === undefined
@@ -202,10 +235,12 @@ function createSelectorAsync<U = any, T = any>(
                     ? projection(selectorResults, projectionProps)
                     : selectorResults
               );
-            } catch (error) {
-              if (!unsubscribed && !didCancel) {
-                observer.error(error);
-              }
+            }
+          } catch (error: any) {
+            if (!unsubscribed && !didCancel) {
+              console.warn("Error during selector execution:", error.message);
+              observer.complete();
+              tracker && tracker.setStatus(trackable, true);
             }
           }
         };
@@ -214,23 +249,26 @@ function createSelectorAsync<U = any, T = any>(
           next: (sliceState: any) => runSelectors(sliceState),
           error: (error: any) => {
             if (!unsubscribed && !didCancel) {
-              observer.error(error);
+              console.warn("Error during selector execution:", error.message);
+              observer.complete();
+              tracker && tracker.setStatus(trackable, true);
             }
           },
           complete: () => {
             if (!unsubscribed && !didCancel) {
               observer.complete();
+              tracker && tracker.setStatus(trackable, true);
             }
-          }
+          },
         });
 
         return () => {
           unsubscribed = true;
           subscription.unsubscribe();
         };
-      });
+      }, tracker);
 
-      return sliceState$;
+      return trackable;
     };
   };
 }

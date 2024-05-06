@@ -9,8 +9,8 @@ import { Lock } from "./lock";
 import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
 import { CustomAsyncSubject } from "./subject";
-import { Tracker } from "./tracker";
-import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
+import { TrackableObservable, Tracker } from "./tracker";
+import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, Observer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
 
 export { createStore as store };
 
@@ -191,53 +191,79 @@ export class Store {
     return storeCreator(mainModule);
   }
 
-  /**
+    /**
    * Dispatches an action to be processed by the store's reducer.
    * @param {Action<any>} action - The action to dispatch.
    * @throws {Error} Throws an error if the action is not a plain object, does not have a defined "type" property, or if the "type" property is not a string.
    */
-  dispatch(action: Action<any>) {
-    if (!isPlainObject(action)) {
-      throw new Error(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
+    dispatch(action: Action<any> | any) {
+      if (!isPlainObject(action)) {
+        console.warn(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
+        return;
+      }
+      if (typeof action.type === "undefined") {
+        console.warn('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
+        return;
+      }
+      if (typeof action.type !== "string") {
+        console.warn(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
+        return;
+      }
+
+      this.actionStream.next(action);
     }
-    if (typeof action.type === "undefined") {
-      throw new Error('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
+
+    /**
+     * Executes a callback function after acquiring a lock and ensuring the system is idle.
+     * @param {keyof T | string[]} slice - The slice of state to execute the callback on.
+     * @param {(readonly state: ) => void} callback - The callback function to execute with the state.
+     * @returns {Promise<void>} A promise that resolves after executing the callback.
+     * @template T
+     */
+    exec<T = any>(slice: keyof T | string[], callback: (state:  Readonly<T>) => void | Promise<void>): Promise<void> {
+      const promise = Promise.all([this.lock.acquire(), this.waitForIdle()])
+        .then(() => this.getState(slice))
+        .then(state => callback(state as any))
+        .finally(() => this.lock.release());
+      return promise;
     }
-    if (typeof action.type !== "string") {
-      throw new Error(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
+
+    /**
+     * Selects a value from the store's state using the provided selector function.
+     * @param {(obs: Observable<any>) => Observable<any>} selector - The selector function to apply on the state observable.
+     * @param {*} [defaultValue] - The default value to use if the selected value is undefined.
+     * @returns {Observable<any>} An observable stream with the selected value.
+     */
+    select<T = any, R = any>(selector: (obs: Observable<T>, tracker?: Tracker) => Observable<R>, defaultValue?: any): Observable<R> {
+      let lastValue: any;
+      let selected$: TrackableObservable<R> | undefined;
+      return new TrackableObservable<R>((subscriber: Observer<R>) => {
+        const subscription = this.currentState.asObservable().pipe((state) => (selected$ = selector(state, this.tracker) as TrackableObservable<R>)).subscribe(selectedValue => {
+          const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
+          if(filteredValue !== lastValue) {
+            Promise.resolve(subscriber.next(filteredValue))
+              .then(() => {
+                lastValue = filteredValue;
+                this.tracker.setStatus(selected$!, true);
+              });
+          } else {
+            this.tracker.setStatus(selected$!, true);
+          }
+        });
+
+        return () => subscription.unsubscribe();
+      }, this.tracker);
     }
 
-    this.actionStream.next(action);
-  }
+    /**
+     * Waits for the store to become idle.
+     * @returns {Promise<boolean>} A promise that resolves to true when the store is idle (not processing any actions), or false if the store completes without becoming idle.
+     * @protected
+     */
+    protected waitForIdle(): Promise<boolean> {
+      return waitFor(this.isProcessing, value => value === false);
+    }
 
-  /**
-   * Waits for the store to become idle.
-   * @returns {Promise<boolean>} A promise that resolves to true when the store is idle (not processing any actions), or false if the store completes without becoming idle.
-   */
-  waitForIdle(): Promise<boolean> {
-    return waitFor(this.isProcessing.asObservable(), value => value === false);
-  }
-
-  /**
-   * Selects a value from the store's state using the provided selector function.
-   * @param {(obs: Observable<any>) => Observable<any>} selector - The selector function to apply on the state observable.
-   * @param {*} [defaultValue] - The default value to use if the selected value is undefined.
-   * @returns {Observable<any>} An observable stream with the selected value.
-   */
-  select<T = any, R = any>(selector: (obs: Observable<T>) => Observable<R>, defaultValue?: any): Observable<R> {
-    let lastValue: any;
-    return new Observable<R>(subscriber => {
-      const subscription = this.currentState.asObservable().pipe((state) => (selector(state) as Observable<R>)).subscribe(selectedValue => {
-        const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
-        if(filteredValue !== lastValue) {
-          lastValue = filteredValue;
-          subscriber.next(filteredValue);
-        }
-      });
-
-      return () => subscription.unsubscribe();
-    });
-  }
 
   /**
    * Gets the current state or a slice of the state from the store.
@@ -614,7 +640,7 @@ export class Store {
   extend(...args: SideEffect[]): Observable<any> {
     const dependencies = this.pipeline.dependencies;
 
-    const effects$ = new Observable<any>(subscriber => {
+    const effects$ = new TrackableObservable<any>((subscriber: Observer<any>) => {
       let effectsSubscription: Subscription | undefined;
       const unregisterEffects = () => {
         if (effectsSubscription) {
@@ -650,7 +676,7 @@ export class Store {
         unregisterEffects();
         this.tracker.remove(effects$);
       }
-    });
+    }, this.tracker);
 
     this.systemActions.effectsRegistered(args);
     return effects$;
