@@ -33,15 +33,15 @@ export const createStarter = () => {
         }, getState, dependencies());
       } else {
         // Pass regular actions to the next middleware
+        isProcessing.next(true);
         await next(action);
+        await waitFor(isProcessing, value => value === false);
       }
     }
 
-    await Promise.all([lock.acquire(), waitFor(isProcessing, value => value === false)]);
+    await lock.acquire();
     try {
-      isProcessing.next(true);
       await processAction(action);
-      await waitFor(isProcessing, value => value === false);
     } finally {
       lock.release();
     }
@@ -69,11 +69,13 @@ export const createStarter = () => {
         asyncActions.push(asyncFunc);
       } else {
         // Pass regular actions to the next middleware
+        isProcessing.next(true);
         await next(action);
+        await waitFor(isProcessing, value => value === false);
       }
     }
 
-    await Promise.all([lock.acquire(), waitFor(isProcessing, value => value === false)]);
+    await lock.acquire();
     try {
       await processAction(action);
     } finally {
