@@ -1,14 +1,19 @@
-import { Action, action, effect, featureSelector, selector } from "@actioncrew/actionstack";
-import { map } from "rxjs";
+import { Action, action, effect, featureSelector, ofType, selector } from "@actioncrew/actionstack";
+import { concatMap, map, withLatestFrom } from "rxjs";
+import { Observable } from 'rxjs/internal/Observable';
 import { Hero } from "../hero";
 
 export const slice = "heroes";
 
-export const getHeroesRequest = action("GET_HEROES_REQUEST", (heroes: Hero[]) => ({heroes}));
-export const getHeroesSuccess = action("GET_HEROES_SUCCESS", (heroes: Hero[]) => ({heroes}));
+export const getHeroesRequest = action("GET_HEROES_REQUEST", (heroes: Hero[]) => heroes);
+export const getHeroesSuccess = action("GET_HEROES_SUCCESS", (heroes: Hero[]) => heroes);
 
-export const loadHeroes = effect(getHeroesRequest.type, (action, state, { heroService }: any) => {
-  return heroService.getHeroes().pipe(map(heroes => getHeroesSuccess(heroes)));
+export const loadHeroes = effect(getHeroesRequest.type, () => (actionType) => (action$, state$, { heroService }: any): Observable<Action<any>> => {
+  return action$.pipe(
+    ofType(actionType),
+    withLatestFrom(state$!),
+    concatMap(([action, state]) => heroService.getHeroes().pipe(map(heroes => getHeroesSuccess({heroes}))) as Observable<Action<any>>)
+  );
 });
 
 const initialState = {
