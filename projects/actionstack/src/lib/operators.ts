@@ -1,6 +1,12 @@
 import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 import { Observable } from "rxjs/internal/Observable";
 import { Subscription } from "rxjs/internal/Subscription";
+import { Action, isAction } from './types';
+
+
+export const EMPTY = new Observable<never>((subscriber) => {
+  subscriber.complete();
+});
 
 /**
  * Projects each source value to a Promise which is merged in the output Observable
@@ -65,7 +71,7 @@ export function concatMap<T, R>(projector: (value: T) => Promise<R>) {
 export function concat<T>(...sources: Observable<T>[]): Observable<T> {
   return new Observable<T>(subscriber => {
     let index = 0;
-    let currentSubscription: Subscription | null = null;
+    let subscription: Subscription | null = null;
 
     const next = () => {
       if (subscriber.closed) {
@@ -74,11 +80,11 @@ export function concat<T>(...sources: Observable<T>[]): Observable<T> {
 
       if (index < sources.length) {
         const source = sources[index++];
-        currentSubscription = source.subscribe({
+        subscription = source.subscribe({
           next: value => subscriber.next(value),
           error: error => subscriber.error(error),
           complete: () => {
-            currentSubscription = null;
+            subscription = null;
             next();
           }
         });
@@ -91,8 +97,8 @@ export function concat<T>(...sources: Observable<T>[]): Observable<T> {
 
     return () => {
       // Unsubscribe if a source Observable is currently being subscribed to
-      if (currentSubscription) {
-        currentSubscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
       }
     };
   });
@@ -108,7 +114,7 @@ export function concat<T>(...sources: Observable<T>[]): Observable<T> {
 export function merge<T>(...sources: Observable<T>[]): Observable<T> {
   return new Observable<T>(subscriber => {
     let completedCount = 0;
-    const subscriptions: Subscription[] = [];
+    let subscriptions: Subscription[] = [];
 
     const completeIfAllCompleted = () => {
       if (++completedCount === sources.length) {
@@ -121,7 +127,10 @@ export function merge<T>(...sources: Observable<T>[]): Observable<T> {
         next: value => subscriber.next(value),
         error: error => {
           // Unsubscribe from all source Observables when an error occurs
-          subscriptions.forEach(subscription => subscription.unsubscribe());
+          if (subscriptions.length) {
+            subscriptions.forEach(subscription => subscription.unsubscribe());
+            subscriptions = [];
+          }
           subscriber.error(error);
         },
         complete: completeIfAllCompleted
@@ -132,7 +141,10 @@ export function merge<T>(...sources: Observable<T>[]): Observable<T> {
 
     return () => {
       // Unsubscribe from all source Observables when the resulting Observable is unsubscribed
-      subscriptions.forEach(subscription => subscription.unsubscribe());
+      if (subscriptions.length) {
+        subscriptions.forEach(subscription => subscription.unsubscribe());
+        subscriptions = [];
+      }
     };
   });
 }
@@ -144,9 +156,9 @@ export function merge<T>(...sources: Observable<T>[]): Observable<T> {
  * @returns {Promise<boolean>} A promise that resolves to true when the predicate condition is met, or false if the observable completes without satisfying the predicate.
  */
 export function waitFor<T>(obs: Observable<T>, predicate: (value: T) => boolean): Promise<T> {
-  return new Promise((resolve, reject) => {
-    let subscription: Subscription; // Declare but don't initialize yet
+  let subscription: Subscription | undefined;
 
+  return new Promise<T>((resolve, reject) => {
     const checkInitialValue = (obs as BehaviorSubject<T>)?.value;
     if (checkInitialValue !== undefined && predicate(checkInitialValue)) {
       return resolve(checkInitialValue);
@@ -155,7 +167,9 @@ export function waitFor<T>(obs: Observable<T>, predicate: (value: T) => boolean)
     subscription = obs.subscribe({
       next: value => {
         if (predicate(value)) {
-          queueMicrotask(() => subscription.unsubscribe());
+          if (subscription) {
+            subscription.unsubscribe();
+          }
           resolve(value);
         }
       },
@@ -164,7 +178,44 @@ export function waitFor<T>(obs: Observable<T>, predicate: (value: T) => boolean)
         reject(new Error("Predicate not met before completion"));
       },
     });
-
-    return () => subscription.unsubscribe(); // unsubscribe logic
+  }).finally(() => {
+    if (subscription && !subscription.closed) {
+      subscription.unsubscribe();
+    }
   });
 }
+
+/**
+ * Creates an RxJS operator function that filters actions based on their type.
+ *
+ * @param {...string} types - A variable number of strings representing the action types to filter by.
+ * @returns {OperatorFunction<Action<any>, Action<any>>} - An RxJS operator function that filters actions.
+ */
+export function ofType(types: string | string[]): (source: Observable<Action<any>>) => Observable<Action<any>> {
+  return (source: Observable<Action<any>>) => {
+    return new Observable<Action<any>>(observer => {
+      const subscription = source.subscribe({
+        next: (action) => {
+          if (isAction(action)) {
+            if (typeof types === 'string') {
+              if (types === action.type) {
+                observer.next(action);
+              }
+            } else {
+              if (types.includes(action.type)) {
+                observer.next(action);
+              }
+            }
+          }
+        },
+        error: (err) => observer.error(err),
+        complete: () => observer.complete()
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    });
+  };
+}
+

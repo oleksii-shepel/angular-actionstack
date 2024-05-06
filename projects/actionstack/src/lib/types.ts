@@ -30,6 +30,16 @@ export interface AsyncAction<T = any> {
 }
 
 /**
+ * Represents an action creator.
+ * @template T The type of the action payload.
+ */
+export type ActionCreator<T = any> = ((...args: any[]) => Action<T> | AsyncAction<T>) & {
+  toString(): string;
+  type: string;
+  match(action: Action<T>): boolean;
+}
+
+/**
  * A function that takes the current state and an action, and returns
  * the updated state (excluding promises).
  */
@@ -80,6 +90,17 @@ export type MetaReducer = (reducer: AsyncReducer) => Promise<AsyncReducer>;
 export interface Middleware {
   (store: any): (next: Function) => (action: Action<any>) => Promise<any>;
   signature?: string;
+}
+
+/**
+ * Represents an observer that receives notifications of values from an Observable.
+ * @interface
+ * @template T The type of the value being observed.
+ */
+export interface Observer<T> {
+  next: (value: T) => void;
+  error: (err: any) => void;
+  complete: () => void;
 }
 
 /**
