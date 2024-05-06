@@ -637,10 +637,10 @@ export class Store {
    * @returns {Observable<any>} An observable stream extended with the specified side effects.
    * @protected
    */
-  extend(...args: SideEffect[]): Observable<any> {
+  extend<T>(...args: SideEffect[]): Observable<T> {
     const dependencies = this.pipeline.dependencies;
 
-    const effects$ = new TrackableObservable<any>((subscriber: Observer<any>) => {
+    const effects$ = new TrackableObservable<T>((subscriber: Observer<T>) => {
       let effectsSubscription: Subscription | undefined;
       const unregisterEffects = () => {
         if (effectsSubscription) {
