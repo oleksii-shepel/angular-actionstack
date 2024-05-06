@@ -6,7 +6,7 @@ import { Subscription } from "rxjs/internal/Subscription";
 import { action, bindActionCreators } from "./actions";
 import { isValidSignature } from "./hash";
 import { Lock } from "./lock";
-import { concat, concatMap, merge, waitFor } from "./operators";
+import { concat, concatMap, merge } from "./operators";
 import { starter } from "./starter";
 import { TrackableObservable, Tracker } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, Observer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
@@ -195,73 +195,65 @@ export class Store {
    * @param {Action<any>} action - The action to dispatch.
    * @throws {Error} Throws an error if the action is not a plain object, does not have a defined "type" property, or if the "type" property is not a string.
    */
-    dispatch(action: Action<any> | any) {
-      if (!isPlainObject(action)) {
-        console.warn(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
-        return;
-      }
-      if (typeof action.type === "undefined") {
-        console.warn('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
-        return;
-      }
-      if (typeof action.type !== "string") {
-        console.warn(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
-        return;
-      }
-
-      this.actionStream.next(action);
+  dispatch(action: Action<any> | any) {
+    if (!isPlainObject(action)) {
+      console.warn(`Actions must be plain objects. Instead, the actual type was: '${kindOf(action)}'. You may need to add middleware to your setup to handle dispatching custom values.`);
+      return;
+    }
+    if (typeof action.type === "undefined") {
+      console.warn('Actions may not have an undefined "type" property. You may have misspelled an action type string constant.');
+      return;
+    }
+    if (typeof action.type !== "string") {
+      console.warn(`Action "type" property must be a string. Instead, the actual type was: '${kindOf(action.type)}'. Value was: '${action.type}' (stringified)`);
+      return;
     }
 
-    /**
-     * Executes a callback function after acquiring a lock and ensuring the system is idle.
-     * @param {keyof T | string[]} slice - The slice of state to execute the callback on.
-     * @param {(readonly state: ) => void} callback - The callback function to execute with the state.
-     * @returns {Promise<void>} A promise that resolves after executing the callback.
-     * @template T
-     */
-    exec<T = any>(slice: keyof T | string[], callback: (state:  Readonly<T>) => void | Promise<void>): Promise<void> {
-      const promise = Promise.all([this.lock.acquire(), this.waitForIdle()])
-        .then(() => this.getState(slice))
-        .then(state => callback(state as any))
-        .finally(() => this.lock.release());
-      return promise;
-    }
+    this.actionStream.next(action);
+  }
 
-    /**
-     * Selects a value from the store's state using the provided selector function.
-     * @param {(obs: Observable<any>) => Observable<any>} selector - The selector function to apply on the state observable.
-     * @param {*} [defaultValue] - The default value to use if the selected value is undefined.
-     * @returns {Observable<any>} An observable stream with the selected value.
-     */
-    select<T = any, R = any>(selector: (obs: Observable<T>, tracker?: Tracker) => Observable<R>, defaultValue?: any): Observable<R> {
-      let lastValue: any;
-      let selected$: TrackableObservable<R> | undefined;
-      return new TrackableObservable<R>((subscriber: Observer<R>) => {
-        const subscription = this.currentState.asObservable().pipe((state) => (selected$ = selector(state, this.tracker) as TrackableObservable<R>)).subscribe(selectedValue => {
-          const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
-          if(filteredValue !== lastValue) {
-            Promise.resolve(subscriber.next(filteredValue))
-              .then(() => {
-                lastValue = filteredValue;
-                this.tracker.setStatus(selected$!, true);
-              });
-          } else {
-            this.tracker.setStatus(selected$!, true);
-          }
-        });
+  /**
+   * Executes a callback function after acquiring a lock and ensuring the system is idle.
+   * @param {keyof T | string[]} slice - The slice of state to execute the callback on.
+   * @param {(readonly state: ) => void} callback - The callback function to execute with the state.
+   * @returns {Promise<void>} A promise that resolves after executing the callback.
+   * @template T
+   */
+  exec<T = any>(slice: keyof T | string[], callback: (state:  Readonly<T>) => void | Promise<void>): Promise<void> {
+    const promise = this.lock.acquire()
+      .then(() => this.getState(slice))
+      .then(state => callback(state as any))
+      .finally(() => this.lock.release());
+    return promise;
+  }
 
-        return () => subscription.unsubscribe();
-      }, this.tracker);
-    }
+  /**
+   * Selects a value from the store's state using the provided selector function.
+   * @param {(obs: Observable<any>) => Observable<any>} selector - The selector function to apply on the state observable.
+   * @param {*} [defaultValue] - The default value to use if the selected value is undefined.
+   * @returns {Observable<any>} An observable stream with the selected value.
+   */
+  select<T = any, R = any>(selector: (obs: Observable<T>, tracker?: Tracker) => Observable<R>, defaultValue?: any): Observable<R> {
+    let lastValue: any;
+    let selected$: TrackableObservable<R> | undefined;
+    return new TrackableObservable<R>((subscriber: Observer<R>) => {
+      const subscription = this.currentState.asObservable().pipe((state) => (selected$ = selector(state, this.tracker) as TrackableObservable<R>)).subscribe(selectedValue => {
+        const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
+        if(filteredValue !== lastValue) {
+          Promise.resolve(subscriber.next(filteredValue))
+            .then(() => {
+              lastValue = filteredValue;
+              this.tracker.setStatus(selected$!, true);
+            });
+        } else {
+          this.tracker.setStatus(selected$!, true);
+        }
+      });
 
-    /**
-     * Waits for the store to become idle.
-     * @returns {Promise<boolean>} A promise that resolves to true when the store is idle (not processing any actions), or false if the store completes without becoming idle.
-     * @protected
-     */
-    protected waitForIdle(): Promise<boolean> {
-      return waitFor(this.isProcessing, value => value === false);
-    }
+      return () => subscription.unsubscribe();
+    }, this.tracker);
+  }
+
 
 
   /**
@@ -271,7 +263,7 @@ export class Store {
    * @throws {Error} Throws an error if the slice parameter is of unsupported type.
    * @template T
    */
-  getState<T = any>(slice?: keyof T | string[]): any {
+  protected getState<T = any>(slice?: keyof T | string[]): any {
     if (this.currentState.value === undefined || slice === undefined || typeof slice === "string" && slice == "@global") {
       return this.currentState.value as T;
     } else if (typeof slice === "string") {
@@ -575,7 +567,7 @@ export class Store {
    * @returns {Observable<any>} An observable stream that processes actions.
    * @protected
    */
-  processAction() {
+  protected processAction() {
     return (source: Observable<Action<any>>) =>
       new Observable<Action<any>>(subscriber => {
 
@@ -655,7 +647,7 @@ export class Store {
         this.systemActions.effectsUnregistered(args);
       };
 
-      this.waitForIdle().then(() => {
+      this.lock.acquire().then(() => {
         this.tracker.track(effects$);
 
         const sideEffects = args.map(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies));
@@ -699,7 +691,7 @@ export class Store {
       return Promise.resolve(); // Module already exists, return without changes
     }
 
-    const promise = Promise.all([this.lock.acquire(), this.waitForIdle()])
+    const promise = this.lock.acquire()
       .then(() => {
         // Create a new array with the module added
         this.modules = [...this.modules, module];
@@ -731,7 +723,7 @@ export class Store {
       return Promise.resolve(); // Module not found, nothing to unload
     }
 
-    const promise = Promise.all([this.lock.acquire(), this.waitForIdle()])
+    const promise = this.lock.acquire()
       .then(() => {
         // Remove the module from the internal state
         this.modules.splice(moduleIndex, 1);
