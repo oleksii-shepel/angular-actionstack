@@ -582,7 +582,6 @@ export class Store {
         const subscription = source.pipe(
           concatMap(async (action: Action<any>) => {
             try {
-              this.isProcessing.next(true);
               return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
             } finally {
               this.isProcessing.next(false);

@@ -39,6 +39,7 @@ export const createStarter = () => {
 
     await Promise.all([lock.acquire(), waitFor(isProcessing, value => value === false)]);
     try {
+      isProcessing.next(true);
       await processAction(action);
       await waitFor(isProcessing, value => value === false);
     } finally {
