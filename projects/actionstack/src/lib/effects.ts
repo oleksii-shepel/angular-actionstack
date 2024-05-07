@@ -23,13 +23,13 @@ export { createEffect as effect };
 
 function createEffect(
   actionType: string[] | string,
-  effectFn: (actionType: any) => SideEffect
+  effectFn: (...args: any[]) => (actionType: any) => SideEffect
 ) {
-  return () => (action$: Observable<Action<any>>, state$?: Observable<any>, dependencies?: Record<string, any>) => {
+  return (...args: any[]) => (action$: Observable<Action<any>>, state$?: Observable<any>, dependencies?: Record<string, any>) => {
     return new Observable<Action<any>> ((observer) => {
       let innerSubscription: Subscription;
       try {
-        const result = () => effectFn(actionType)(action$, state$!, dependencies!) as Observable<Action<any>>;
+        const result = effectFn(...args)(actionType)(action$, state$!, dependencies!) as Observable<Action<any>>;
         if (result === null || result === undefined) {
           console.warn(`The effect must return an observable. It currently does not return anything.`);
           return;
