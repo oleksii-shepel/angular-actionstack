@@ -1,7 +1,8 @@
+import { Observer, OperatorFunction } from "rxjs";
 import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
 import { Observable } from "rxjs/internal/Observable";
 import { Subscription } from 'rxjs/internal/Subscription';
-import { Observer } from "./types";
+import { isObservable } from "./types";
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -119,13 +120,26 @@ export class Tracker {
 export class TrackableObservable<T> extends Observable<T> {
   /** Indicates whether the observable sequence has completed. */
   isCompleted: boolean = false;
+  /** Indicates whether the observable has produced a value. */
+  isExecuted: boolean = false;
+  /** Indicates how many times the observable has produced a value. */
+  emissionNumber = 0;
+  /** Ancestor observable of this observable in the pipe. */
+  ancestor?: TrackableObservable<any>;
 
   /**
    * Creates a new TrackableObservable.
    * @param {function(observer: Observer<T>): () => void} subscribe The function that is called when the Observable is initially subscribed to. This function should be defined to handle the delivery of values to Observers.
    */
-  constructor(subscribe?: (subscriber: Observer<T>) => (() => void) | void, tracker?: Tracker) {
-    super(subscribe);
+  constructor(subscribeOrObservable?: Observable<T> | ((subscriber: Observer<T>) => (() => void) | void), private tracker?: Tracker) {
+    super(isObservable(subscribeOrObservable) ? (observer => {
+      const subscription = subscribeOrObservable.subscribe({
+        next: (value) => { observer.next(value); this.isExecuted = true; this.emissionNumber++; },
+        error: (err) => { this.isCompleted = true; observer.error(err); },
+        complete: () => { this.isCompleted = true; observer.complete(); }
+      });
+      return () => subscription.unsubscribe();
+    }) : subscribeOrObservable);
   }
 
   /**
@@ -146,6 +160,15 @@ export class TrackableObservable<T> extends Observable<T> {
       Object.assign(observer, observerOrNext);
     }
 
+    const originalNext = observer.next?.bind(observer);
+    observer.next = (value) => {
+      if(originalNext) {
+        originalNext(value);
+        this.isExecuted = true;
+        this.emissionNumber++;
+      }
+    };
+
     // Initialize error and complete callbacks if not provided
     observer.error = observer.error || error;
     observer.complete = observer.complete || complete;
@@ -156,6 +179,21 @@ export class TrackableObservable<T> extends Observable<T> {
       this.isCompleted = true;
       originalComplete();
     };
+
+    (subscription as any).source = this;
     return subscription;
+  }
+
+  /**
+   * Overrides the pipe method of Observable to create a new TrackableObservable
+   * with the specified operators applied.
+   * @param {OperatorFunction<any, any>[]} operators - An array of operators to apply.
+   * @returns {TrackableObservable<any>} A new TrackableObservable with the specified operators applied.
+   */
+  override pipe(...operators: OperatorFunction<any, any>[]): TrackableObservable<any> {
+    if (operators.length === 0) {
+      return this;
+    }
+    return operators.reduce((prev, fn) => { const obs = new TrackableObservable(fn(prev), this.tracker); obs.ancestor = prev; return obs; }, this as any);
   }
 }
