@@ -237,7 +237,7 @@ export class Store {
     let lastValue: any;
     let selected$: TrackableObservable<R> | undefined;
     return new TrackableObservable<R>((subscriber: Observer<R>) => {
-      const subscription = this.currentState.asObservable().pipe((state) => (selected$ = selector(state, this.tracker) as TrackableObservable<R>)).subscribe(selectedValue => {
+      const subscription = this.currentState.pipe((state) => (selected$ = selector(state, this.tracker) as TrackableObservable<R>)).subscribe(selectedValue => {
         const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
         if(filteredValue !== lastValue) {
           Promise.resolve(subscriber.next(filteredValue))
@@ -649,7 +649,7 @@ export class Store {
 
       this.tracker.track(effects$);
 
-      const sideEffects = args.map(sideEffect => sideEffect(this.currentAction.asObservable(), this.currentState.asObservable(), dependencies));
+      const sideEffects = args.map(sideEffect => sideEffect(this.currentAction, this.currentState, dependencies));
       let effectsExecutedCount = 0;
       effectsSubscription = (this.pipeline.strategy === "concurrent" ? merge : concat)(...sideEffects).subscribe({
         next: (childAction: any) => {
