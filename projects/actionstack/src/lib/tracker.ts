@@ -64,15 +64,15 @@ export class Tracker {
   /**
    * Resets the execution status of all tracked Observables to false.
    */
-    reset() {
-      for (const [key, value] of [...this.entries.entries()]) {
-        if (key.isCompleted) {
-          this.entries.delete(key); // Remove the entry if its value is true
-        } else {
-          value.next(false); // Reset the subject to false
-        }
+  reset() {
+    for (const [key, value] of [...this.entries.entries()]) {
+      if (key.isCompleted) {
+        this.entries.delete(key); // Remove the entry if its value is true
+      } else {
+        value.next(false); // Reset the subject to false
       }
     }
+  }
 
   /**
    * Asynchronously checks if all tracked Observables have been executed within a specified timeout period.
