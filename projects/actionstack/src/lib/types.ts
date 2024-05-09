@@ -104,6 +104,30 @@ export interface Observer<T> {
 }
 
 /**
+ * Represents an asynchronous observer that receives notifications of values from an Observable.
+ * @interface
+ * @template T The type of the value being observed.
+ */
+export interface AsyncObserver<T> {
+  next: (value: T) => Promise<void>;
+  error: (err: any) => Promise<void>;
+  complete: () => Promise<void>;
+}
+
+/**
+ * Interface representing an operator function for transforming observables.
+ *
+ * An operator function takes an input `Observable<T>` and returns an output `Observable<R>`.
+ *
+ * @typeParam T - The type of the input elements.
+ * @typeParam R - The type of the output elements.
+ */
+export interface OperatorFunction<T, R> {
+  (source: Observable<T>): Observable<R>
+}
+
+
+/**
  * Type alias for any function that takes any number of arguments and returns anything.
  *
  * This type is used to represent a generic function without specifying a specific argument or return type.
