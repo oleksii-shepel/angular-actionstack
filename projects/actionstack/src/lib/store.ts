@@ -241,10 +241,8 @@ export class Store {
         const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
         if(filteredValue !== lastValue) {
           Promise.resolve(subscriber.next(filteredValue))
-            .then(() => {
-              lastValue = filteredValue;
-              this.tracker.setStatus(selected$!, true);
-            });
+            .then(() => lastValue = filteredValue)
+            .finally(() => this.tracker.setStatus(selected$!, true));
         } else {
           this.tracker.setStatus(selected$!, true);
         }
