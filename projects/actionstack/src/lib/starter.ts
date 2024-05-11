@@ -27,15 +27,11 @@ export const createStarter = () => {
       if (typeof action === 'function') {
         // Process async actions (functions)
         await action(async (action: Action<any>) => {
-          isProcessing.next(true);
           await next(action);
-          await waitFor(isProcessing, value => value === false);
         }, getState, dependencies());
       } else {
         // Pass regular actions to the next middleware
-        isProcessing.next(true);
         await next(action);
-        await waitFor(isProcessing, value => value === false);
       }
     }
 
@@ -69,9 +65,7 @@ export const createStarter = () => {
         asyncActions.push(asyncFunc);
       } else {
         // Pass regular actions to the next middleware
-        isProcessing.next(true);
         await next(action);
-        await waitFor(isProcessing, value => value === false);
       }
     }
 
