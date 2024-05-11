@@ -606,7 +606,6 @@ export class Store {
     const starterAPI = {
       getState: () => this.getState(),
       dispatch: async (action: any) => await dispatch(action),
-      isProcessing: this.isProcessing,
       dependencies: () => this.pipeline.dependencies,
       strategy: () => this.pipeline.strategy,
       lock: this.lock
