@@ -619,8 +619,13 @@ export class Store {
 
     // Build middleware chain
     const chain = [starter(isValidSignature(starter.signature) ? starterAPI : middlewareAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
+    const originalDispatch = this.dispatch.bind(this);
     // Compose middleware chain with dispatch function
-    dispatch = (chain.length === 1 ? chain[0] : chain.reduce((a, b) => (...args: any[]) => a(b(...args))))(this.dispatch.bind(this));
+    dispatch = (chain.length === 1 ? chain[0] : chain.reduce((a, b) => (...args: any[]) => a(b(...args))))(async () => {
+      this.isProcessing.next(true);
+      originalDispatch(action);
+      return await waitFor(isProcessing, value => value === false);
+    });
 
     this.dispatch = dispatch;
     return this;
