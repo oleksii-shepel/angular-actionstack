@@ -155,20 +155,26 @@ export class Store {
 
       // Create action stream observable
       // Subscribe to action stream and process actions
-      let count = 0;
+      let ready = new Lock();
+
+      let isInitialized = false;
 
       store.subscription = store.actionStream.pipe(
         concatMap(async (action: any) => {
-          if (count === 0) {
-            console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;");
-            await store.currentState.next(await store.setupReducer());
-            store.systemActions.storeInitialized();
+          if (!isInitialized) {
+            await ready.acquire();
+            if (!isInitialized) {
+              console.log('%cYou are using ActionStack. Happy coding! 🎉', 'font-weight: bold;');
+              await store.currentState.next(await store.setupReducer());
+              store.systemActions.storeInitialized();
+              isInitialized = true;
+              ready.release();
+            }
           }
-          count++;
           return action;
         }),
-        store.processAction()
-      ).subscribe(() => {});
+        store.processAction())
+      .subscribe(() => {});
 
       // Initialize state and mark store as initialized
       store.systemActions.initializeState();
