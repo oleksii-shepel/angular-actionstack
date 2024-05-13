@@ -5,7 +5,7 @@ import { Subject } from "rxjs/internal/Subject";
 import { Subscription } from "rxjs/internal/Subscription";
 import { action, bindActionCreators } from "./actions";
 import { Lock } from "./lock";
-import { concat, concatMap, merge, waitFor } from "./operators";
+import { EMPTY, concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
 import { TrackableObservable, Tracker } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, Observer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
@@ -155,29 +155,23 @@ export class Store {
 
       // Create action stream observable
       // Subscribe to action stream and process actions
-      let ready = new Lock();
-
-      let isInitialized = false;
+      let count = 0;
 
       store.subscription = store.actionStream.pipe(
         concatMap(async (action: any) => {
-          if (!isInitialized) {
-            await ready.acquire();
-            if (!isInitialized) {
-              console.log('%cYou are using ActionStack. Happy coding! 🎉', 'font-weight: bold;');
-              await store.currentState.next(await store.setupReducer());
-              store.systemActions.storeInitialized();
-              isInitialized = true;
-              ready.release();
-            }
+          if (count === 0) {
+            console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;");
+            await store.currentState.next(await store.setupReducer());
           }
+          count++;
           return action;
         }),
-        store.processAction())
-      .subscribe(() => {});
+        store.processAction()
+      ).subscribe(() => {});
 
       // Initialize state and mark store as initialized
       store.systemActions.initializeState();
+      store.systemActions.storeInitialized();
 
       return store;
     }
