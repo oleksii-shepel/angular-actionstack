@@ -52,7 +52,7 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const concurrent = ({ dispatch, getState, dependendencies, lock }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const concurrent = ({ dispatch, getState, dependencies, lock }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       if (typeof action === 'function') {
         // Process async actions asynchronously and track them
