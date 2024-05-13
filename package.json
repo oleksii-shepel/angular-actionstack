@@ -1,6 +1,6 @@
 {
   "name": "actionstack",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -8,7 +8,6 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "minify": "node terser.mjs",
-    "bundle": "dts-bundle --name @actioncrew/actionstack --main ./dist/actionstack/public-api.d.ts --outputAsModuleFolder && dts-bundle --name @actioncrew/actionstack/tools --main ./dist/actionstack/tools/public-api.d.ts --outputAsModuleFolder && npm run minify"
   },
   "private": true,
   "dependencies": {
