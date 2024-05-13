@@ -623,7 +623,7 @@ export class Store {
     dispatch = (chain.length === 1 ? chain[0] : chain.reduce((a, b) => (...args: any[]) => a(b(...args))))(async () => {
       this.isProcessing.next(true);
       originalDispatch(action);
-      return await waitFor(isProcessing, value => value === false);
+      return await waitFor(this.isProcessing, value => value === false);
     });
 
     this.dispatch = dispatch;
