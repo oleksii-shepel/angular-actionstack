@@ -4,7 +4,6 @@ import { Observable } from "rxjs/internal/Observable";
 import { Subject } from "rxjs/internal/Subject";
 import { Subscription } from "rxjs/internal/Subscription";
 import { action, bindActionCreators } from "./actions";
-import { isValidSignature } from "./hash";
 import { Lock } from "./lock";
 import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";

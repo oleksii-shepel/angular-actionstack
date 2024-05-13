@@ -4,7 +4,7 @@
   "description": "State management library [Black Edition]",
   "license": "MIT",
   "keywords": [
-    "no RxJS",
+    "RxJS",
     "ActionStack",
     "NgRx",
     "Redux",
