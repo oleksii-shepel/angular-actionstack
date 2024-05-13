@@ -6,7 +6,7 @@ import { Subscription } from "rxjs/internal/Subscription";
 import { action, bindActionCreators } from "./actions";
 import { isValidSignature } from "./hash";
 import { Lock } from "./lock";
-import { concat, concatMap, merge } from "./operators";
+import { concat, concatMap, merge, waitFor } from "./operators";
 import { starter } from "./starter";
 import { TrackableObservable, Tracker } from "./tracker";
 import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, Observer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
