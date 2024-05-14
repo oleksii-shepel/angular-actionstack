@@ -43,11 +43,10 @@ export class Slice implements OnDestroy {
       this.elRef = inject(ElementRef);
     } catch {
       console.warn('Injection failed. The Slice is provided in the module providers list, but it is suitable to use within component provider list.')
-      return;
     }
 
     this.opts = {
-      slice: this.elRef.nativeElement.localName,
+      slice: this.elRef ? this.elRef.nativeElement.localName : "noname",
       reducer: (state: any = {}, action: Action<any>) => state,
       effects: [],
       dependencies: {},

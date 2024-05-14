@@ -576,31 +576,26 @@ export class Store {
    * @returns {Observable<any>} An observable stream that processes actions.
    * @protected
    */
-  protected processAction() {
+  processAction() {
     return (source: Observable<Action<any>>) =>
-      new Observable<Action<any>>(subscriber => {
-
-        const subscription = source.pipe(
-          concatMap(async (action: Action<any>) => {
-            try {
-              return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
-            } finally {
-              this.isProcessing.next(false);
-            }
-          })
-        ).subscribe({
-          error: (error) => {
-            console.warn(error.message);
-            subscriber.complete(); // Complete the observable on error
-          },
-          complete: () => {
-            subscriber.complete(); // Complete the observable when the source completes
-          }
-        });
-
-        return () => subscription.unsubscribe();
+      new Observable(subscriber => {
+        const subscription = source.pipe(concatMap(async (action) => {
+        try {
+          return await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
+        } catch (error: any) {
+          console.warn(error.message);
+        } finally {
+          this.isProcessing.next(false);
+        }
+      })).subscribe({
+        complete: () => {
+          subscriber.complete();
+        }
       });
+      return () => subscription.unsubscribe();
+    });
   }
+
 
   /**
    * Applies middleware to the store's dispatch method.
