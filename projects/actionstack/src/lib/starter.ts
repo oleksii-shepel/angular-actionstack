@@ -82,12 +82,14 @@ export const createStarter = () => {
     'concurrent': concurrent
   };
 
+  const defaultStrategy = 'concurrent';
+
   // Create a method to select the strategy
   const selectStrategy = ({ dispatch, getState, dependencies, strategy, lock }: any) => (next: Function) => async (action: Action<any>) => {
-    const strategyFunc = strategies[strategy()];
+    let strategyFunc = strategies[strategy()];
     if (!strategyFunc) {
-      console.warn(`Unknown strategy: ${strategy}`);
-      return;
+      console.warn(`Unknown strategy: ${strategy}, default is used: ${defaultStrategy}`);
+      strategyFunc = strategies[defaultStrategy];
     }
     return strategyFunc({ dispatch, getState, dependencies, lock })(next)(action);
   };
