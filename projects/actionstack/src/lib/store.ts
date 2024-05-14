@@ -179,7 +179,8 @@ export class Store {
     // Apply enhancer if provided
     if (typeof enhancer !== "undefined") {
       if (typeof enhancer !== "function") {
-        throw new Error(`Expected the enhancer to be a function. Instead, received: '${kindOf(enhancer)}'`);
+        console.warn(`Expected the enhancer to be a function. Instead, received: '${kindOf(enhancer)}'`);
+        return;
       }
       // Apply the enhancer to the storeCreator function
       return enhancer(storeCreator)(mainModule);
@@ -276,7 +277,7 @@ export class Store {
         }
       }, this.currentState.value) as T;
     } else {
-      throw new Error("Unsupported type of slice parameter");
+      console.warn("Unsupported type of slice parameter");
     }
   }
 
@@ -332,7 +333,8 @@ export class Store {
       newState = this.applyChange(this.currentState.value, {path: slice, value}, {});
     } else {
       // Unsupported type of slice parameter
-      throw new Error("Unsupported type of slice parameter");
+      console.warn("Unsupported type of slice parameter");
+      return;
     }
 
     this.tracker.reset();
@@ -366,7 +368,8 @@ export class Store {
    */
   protected async updateState<T = any>(slice: keyof T | string[] | undefined, callback: AnyFn, action: Action<any> = systemActions.updateState()): Promise<any> {
     if(callback === undefined) {
-      throw new Error('Callback function is missing. State will not be updated.')
+      console.warn('Callback function is missing. State will not be updated.')
+      return;
     }
 
     let state = await this.getState(slice);
@@ -607,7 +610,8 @@ export class Store {
   protected applyMiddleware(): Store {
 
     let dispatch = (action: any) => {
-      throw new Error("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
+      console.warn("Dispatching while constructing your middleware is not allowed. Other middleware would not be applied to this dispatch.");
+      return;
     };
 
     // Define starter and middleware APIs

@@ -175,7 +175,7 @@ export function waitFor<T>(obs: Observable<T>, predicate: (value: T) => boolean)
       },
       error: err => reject(err),
       complete: () => {
-        reject(new Error("Predicate not met before completion"));
+        reject("Method had completed before predicate condition was met");
       },
     });
   }).finally(() => {

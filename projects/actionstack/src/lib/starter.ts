@@ -86,7 +86,8 @@ export const createStarter = () => {
   const selectStrategy = ({ dispatch, getState, dependencies, strategy, lock }: any) => (next: Function) => async (action: Action<any>) => {
     const strategyFunc = strategies[strategy()];
     if (!strategyFunc) {
-      throw new Error(`Unknown strategy: ${strategy}`);
+      console.warn(`Unknown strategy: ${strategy}`);
+      return;
     }
     return strategyFunc({ dispatch, getState, dependencies, lock })(next)(action);
   };

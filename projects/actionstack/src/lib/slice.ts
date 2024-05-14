@@ -42,7 +42,8 @@ export class Slice implements OnDestroy {
     try {
       this.elRef = inject(ElementRef);
     } catch {
-      throw new Error('Injection failed. The Slice is provided in the module providers list, but it is suitable to use within component provider list.')
+      console.warn('Injection failed. The Slice is provided in the module providers list, but it is suitable to use within component provider list.')
+      return;
     }
 
     this.opts = {

@@ -33,7 +33,8 @@ function createAction(typeOrThunk: string | Function, payloadCreator?: Function)
     } else if (payloadCreator) {
       let result = payloadCreator(...args);
       if (!result) {
-        throw new Error('payloadCreator did not return an object. Did you forget to initialize an action with params?');
+        console.warn('payloadCreator did not return an object. Did you forget to initialize an action with params?');
+        return;
       }
 
       // Do not return payload if it is undefined
@@ -100,7 +101,8 @@ export function bindActionCreators(actionCreators: any, dispatch: Function): any
   }
 
   if (typeof actionCreators !== "object" || actionCreators === null) {
-    throw new Error(`bindActionCreators expected an object or a function, but instead received: '${kindOf(actionCreators)}'. Did you write "import ActionCreators from" instead of "import * as ActionCreators from"?`);
+    console.warn(`bindActionCreators expected an object or a function, but instead received: '${kindOf(actionCreators)}'. Did you write "import ActionCreators from" instead of "import * as ActionCreators from"?`);
+    return;
   }
 
   const keys = Object.keys(actionCreators);
