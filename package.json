@@ -1,13 +1,14 @@
 {
   "name": "actionstack",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "minify": "node terser.mjs"
+    "minify": "node terser.mjs",
+    "bundle": "dts-bundle-generator --o ./dist/actionstack/@actioncrew/actionstack.d.ts ./dist/actionstack/index.d.ts && dts-bundle-generator --o ./dist/actionstack/@actioncrew/actionstack-tools.d.ts ./dist/actionstack/tools/index.d.ts && npm run minify"
   },
   "private": true,
   "dependencies": {
@@ -29,6 +30,7 @@
     "@angular/cli": "~16.2.2",
     "@angular/compiler-cli": "^16.2.0",
     "@types/jasmine": "~4.3.0",
+    "dts-bundle-generator": "^9.5.1",
     "jasmine-core": "~4.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
