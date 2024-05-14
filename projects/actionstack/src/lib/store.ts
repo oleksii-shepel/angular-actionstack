@@ -447,15 +447,24 @@ export class Store {
     // Define async compose function to apply meta reducers
     const asyncCompose = (...fns: MetaReducer[]) => async (reducer: AsyncReducer) => {
       for (let i = fns.length - 1; i >= 0; i--) {
-        reducer = await fns[i](reducer);
+        try {
+          reducer = await fns[i](reducer);
+        } catch (error: any) {
+          console.warn(`Error in metareducer ${i}:`, error.message);
+        }
       }
       return reducer;
     };
 
     // Apply meta reducers if enabled
-    this.settings.enableMetaReducers && this.mainModule.metaReducers
-      && this.mainModule.metaReducers.length
-      && (reducer = await asyncCompose(...this.mainModule.metaReducers)(reducer));
+    if (this.settings.enableMetaReducers && this.mainModule.metaReducers && this.mainModule.metaReducers.length) {
+      try {
+        reducer = await asyncCompose(...this.mainModule.metaReducers)(reducer);
+      } catch (error: any) {
+        console.warn('Error applying meta reducers:', error.message);
+      }
+    }
+
     this.pipeline.reducer = reducer;
 
     // Update store state
