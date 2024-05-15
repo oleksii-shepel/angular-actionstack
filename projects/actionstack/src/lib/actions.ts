@@ -32,9 +32,8 @@ function createAction(typeOrThunk: string | Function, payloadCreator?: Function)
       }
     } else if (payloadCreator) {
       let result = payloadCreator(...args);
-      if (!result) {
+      if (result === undefined || result === null) {
         console.warn('payloadCreator did not return an object. Did you forget to initialize an action with params?');
-        return;
       }
 
       // Do not return payload if it is undefined
