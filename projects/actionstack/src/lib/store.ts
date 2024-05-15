@@ -98,7 +98,8 @@ export class Store {
     reducer: (state: any = {}, action: Action<any>) => state as Reducer,
     metaReducers: [],
     dependencies: {},
-    strategy: "exclusive" as ProcessingStrategy
+    strategy: "exclusive" as ProcessingStrategy,
+    callback: () => {}
   };
   protected modules: FeatureModule[] = [];
   protected pipeline = {
@@ -173,6 +174,7 @@ export class Store {
       store.systemActions.initializeState();
       store.systemActions.storeInitialized();
 
+      store.mainModule.callback!();
       return store;
     }
 
