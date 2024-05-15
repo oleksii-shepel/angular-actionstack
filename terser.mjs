@@ -55,7 +55,9 @@ await deleteFiles(definitions);
 
 fs.rmSync('./dist/actionstack/esm2022', {recursive: true, force: true});
 fs.rmSync('./dist/actionstack/lib', {recursive: true, force: true});
+fs.rmSync('./dist/actionstack/saga/lib', {recursive: true, force: true});
 fs.rmSync('./dist/actionstack/tools/lib', {recursive: true, force: true});
 fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack.d.ts', './dist/actionstack/index.d.ts');
+fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack-saga.d.ts', './dist/actionstack/saga/index.d.ts');
 fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack-tools.d.ts', './dist/actionstack/tools/index.d.ts');
 fs.rmSync('./dist/actionstack/@actioncrew', {recursive: true, force: true});
