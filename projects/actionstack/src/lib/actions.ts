@@ -96,9 +96,9 @@ export function bindActionCreator(actionCreator: Function, dispatch: Function): 
 export function bindActionCreators(actionCreators: any, dispatch: Function): any {
   if (typeof actionCreators !== "object" || actionCreators === null) {
     console.warn(`bindActionCreators expected an object or a function, but instead received: '${kindOf(actionCreators)}'. Did you write "import ActionCreators from" instead of "import * as ActionCreators from"?`);
-    return {};
+    return undefined;
   }
-  
+
   actionCreators = { ...actionCreators };
   if (typeof actionCreators === "function") {
     return bindActionCreator(actionCreators, dispatch);
