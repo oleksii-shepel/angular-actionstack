@@ -588,6 +588,10 @@ export class Store {
           this.isProcessing.next(false);
         }
       })).subscribe({
+        error: (error: any) => {
+          console.warn("Error during processing the action");
+          subscriber.complete();
+        },
         complete: () => {
           subscriber.complete();
         }
