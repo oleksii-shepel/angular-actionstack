@@ -37,7 +37,7 @@ function createAction(typeOrThunk: string | Function, payloadCreator?: Function)
       }
 
       // Do not return payload if it is undefined
-      if (result !== undefined) {
+      if (result !== undefined && result !== null) {
         action.payload = result;
         'meta' in result && (action.meta = result.meta);
         'error' in result && (action.error = result.error);
