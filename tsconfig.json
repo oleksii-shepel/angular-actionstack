@@ -28,9 +28,13 @@
         "./dist/actionstack/tools",
         "projects/actionstack/tools/src/public-api.ts"
       ],
-      "@actioncrew/actionstack/saga": [
-        "./dist/actionstack/saga",
-        "projects/actionstack/saga/src/public-api.ts"
+      "@actioncrew/actionstack/sagas": [
+        "./dist/actionstack/sagas",
+        "projects/actionstack/sagas/src/public-api.ts"
+      ],
+      "@actioncrew/actionstack/epics": [
+        "./dist/actionstack/epics",
+        "projects/actionstack/epics/src/public-api.ts"
       ]
     },
     "useDefineForClassFields": false,
