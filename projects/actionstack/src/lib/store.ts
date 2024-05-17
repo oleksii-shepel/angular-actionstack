@@ -578,7 +578,7 @@ export class Store {
    * @returns {Observable<any>} An observable stream that processes actions.
    * @protected
    */
-  processAction() {
+  protected processAction() {
     return (source: Observable<Action<any>>) =>
       new Observable(subscriber => {
         const subscription = source.pipe(concatMap(async (action) => {
@@ -616,7 +616,7 @@ export class Store {
     };
 
     // Define starter and middleware APIs
-    const starterAPI = {
+    const middlewareAPI = {
       getState: () => this.getState(),
       dispatch: async (action: any) => await dispatch(action),
       dependencies: () => this.pipeline.dependencies,
@@ -624,13 +624,8 @@ export class Store {
       lock: this.lock
     };
 
-    const middlewareAPI = {
-      getState: () => this.getState(),
-      dispatch: async (action: any) => await dispatch(action),
-    };
-
     // Build middleware chain
-    const chain = [starter(starterAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
+    const chain = [starter(middlewareAPI), ...this.pipeline.middleware.map(middleware => middleware(middlewareAPI))];
     const originalDispatch = this.dispatch.bind(this);
     // Compose middleware chain with dispatch function
     dispatch = (chain.length === 1 ? chain[0] : chain.reduce((a, b) => (...args: any[]) => a(b(...args))))(async (action: any) => {
