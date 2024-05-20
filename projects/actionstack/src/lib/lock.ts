@@ -48,75 +48,85 @@ export class Lock {
   }
 }
 
-export class ReadWriteLock {
-  private readers: number;
-  private writer: boolean;
-  private readQueue: Array<() => void>;
-  private writeQueue: Array<() => void>;
-  private currentWriter: any;
-  private currentReaderCount: Map<any, number>;
+class FairnessNode {
+  constructor(public readonly owner: any, private _callback: () => void, public readonly isWriter: boolean = false) {}
 
-  constructor() {
-    this.readers = 0;
-    this.writer = false;
-    this.readQueue = [];
-    this.writeQueue = [];
-    this.currentWriter = null;
-    this.currentReaderCount = new Map();
+  public call() {
+    this._callback();
+  }
+}
+
+export class ReadWriteLock {
+  private queue: FairnessNode[] = [];
+  private currentWriter: any = null;
+  private readers: number = 0;
+  private currentReaderCount: Map<any, number> = new Map();
+  private writer: boolean = false;
+
+  readLock(owner: any): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const node = new FairnessNode(owner, () => resolve());
+      this.queue.push(node);
+      this.tryGrantAccess();
+    });
   }
 
-  async readLock(owner: any): Promise<void> {
-    if (this.writer && this.currentWriter !== owner) {
-      await new Promise<void>(resolve => this.readQueue.push(resolve));
+  writeLock(owner: any): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const node = new FairnessNode(owner, () => resolve(), true);
+      this.queue.push(node);
+      this.tryGrantAccess();
+    });
+  }
+
+  private tryGrantAccess() {
+    if (this.queue.length === 0) return;
+
+    const next = this.queue[0];
+    if (next.isWriter) {
+      if (this.readers === 0 && !this.writer) {
+        // Grant write lock
+        this.writer = true;
+        this.currentWriter = next.owner;
+        next.call();
+        this.queue.shift();
+      }
     } else {
-      this.readers++;
-      this.currentReaderCount.set(owner, (this.currentReaderCount.get(owner) || 0) + 1);
+      if (!this.writer || next.owner === this.currentWriter) {
+        // Grant read lock
+        this.readers++;
+        this.currentReaderCount.set(next.owner, (this.currentReaderCount.get(next.owner) || 0) + 1);
+        next.call();
+        this.queue.shift();
+      }
+    }
+
+    // Try to grant access to the next node in the queue
+    if (this.queue.length > 0) {
+      this.tryGrantAccess();
     }
   }
 
   readUnlock(owner: any): void {
     const count = this.currentReaderCount.get(owner);
-    if (count === undefined) throw new Error("Read lock not held by this owner");
+    if (!count) {
+      throw new Error(`Read lock not held by this owner: ${owner}`);
+    }
     if (count > 1) {
       this.currentReaderCount.set(owner, count - 1);
     } else {
       this.currentReaderCount.delete(owner);
       this.readers--;
-      if (this.readers === 0 && this.writeQueue.length > 0) {
-        const writer = this.writeQueue.shift();
-        this.writer = true;
-        this.currentWriter = writer!.owner;
-        writer!.callback();
-      }
-    }
-  }
-
-  async writeLock(owner: any): Promise<void> {
-    if (this.writer && this.currentWriter !== owner || this.readers > 0) {
-      await new Promise<void>(resolve => this.writeQueue.push({ callback: resolve, owner }));
-    } else {
-      this.writer = true;
-      this.currentWriter = owner;
+      this.tryGrantAccess();
     }
   }
 
   writeUnlock(owner: any): void {
-    if (this.currentWriter !== owner) throw new Error("Write lock not held by this owner");
+    if (this.currentWriter !== owner) {
+      throw new Error(`Write lock not held by this owner: ${owner}`);
+    }
     this.writer = false;
     this.currentWriter = null;
-    if (this.writeQueue.length > 0) {
-      const nextWriter = this.writeQueue.shift();
-      this.writer = true;
-      this.currentWriter = nextWriter!.owner;
-      nextWriter!.callback();
-    } else if (this.readQueue.length > 0) {
-      while (this.readQueue.length > 0) {
-        const nextReader = this.readQueue.shift();
-        this.readers++;
-        this.currentReaderCount.set(nextReader!.owner, (this.currentReaderCount.get(nextReader!.owner) || 0) + 1);
-        nextReader!.callback();
-      }
-    }
+    this.tryGrantAccess();
   }
 }
-
