@@ -3,7 +3,7 @@ ActionStack is a powerful Angular library designed to simplify and enhance state
 *** Effects are reimplemented as Epics and Sagas ***<br>
 *** To enable or disable effect dispatch corresponding action ***<br>
 *** New runners for sagas and epics are available within separate middleware packages ***<br>
-*** An execution stack is presented to monitor store workload and idle time ***<br>
+*** An execution stack is presented to monitor store workload and detect idle time ***<br>
 
 [redux-docs](https://redux.js.org/)
 [observable-docs](https://redux-observable.js.org/)
