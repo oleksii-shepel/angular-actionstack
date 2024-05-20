@@ -1,6 +1,5 @@
 import { Action, action } from '@actioncrew/actionstack';
 import { runSaga, Saga, SagaMiddlewareOptions, stdChannel, Task } from 'redux-saga';
-import { call, cancelled } from 'redux-saga/effects';
 
 export const createSagasMiddleware = ({
     context = {},
@@ -21,17 +20,7 @@ export const createSagasMiddleware = ({
       if (action.type === 'ADD_SAGAS') {
         action.payload.sagas.forEach((saga: Saga) => {
           if (!activeSagas.has(saga)) {
-            const task: Task = sagaMiddleware.run(function*(): Generator<any, void, any> {
-              while (true) {
-                try {
-                  yield call(saga);
-                } catch (e) {
-                  if (yield cancelled()) {
-                    break;
-                  }
-                }
-              }
-            });
+            const task: Task = sagaMiddleware.run(saga); // Call saga only once
             activeSagas.set(saga, task);
           }
         });

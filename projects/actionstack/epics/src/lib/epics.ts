@@ -6,6 +6,7 @@ export const createEpicsMiddleware = () => {
   let activeEpics: Epic[] = [];
   let currentAction = new Subject<Action<any>>();
   let currentState = new Subject<any>();
+  let subscriptions: Subscription[] = [];
 
   return ({ dispatch, getState, dependencies, strategy, stack }: any) => (next: any) => async (action: any) => {
     // Proceed to the next action
@@ -44,10 +45,20 @@ export const createEpicsMiddleware = () => {
         },
         error: (err: any) => {
           console.warn("Error in epic:", err);
-          subscription && subscription.unsubscribe();
+          if(subscription) {
+            subscription.unsubscribe()
+            subscriptions = subscriptions.filter(item => item === subscription);
+          }
         },
-        complete: () => subscription && subscription.unsubscribe()
+        complete: () => {
+          if(subscription) {
+            subscription.unsubscribe()
+            subscriptions = subscriptions.filter(item => item === subscription);
+          }
+        }
       });
+
+      subscriptions.push(subscription);
     }
 
     currentAction.next(action);
