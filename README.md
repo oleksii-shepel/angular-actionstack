@@ -1,6 +1,13 @@
-ActionStack is a powerful Angular library designed to simplify and enhance state management within your web applications. Developed for the modern Angular developer, it offers a robust and intuitive approach to managing application state, empowering you to create scalable and maintainable UIs. It combines all the good parts of its predecessors and eliminates their shortcomings in asynchronous environment. ```This version does not reference RxJS library. This is a customized version of the library for confident developers. Minified and well-tuned.```
+ActionStack is a powerful Angular library designed to simplify and enhance state management within your web applications. Developed for the modern Angular developer, it offers a robust and intuitive approach to managing application state, empowering you to create scalable and maintainable UIs. It combines all the good parts of its predecessors and eliminates their shortcomings in asynchronous environment. ```This version does not reference RxJS library, only its type definitions. This is a customized version of the library for confident developers. Minified and well-tuned.```
 
-*** Added experimental support for [redux-sagas](https://redux-saga.js.org/) ***
+*** Effects are reimplemented as Epics and Sagas ***<br>
+*** To enable or disable effect dispatch corresponding action ***<br>
+*** New runners for sagas and epics are available within separate middleware packages ***<br>
+
+[redux-docs](https://redux.js.org/)
+[observable-docs](https://redux-observable.js.org/)
+[saga-docs](https://redux-saga.js.org/)
+[actionstack-docs](https://actionstack.vercel.app/documentation/)
 
   [![build status](https://github.com/actioncrew/actionstack/workflows/build/badge.svg)](https://github.com/actioncrew/actionstack/workflows/build/badge.svg)
   [![npm version](https://img.shields.io/npm/v/@actioncrew%2Factionstack.svg?style=flat-square)](https://www.npmjs.com/package/@actioncrew%2Factionstack)
