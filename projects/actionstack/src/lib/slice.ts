@@ -4,6 +4,7 @@ import { Subscription } from "rxjs/internal/Subscription";
 import { StoreModule } from "./module";
 import { Store } from "./store";
 import { Action, Reducer, SideEffect, SliceStrategy } from "./types";
+import { addEffects, removeEffects } from "@actioncrew/actionstack/epics";
 
 
 /**
@@ -61,7 +62,7 @@ export class Slice implements OnDestroy {
    */
   setup(opts: SliceOptions): void {
     this.opts = Object.assign(this.opts, opts);
-    this.opts.effects && this.opts.effects.length > 0 && (this.subscription = this.store.extend(...this.opts.effects as any).subscribe());
+    this.opts.effects && this.opts.effects.length > 0 && this.store.dispatch(addEffects(...this.opts.effects));
     this.opts.slice !== undefined && this.opts.reducer && this.store.loadModule({
       slice: this.opts.slice,
       dependencies: this.opts.dependencies,
@@ -93,7 +94,7 @@ export class Slice implements OnDestroy {
    * Cleans up resources when the Slice is destroyed.
    */
   ngOnDestroy(): void {
-    this.subscription.unsubscribe();
+    this.opts.effects &&  this.opts.effects.length > 0 && this.store.dispatch(removeEffects(...this.opts.effects!));
     this.opts.slice !== undefined && this.opts.reducer && this.store.unloadModule({slice: this.opts.slice, reducer: this.opts.reducer}, this.opts.strategy === "temporary" ? true : false);
   }
 }

@@ -639,53 +639,6 @@ export class Store {
   }
 
   /**
-   * Extends the observable stream with the provided side effects.
-   * @param {...SideEffect[]} args - The side effect functions to extend the stream.
-   * @returns {Observable<any>} An observable stream extended with the specified side effects.
-   * @protected
-   */
-  extend<T>(...args: SideEffect[]): Observable<T> {
-    const dependencies = this.pipeline.dependencies;
-
-    const effects$ = new TrackableObservable<T>((subscriber: Observer<T>) => {
-      let effectsSubscription: Subscription | undefined;
-      const unregisterEffects = () => {
-        if (effectsSubscription) {
-          effectsSubscription.unsubscribe();
-          effectsSubscription = undefined;
-        }
-        this.systemActions.effectsUnregistered(args);
-      };
-
-      this.tracker.track(effects$);
-
-      const sideEffects = args.map(sideEffect => sideEffect(this.currentAction, this.currentState, dependencies));
-      let effectsExecutedCount = 0;
-      effectsSubscription = (this.pipeline.strategy === "concurrent" ? merge : concat)(...sideEffects).subscribe({
-        next: (childAction: any) => {
-          if (isAction(childAction)) {
-            this.dispatch(childAction);
-          }
-          effectsExecutedCount++;
-          if(effectsExecutedCount === args.length) {
-            this.tracker.setStatus(effects$, true);
-          }
-        },
-        error: (err: any) => subscriber.error(err),
-        complete: () => { subscriber.complete() },
-      });
-
-      return () => {
-        unregisterEffects();
-        this.tracker.remove(effects$);
-      }
-    }, this.tracker);
-
-    this.systemActions.effectsRegistered(args);
-    return effects$;
-  }
-
-  /**
    * Loads a feature module into the store.
    * @param {FeatureModule} module - The feature module to load.
    * @param {Injector} injector - The injector to use for dependency injection.
