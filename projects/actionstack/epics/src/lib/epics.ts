@@ -29,8 +29,9 @@ export const createEpicsMiddleware = () => {
       }
 
       // Unsubscribe from the previous subscription if it exists
-      if (currentAction.observers.length) {
-        currentAction.complete(); // Complete previous subscription
+      if (subscriptions.length) {
+        subscriptions[0].unsubscribe();
+        subscriptions.shift(); // Remove the unsubscribed element from the array
       }
 
       let subscription: Subscription;
