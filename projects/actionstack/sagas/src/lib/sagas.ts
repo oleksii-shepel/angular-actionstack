@@ -1,11 +1,19 @@
 import { Action, action } from '@actioncrew/actionstack';
-import { runSaga, Saga, stdChannel, Task } from 'redux-saga';
+import { runSaga, Saga, SagaMiddlewareOptions, stdChannel, Task } from 'redux-saga';
 import { call, cancelled } from 'redux-saga/effects';
 
-const createSagasMiddleware = () => {
+interface ErrorInfo {
+  sagaStack: string
+}
+
+const createSagasMiddleware = ({
+    context = {},
+    sagaMonitor = undefined,
+    onError = undefined,
+    effectMiddlewares = [],
+    channel = stdChannel()
+  } : SagaMiddlewareOptions) => {
   let activeSagas = new Map();
-  let channel = stdChannel();
-  let context = {};
 
   const sagaMiddleware = ({ dispatch, getState }: any) => (next: any) => async (action: Action<any>) => {
     // Proceed to the next action
@@ -61,7 +69,7 @@ const createSagasMiddleware = () => {
 
 createSagasMiddleware.signature = "u.p.l.2.y.m.b.1.d.7";
 
-export const sagas = createSagasMiddleware();
+export const sagas = createSagasMiddleware({});
 
 export const addSagas = action('ADD_SAGAS', (...sagas: any[]) => ({sagas}));
 export const removeSagas = action('REMOVE_SAGAS', (...sagas: any[]) => ({sagas}));
