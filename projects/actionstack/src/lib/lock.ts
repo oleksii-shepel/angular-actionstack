@@ -80,30 +80,29 @@ export class ReadWriteLock {
   }
 
   private tryGrantAccess() {
-    if (this.queue.length === 0) return;
-
-    const next = this.queue[0];
-    if (next.isWriter) {
-      if (this.readers === 0 && !this.writer) {
-        // Grant write lock
-        this.writer = true;
-        this.currentWriter = next.owner;
-        next.call();
-        this.queue.shift();
+    while (this.queue.length > 0) {
+      const next = this.queue[0];
+      if (next.isWriter) {
+        if (this.readers === 0 && !this.writer) {
+          // Grant write lock
+          this.writer = true;
+          this.currentWriter = next.owner;
+          next.call();
+          this.queue.shift();
+        } else {
+          break;
+        }
+      } else {
+        if (!this.writer || next.owner === this.currentWriter) {
+          // Grant read lock
+          this.readers++;
+          this.currentReaderCount.set(next.owner, (this.currentReaderCount.get(next.owner) || 0) + 1);
+          next.call();
+          this.queue.shift();
+        } else {
+          break;
+        }
       }
-    } else {
-      if (!this.writer || next.owner === this.currentWriter) {
-        // Grant read lock
-        this.readers++;
-        this.currentReaderCount.set(next.owner, (this.currentReaderCount.get(next.owner) || 0) + 1);
-        next.call();
-        this.queue.shift();
-      }
-    }
-
-    // Try to grant access to the next node in the queue
-    if (this.queue.length > 0) {
-      this.tryGrantAccess();
     }
   }
 
