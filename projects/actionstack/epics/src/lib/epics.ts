@@ -2,7 +2,7 @@ import { Action, action, concat, Epic, isAction, merge } from '@actioncrew/actio
 import { Subscription } from 'rxjs';
 import { Subject } from 'rxjs/internal/Subject';
 
-const createEpicsMiddleware = () => {
+export const createEpicsMiddleware = () => {
   let activeEpics: Epic[] = [];
   let currentAction = new Subject<Action<any>>();
   let currentState = new Subject<any>();

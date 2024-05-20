@@ -2,11 +2,7 @@ import { Action, action } from '@actioncrew/actionstack';
 import { runSaga, Saga, SagaMiddlewareOptions, stdChannel, Task } from 'redux-saga';
 import { call, cancelled } from 'redux-saga/effects';
 
-interface ErrorInfo {
-  sagaStack: string
-}
-
-const createSagasMiddleware = ({
+export const createSagasMiddleware = ({
     context = {},
     sagaMonitor = undefined,
     onError = undefined,
