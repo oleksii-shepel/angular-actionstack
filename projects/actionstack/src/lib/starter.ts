@@ -98,5 +98,5 @@ export const createStarter = () => {
   return selectStrategy;
 };
 
-// Create the bufferize middleware
+// Create the starter middleware
 export const starter = createStarter();
