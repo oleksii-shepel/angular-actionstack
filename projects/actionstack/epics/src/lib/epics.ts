@@ -2,7 +2,7 @@ import { Action, action, concat, Epic, isAction, merge } from '@actioncrew/actio
 import { Subject } from 'rxjs/internal/Subject';
 import { Subscription } from 'rxjs/internal/Subscription';
 
-const epicsMiddleware = () => {
+const createEpicsMiddleware = () => {
   let activeEpics: Epic[] = [];
   let currentAction = new Subject<Action<any>>();
   let currentState = new Subject<any>();
@@ -78,8 +78,8 @@ const epicsMiddleware = () => {
   };
 };
 
-export const epics = epicsMiddleware();
+export const epics = createEpicsMiddleware();
 
-export const addEffects = action("ADD_EPICS", (...epics: Epic[]) => ({ epics }));
-export const removeEffects = action("REMOVE_EPICS", (...epics: Epic[]) => ({ epics }));
+export const addEpics = action("ADD_EPICS", (...epics: Epic[]) => ({ epics }));
+export const removeEpics = action("REMOVE_EPICS", (...epics: Epic[]) => ({ epics }));
 

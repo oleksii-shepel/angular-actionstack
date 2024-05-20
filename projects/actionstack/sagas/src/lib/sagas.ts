@@ -2,7 +2,7 @@ import { Action, action } from '@actioncrew/actionstack';
 import { runSaga, Saga, stdChannel, Task } from 'redux-saga';
 import { call, cancelled } from 'redux-saga/effects';
 
-const sagasMiddleware = () => {
+const createSagasMiddleware = () => {
   let activeSagas = new Map();
   let channel = stdChannel();
   let context = {};
@@ -59,9 +59,9 @@ const sagasMiddleware = () => {
   return sagaMiddleware;
 };
 
-sagasMiddleware.signature = "u.p.l.2.y.m.b.1.d.7";
+createSagasMiddleware.signature = "u.p.l.2.y.m.b.1.d.7";
 
-export const sagas = sagasMiddleware();
+export const sagas = createSagasMiddleware();
 
 export const addSagas = action('ADD_SAGAS', (...sagas: any[]) => ({sagas}));
 export const removeSagas = action('REMOVE_SAGAS', (...sagas: any[]) => ({sagas}));
