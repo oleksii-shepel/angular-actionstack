@@ -32,8 +32,9 @@ export const createEpicsMiddleware = () => {
         currentAction.complete(); // Complete previous subscription
       }
 
+      let subscription: Subscription;
       // Create a new subscription
-      const subscription: Subscription = currentAction.pipe(
+      subscription = currentAction.pipe(
         () => (strategy === "concurrent" ? merge : concat)(stack, ...activeEpics.map(sideEffect => sideEffect(currentAction, currentState, dependencies())))
       ).subscribe({
         next: (childAction: any) => {

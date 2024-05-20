@@ -1,5 +1,6 @@
 import { Action, provideStore } from '@actioncrew/actionstack';
 import { epics } from '@actioncrew/actionstack/epics';
+import { sagas } from '@actioncrew/actionstack/sagas';
 import { perfmon } from '@actioncrew/actionstack/tools';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +16,7 @@ import { MessagesModule } from './messages/messages.module';
     FormsModule,
     AppRoutingModule,
     provideStore({
-      middleware: [epics, perfmon],
+      middleware: [epics, sagas, perfmon],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
       strategy: "concurrent"
