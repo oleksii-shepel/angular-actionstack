@@ -68,9 +68,9 @@ const createEpicsMiddleware = () => {
 
     // If current action is not of type ADD_EFFECT or REMOVE_EFFECT, await promise
     if (action.type !== 'ADD_EPICS' && action.type !== 'REMOVE_EPICS' && promise) {
-      await new Promise((resolve, reject) => {
-        resolvePromise = resolve;
-        rejectPromise = reject;
+      await new Promise<void>((resolve, reject) => {
+        resolvePromise = () => resolve();
+        rejectPromise = () => reject();
       });
     }
 
