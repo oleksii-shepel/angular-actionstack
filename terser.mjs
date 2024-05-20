@@ -58,6 +58,7 @@ fs.rmSync('./dist/actionstack/lib', {recursive: true, force: true});
 fs.rmSync('./dist/actionstack/saga/lib', {recursive: true, force: true});
 fs.rmSync('./dist/actionstack/tools/lib', {recursive: true, force: true});
 fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack.d.ts', './dist/actionstack/index.d.ts');
-fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack-saga.d.ts', './dist/actionstack/saga/index.d.ts');
+fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack-epics.d.ts', './dist/actionstack/epics/index.d.ts');
+fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack-sagas.d.ts', './dist/actionstack/sagas/index.d.ts');
 fs.copyFileSync('./dist/actionstack/@actioncrew/actionstack-tools.d.ts', './dist/actionstack/tools/index.d.ts');
 fs.rmSync('./dist/actionstack/@actioncrew', {recursive: true, force: true});
