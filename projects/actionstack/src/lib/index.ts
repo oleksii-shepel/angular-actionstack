@@ -1,5 +1,4 @@
 export * from "./actions";
-export * from "./epics";
 export * from "./hash";
 export * from "./lock";
 export * from "./module";
