@@ -13,7 +13,6 @@ import { addEffects, removeEffects } from "@actioncrew/actionstack/epics";
 export interface SliceOptions {
   slice?: string;
   reducer?: Reducer;
-  effects?: (SideEffect | any)[];
   dependencies?: any;
   strategy?: SliceStrategy;
 }
@@ -49,7 +48,6 @@ export class Slice implements OnDestroy {
     this.opts = {
       slice: this.elRef ? this.elRef.nativeElement.localName : "noname",
       reducer: (state: any = {}, action: Action<any>) => state,
-      effects: [],
       dependencies: {},
       strategy: "persistent"
     };
@@ -62,7 +60,6 @@ export class Slice implements OnDestroy {
    */
   setup(opts: SliceOptions): void {
     this.opts = Object.assign(this.opts, opts);
-    this.opts.effects && this.opts.effects.length > 0 && this.store.dispatch(addEffects(...this.opts.effects));
     this.opts.slice !== undefined && this.opts.reducer && this.store.loadModule({
       slice: this.opts.slice,
       dependencies: this.opts.dependencies,
@@ -94,7 +91,6 @@ export class Slice implements OnDestroy {
    * Cleans up resources when the Slice is destroyed.
    */
   ngOnDestroy(): void {
-    this.opts.effects &&  this.opts.effects.length > 0 && this.store.dispatch(removeEffects(...this.opts.effects!));
     this.opts.slice !== undefined && this.opts.reducer && this.store.unloadModule({slice: this.opts.slice, reducer: this.opts.reducer}, this.opts.strategy === "temporary" ? true : false);
   }
 }
