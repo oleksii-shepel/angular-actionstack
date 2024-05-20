@@ -15,14 +15,14 @@ const epicsMiddleware = () => {
     // Proceed to the next action
     const result = await next(action);
 
-    if (action.type === 'ADD_EFFECTS' || action.type === 'REMOVE_EFFECTS') {
-      if (action.type === 'ADD_EFFECTS') {
+    if (action.type === 'ADD_EPICS' || action.type === 'REMOVE_EPICS') {
+      if (action.type === 'ADD_EPICS') {
         action.payload.effects.forEach((effect: Epic) => {
           if (!activeEpics.includes(effect)) {
             activeEpics.push(effect);
           }
         });
-      } else if (action.type === 'REMOVE_EFFECTS') {
+      } else if (action.type === 'REMOVE_EPICS') {
         action.payload.effects.forEach((effect: Epic) => {
           const effectIndex = activeEpics.indexOf(effect);
           if (effectIndex !== -1) {
@@ -67,7 +67,7 @@ const epicsMiddleware = () => {
     currentState.next(getState());
 
     // If current action is not of type ADD_EFFECT or REMOVE_EFFECT, await promise
-    if (action.type !== 'ADD_EFFECTS' && action.type !== 'REMOVE_EFFECTS' && promise) {
+    if (action.type !== 'ADD_EPICS' && action.type !== 'REMOVE_EPICS' && promise) {
       await new Promise((resolve, reject) => {
         resolvePromise = resolve;
         rejectPromise = reject;
@@ -80,6 +80,6 @@ const epicsMiddleware = () => {
 
 export const epics = epicsMiddleware();
 
-export const addEffects = action("ADD_EFFECTS", (...effects: Epic[]) => ({ effects }));
-export const removeEffects = action("REMOVE_EFFECTS", (...effects: Epic[]) => ({ effects }));
+export const addEffects = action("ADD_EPICS", (...effects: Epic[]) => ({ effects }));
+export const removeEffects = action("REMOVE_EPICS", (...effects: Epic[]) => ({ effects }));
 
