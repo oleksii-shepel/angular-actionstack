@@ -11,7 +11,7 @@ const createEpicsMiddleware = () => {
   let promise: Promise<any> | undefined = undefined;
   let subscription: Subscription | undefined = undefined;
 
-  return ({ dispatch, getState, dependencies, strategy }: any) => (next: any) => async (action: any) => {
+  return ({ dispatch, getState, dependencies, strategy, stack }: any) => (next: any) => async (action: any) => {
     // Proceed to the next action
     const result = await next(action);
 
@@ -38,7 +38,7 @@ const createEpicsMiddleware = () => {
 
       // Create a new subscription
       subscription = currentAction.pipe(
-        () => (strategy === "concurrent" ? merge : concat)(...activeEpics.map(sideEffect => sideEffect(currentAction, currentState, dependencies())))
+        () => (strategy === "concurrent" ? merge : concat)(stack, ...activeEpics.map(sideEffect => sideEffect(currentAction, currentState, dependencies())))
       ).subscribe({
         next: (childAction: any) => {
           if (isAction(childAction)) {

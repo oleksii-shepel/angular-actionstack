@@ -1,7 +1,7 @@
-import { Store } from "@actioncrew/actionstack";
-import { addSagas, removeSagas } from "@actioncrew/actionstack/sagas";
-import { Component, OnDestroy, OnInit } from "@angular/core";
-import { takeEvery } from "redux-saga/effects";
+import { Store } from '@actioncrew/actionstack';
+import { addSagas, removeSagas } from '@actioncrew/actionstack/sagas';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { takeEvery } from 'redux-saga/effects';
 
 
 function* helloSaga() {

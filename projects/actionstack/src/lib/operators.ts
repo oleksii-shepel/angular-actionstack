@@ -1,6 +1,8 @@
 import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
-import { Observable } from "rxjs/internal/Observable";
-import { Subscription } from "rxjs/internal/Subscription";
+import { Observable } from 'rxjs/internal/Observable';
+import { Subscription } from 'rxjs/internal/Subscription';
+
+import { ExecutionStack, OperationType } from './stack';
 import { Action, isAction } from './types';
 
 
@@ -68,7 +70,7 @@ export function concatMap<T, R>(projector: (value: T) => Promise<R>) {
  * @param {...Observable<T>[]} sources The source Observables to concatenate.
  * @returns {Observable<T>} An Observable that emits values from the source Observables in order as they are concatenated.
  */
-export function concat<T>(...sources: Observable<T>[]): Observable<T> {
+export function concat<T>(stack: ExecutionStack, ...sources: Observable<T>[]): Observable<T> {
   return new Observable<T>(subscriber => {
     let index = 0;
     let subscription: Subscription | null = null;
@@ -80,11 +82,16 @@ export function concat<T>(...sources: Observable<T>[]): Observable<T> {
 
       if (index < sources.length) {
         const source = sources[index++];
+        stack.push({operation: OperationType.EFFECT, instance: source});
         subscription = source.subscribe({
           next: value => subscriber.next(value),
-          error: error => subscriber.error(error),
+          error: error => {
+            subscriber.error(error);
+            stack.pop();
+          },
           complete: () => {
             subscription = null;
+            stack.pop();
             next();
           }
         });
@@ -111,7 +118,7 @@ export function concat<T>(...sources: Observable<T>[]): Observable<T> {
  * @param {...Observable<T>[]} sources The source Observables to merge.
  * @returns {Observable<T>} An Observable that emits all the values from the source Observables.
  */
-export function merge<T>(...sources: Observable<T>[]): Observable<T> {
+export function merge<T>(stack: ExecutionStack, ...sources: Observable<T>[]): Observable<T> {
   return new Observable<T>(subscriber => {
     let completedCount = 0;
     let subscriptions: Subscription[] = [];
@@ -123,6 +130,7 @@ export function merge<T>(...sources: Observable<T>[]): Observable<T> {
     };
 
     sources.forEach(source => {
+      stack.push({operation: OperationType.EFFECT, instance: source});
       const subscription = source.subscribe({
         next: value => subscriber.next(value),
         error: error => {
@@ -132,8 +140,9 @@ export function merge<T>(...sources: Observable<T>[]): Observable<T> {
             subscriptions = [];
           }
           subscriber.error(error);
+          stack.filter((item) => item.instance === source);
         },
-        complete: completeIfAllCompleted
+        complete: () => { stack.filter((item) => item.instance === source); completeIfAllCompleted(); }
       });
 
       subscriptions.push(subscription);

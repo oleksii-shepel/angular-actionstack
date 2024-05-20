@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs/internal/Subscription';
 import { action, bindActionCreators } from './actions';
 import { Lock } from './lock';
 import { concatMap, waitFor } from './operators';
+import { ExecutionStack } from './stack';
 import { starter } from './starter';
 import { TrackableObservable, Tracker } from './tracker';
 import {
@@ -133,6 +134,7 @@ export class Store {
   protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
   protected lock = new Lock();
+  protected stack = new ExecutionStack();
 
   /**
    * Creates a new store instance with the provided mainModule and optional enhancer.
@@ -237,11 +239,19 @@ export class Store {
    * @returns {Promise<void>} A promise that resolves after executing the callback.
    * @template T
    */
-  exec<T = any>(slice: keyof T | string[], callback: (state:  Readonly<T>) => void | Promise<void>): Promise<void> {
-    const promise = this.lock.acquire()
-      .then(() => this.getState(slice))
-      .then(state => callback(state as any))
-      .finally(() => this.lock.release());
+  read<T = any>(slice: keyof T | string[], callback: (state:  Readonly<T>) => void | Promise<void>): Promise<void> {
+    const promise = (async () => {
+      await this.stack.waitForEmpty(); // Wait for stack to become empty
+      await this.lock.acquire(); // Acquire lock after stack is empty
+
+      try {
+        const state = await this.getState(slice); // Get state after acquiring lock
+        callback(state as any);
+      } finally {
+        this.lock.release(); // Release lock regardless of success or failure
+      }
+    })();
+
     return promise;
   }
 
@@ -637,7 +647,8 @@ export class Store {
       dispatch: async (action: any) => await dispatch(action),
       dependencies: () => this.pipeline.dependencies,
       strategy: () => this.pipeline.strategy,
-      lock: this.lock
+      lock: this.lock,
+      stack: this.stack
     };
 
     // Build middleware chain

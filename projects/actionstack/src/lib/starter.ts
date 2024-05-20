@@ -1,4 +1,5 @@
-import { Action, AsyncAction } from "./types";
+import { OperationType } from './stack';
+import { Action, AsyncAction } from './types';
 
 /**
  * Function to create the starter middleware factory.
@@ -21,16 +22,31 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const exclusive = ({ dispatch, getState, dependencies, lock }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const exclusive = ({ dispatch, getState, dependencies, lock, stack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       if (typeof action === 'function') {
         // Process async actions (functions)
-        await action(async (action: Action<any>) => {
-          await next(action);
-        }, getState, dependencies());
+        stack.push({ operation: OperationType.ASYNC_ACTION, instance: action });
+        try {
+          await action(async (action: Action<any>) => {
+            stack.push({ operation: OperationType.ACTION, instance: action });
+            try {
+              await next(action);
+            } finally {
+              stack.pop();
+            }
+          }, getState, dependencies());
+        } finally {
+          stack.pop();
+        }
       } else {
         // Pass regular actions to the next middleware
-        await next(action);
+        stack.push({ operation: OperationType.ACTION, instance: action });
+        try {
+          await next(action);
+        } finally {
+          stack.pop();
+        }
       }
     }
 
@@ -51,12 +67,24 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const concurrent = ({ dispatch, getState, dependencies, lock }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+  const concurrent = ({ dispatch, getState, dependencies, lock, stack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       if (typeof action === 'function') {
         // Process async actions asynchronously and track them
         const asyncFunc = (async () => {
-          await action(dispatch, getState, dependencies());
+          stack.push({ operation: OperationType.ASYNC_ACTION, instance: action });
+          try {
+            await action(async (action: Action<any>) => {
+              stack.push({ operation: OperationType.ACTION, instance: action });
+              try {
+                await next(action);
+              } finally {
+                stack.pop();
+              }
+            }, getState, dependencies());
+          } finally {
+            stack.pop();
+          }
           // Remove the function from the array when it's done
           asyncActions = asyncActions.filter(func => func !== asyncFunc);
         })();
@@ -64,7 +92,12 @@ export const createStarter = () => {
         asyncActions.push(asyncFunc);
       } else {
         // Pass regular actions to the next middleware
-        await next(action);
+        stack.push({ operation: OperationType.ACTION, instance: action });
+        try {
+          await next(action);
+        } finally {
+          stack.pop();
+        }
       }
     }
 
@@ -85,13 +118,13 @@ export const createStarter = () => {
   const defaultStrategy = 'concurrent';
 
   // Create a method to select the strategy
-  const selectStrategy = ({ dispatch, getState, dependencies, strategy, lock }: any) => (next: Function) => async (action: Action<any>) => {
+  const selectStrategy = ({ dispatch, getState, dependencies, strategy, lock, stack }: any) => (next: Function) => async (action: Action<any>) => {
     let strategyFunc = strategies[strategy()];
     if (!strategyFunc) {
       console.warn(`Unknown strategy: ${strategy}, default is used: ${defaultStrategy}`);
       strategyFunc = strategies[defaultStrategy];
     }
-    return strategyFunc({ dispatch, getState, dependencies, lock })(next)(action);
+    return strategyFunc({ dispatch, getState, dependencies, lock, stack })(next)(action);
   };
 
   selectStrategy.signature = 'i.p.5.j.7.0.2.1.8.b';
