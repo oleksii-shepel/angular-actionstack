@@ -1,8 +1,8 @@
-import { HeroService } from './../hero.service';
-import { Action, SideEffect, action, effect, featureSelector, ofType, selector } from "@actioncrew/actionstack";
-import { concatMap, map, withLatestFrom } from "rxjs";
+import { Action, action, effect, featureSelector, ofType, selector } from '@actioncrew/actionstack';
+import { concatMap, map, withLatestFrom } from 'rxjs';
 import { Observable } from 'rxjs/internal/Observable';
-import { Hero } from "../hero";
+
+import { Hero } from '../hero';
 
 export const slice = "heroes";
 

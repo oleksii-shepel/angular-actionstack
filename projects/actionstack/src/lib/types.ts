@@ -1,6 +1,7 @@
-import { InjectionToken, Type } from "@angular/core";
+import { InjectionToken, Type } from '@angular/core';
 import { Observable } from 'rxjs/internal/Observable';
-import { Store } from "./store";
+
+import { Store } from './store';
 
 /**
  * Interface defining the structure of an action object.
@@ -180,7 +181,7 @@ export interface ProjectionFunction {
  *   The side effect function can use the provided observables and dependencies to perform its tasks
  *   and potentially emit new actions to be dispatched back to the store.
  */
-export type SideEffect = (action: Observable<Action<any>>, state: Observable<any>, dependencies: Record<string, any>) => Observable<Action<any>>;
+export type Epic = (action: Observable<Action<any>>, state: Observable<any>, dependencies: Record<string, any>) => Observable<Action<any>>;
 
 /**
  * Type alias representing a recursive tree structure.

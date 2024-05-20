@@ -1,14 +1,30 @@
-import { InjectionToken, Injector, Type, inject } from "@angular/core";
-import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
-import { Observable } from "rxjs/internal/Observable";
-import { Subject } from "rxjs/internal/Subject";
-import { Subscription } from "rxjs/internal/Subscription";
-import { action, bindActionCreators } from "./actions";
-import { Lock } from "./lock";
-import { concat, concatMap, merge, waitFor } from "./operators";
-import { starter } from "./starter";
-import { TrackableObservable, Tracker } from "./tracker";
-import { Action, AnyFn, AsyncReducer, FeatureModule, MainModule, MetaReducer, Observer, ProcessingStrategy, Reducer, SideEffect, StoreEnhancer, Tree, isAction, isPlainObject, kindOf } from "./types";
+import { inject, InjectionToken, Injector, Type } from '@angular/core';
+import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
+import { Observable } from 'rxjs/internal/Observable';
+import { Subject } from 'rxjs/internal/Subject';
+import { Subscription } from 'rxjs/internal/Subscription';
+
+import { action, bindActionCreators } from './actions';
+import { Lock } from './lock';
+import { concatMap, waitFor } from './operators';
+import { starter } from './starter';
+import { TrackableObservable, Tracker } from './tracker';
+import {
+  Action,
+  AnyFn,
+  AsyncReducer,
+  Epic,
+  FeatureModule,
+  isPlainObject,
+  kindOf,
+  MainModule,
+  MetaReducer,
+  Observer,
+  ProcessingStrategy,
+  Reducer,
+  StoreEnhancer,
+  Tree,
+} from './types';
 
 export { createStore as store };
 
@@ -78,8 +94,8 @@ const systemActions = {
   storeInitialized: systemAction("STORE_INITIALIZED"),
   moduleLoaded: systemAction("MODULE_LOADED", (module: FeatureModule) => ({module})),
   moduleUnloaded: systemAction("MODULE_UNLOADED", (module: FeatureModule) => ({module})),
-  effectsRegistered: systemAction("EFFECTS_REGISTERED", (effects: SideEffect[]) => ({effects})),
-  effectsUnregistered: systemAction("EFFECTS_UNREGISTERED", (effects: SideEffect[]) => ({effects}))
+  effectsRegistered: systemAction("EFFECTS_REGISTERED", (effects: Epic[]) => ({effects})),
+  effectsUnregistered: systemAction("EFFECTS_UNREGISTERED", (effects: Epic[]) => ({effects}))
 };
 
 /**

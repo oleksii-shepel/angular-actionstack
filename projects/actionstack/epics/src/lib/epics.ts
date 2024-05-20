@@ -1,9 +1,9 @@
-import { Subscription } from 'rxjs/internal/Subscription';
+import { Action, action, concat, Epic, isAction, merge } from '@actioncrew/actionstack';
 import { Subject } from 'rxjs/internal/Subject';
-import { Action, SideEffect, action, concat, isAction, merge } from "@actioncrew/actionstack";
+import { Subscription } from 'rxjs/internal/Subscription';
 
-const sideEffectsMiddleware = () => {
-  let activeSideEffects: SideEffect[] = [];
+const epicsMiddleware = () => {
+  let activeEpics: Epic[] = [];
   let currentAction = new Subject<Action<any>>();
   let currentState = new Subject<any>();
   let resolvePromise: Function | undefined = undefined;
@@ -17,16 +17,16 @@ const sideEffectsMiddleware = () => {
 
     if (action.type === 'ADD_EFFECTS' || action.type === 'REMOVE_EFFECTS') {
       if (action.type === 'ADD_EFFECTS') {
-        action.payload.effects.forEach((effect: SideEffect) => {
-          if (!activeSideEffects.includes(effect)) {
-            activeSideEffects.push(effect);
+        action.payload.effects.forEach((effect: Epic) => {
+          if (!activeEpics.includes(effect)) {
+            activeEpics.push(effect);
           }
         });
       } else if (action.type === 'REMOVE_EFFECTS') {
-        action.payload.effects.forEach((effect: SideEffect) => {
-          const effectIndex = activeSideEffects.indexOf(effect);
+        action.payload.effects.forEach((effect: Epic) => {
+          const effectIndex = activeEpics.indexOf(effect);
           if (effectIndex !== -1) {
-            activeSideEffects.splice(effectIndex, 1);
+            activeEpics.splice(effectIndex, 1);
           }
         });
       }
@@ -38,7 +38,7 @@ const sideEffectsMiddleware = () => {
 
       // Create a new subscription
       subscription = currentAction.pipe(
-        () => (strategy === "concurrent" ? merge : concat)(...activeSideEffects.map(sideEffect => sideEffect(currentAction, currentState, dependencies())))
+        () => (strategy === "concurrent" ? merge : concat)(...activeEpics.map(sideEffect => sideEffect(currentAction, currentState, dependencies())))
       ).subscribe({
         next: (childAction: any) => {
           if (isAction(childAction)) {
@@ -78,8 +78,8 @@ const sideEffectsMiddleware = () => {
   };
 };
 
-export const sideEffects = sideEffectsMiddleware();
+export const epics = epicsMiddleware();
 
-export const addEffects = action("ADD_EFFECTS", (...effects: SideEffect[]) => ({ effects }));
-export const removeEffects = action("REMOVE_EFFECTS", (...effects: SideEffect[]) => ({ effects }));
+export const addEffects = action("ADD_EFFECTS", (...effects: Epic[]) => ({ effects }));
+export const removeEffects = action("REMOVE_EFFECTS", (...effects: Epic[]) => ({ effects }));
 

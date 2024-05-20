@@ -24,7 +24,7 @@ export interface SliceOptions {
  * @see {@link Store} - for interacting with the global Actionstack state.
  * @see {@link Action} - for representing actions that can be dispatched to update the state.
  * @see {@link Reducer} - for defining how the state is updated in response to an action.
- * @see {@link SideEffect} - for handling side effects triggered by actions.
+ * @see {@link Epic} - for handling side effects triggered by actions.
  */
 @Injectable()
 export class Slice implements OnDestroy {

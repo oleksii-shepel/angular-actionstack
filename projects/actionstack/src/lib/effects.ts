@@ -1,7 +1,7 @@
-import { Observable } from "rxjs/internal/Observable";
+import { Observable } from 'rxjs/internal/Observable';
 import { Subscription } from 'rxjs/internal/Subscription';
 
-import { Action, SideEffect, isObservable } from "./types";
+import { Action, Epic, isObservable } from './types';
 
 export { createEffect as effect };
 
@@ -23,7 +23,7 @@ export { createEffect as effect };
 
 function createEffect(
   actionType: string[] | string,
-  effectFn: (actionType: any) => SideEffect
+  effectFn: (actionType: any) => Epic
 ) {
   return (action$: Observable<Action<any>>, state$?: Observable<any>, dependencies?: Record<string, any>) => {
     return new Observable<Action<any>> ((observer) => {
