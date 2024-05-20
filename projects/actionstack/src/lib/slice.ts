@@ -4,8 +4,6 @@ import { Subscription } from "rxjs/internal/Subscription";
 import { StoreModule } from "./module";
 import { Store } from "./store";
 import { Action, Reducer, SideEffect, SliceStrategy } from "./types";
-import { addEffects, removeEffects } from "@actioncrew/actionstack/epics";
-
 
 /**
  * Interface defining configuration options for a Slice.
