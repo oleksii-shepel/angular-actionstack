@@ -1,4 +1,4 @@
-import { Action, action, effect, featureSelector, ofType, selector } from '@actioncrew/actionstack';
+import { Action, action, epic, featureSelector, ofType, selector } from '@actioncrew/actionstack';
 import { concatMap, map, withLatestFrom } from 'rxjs';
 import { Observable } from 'rxjs/internal/Observable';
 
@@ -9,7 +9,7 @@ export const slice = "heroes";
 export const getHeroesRequest = action("GET_HEROES_REQUEST", (heroes: Hero[]) => ({ heroes }));
 export const getHeroesSuccess = action("GET_HEROES_SUCCESS", (heroes: Hero[]) => ({ heroes }));
 
-export const loadHeroes = effect(getHeroesRequest.type, (actionType) => (action$, state$, { heroService }: any): Observable<Action<any>> => {
+export const loadHeroes = epic(getHeroesRequest.type, (actionType) => (action$, state$, { heroService }: any): Observable<Action<any>> => {
   return action$.pipe(
     ofType(actionType),
     withLatestFrom(state$!),

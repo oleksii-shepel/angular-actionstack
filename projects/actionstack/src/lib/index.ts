@@ -1,5 +1,5 @@
 export * from "./actions";
-export * from "./effects";
+export * from "./epics";
 export * from "./hash";
 export * from "./lock";
 export * from "./module";

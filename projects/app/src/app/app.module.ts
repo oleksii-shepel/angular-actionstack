@@ -1,13 +1,14 @@
-import { sideEffects } from '@actioncrew/actionstack/epics';
-import { Action, Tracker, provideStore } from '@actioncrew/actionstack';
+import { Action, provideStore } from '@actioncrew/actionstack';
+import { epics } from '@actioncrew/actionstack/epics';
+import { sagas } from '@actioncrew/actionstack/sagas';
 import { logger, perfmon } from '@actioncrew/actionstack/tools';
-import { NgModule, inject } from '@angular/core';
+import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
+
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { MessagesModule } from './messages/messages.module';
-import { sagas } from '@actioncrew/actionstack/sagas';
 
 
 
@@ -17,7 +18,7 @@ import { sagas } from '@actioncrew/actionstack/sagas';
     FormsModule,
     AppRoutingModule,
     provideStore({
-      middleware: [sagas, sideEffects, logger, perfmon],
+      middleware: [sagas, epics, logger, perfmon],
       reducer: (state: any = {}, action: Action<any>) => state,
       dependencies: {},
       strategy: "concurrent"

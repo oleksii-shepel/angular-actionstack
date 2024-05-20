@@ -17,16 +17,16 @@ const epicsMiddleware = () => {
 
     if (action.type === 'ADD_EPICS' || action.type === 'REMOVE_EPICS') {
       if (action.type === 'ADD_EPICS') {
-        action.payload.effects.forEach((effect: Epic) => {
-          if (!activeEpics.includes(effect)) {
-            activeEpics.push(effect);
+        action.payload.epics.forEach((epic: Epic) => {
+          if (!activeEpics.includes(epic)) {
+            activeEpics.push(epic);
           }
         });
       } else if (action.type === 'REMOVE_EPICS') {
-        action.payload.effects.forEach((effect: Epic) => {
-          const effectIndex = activeEpics.indexOf(effect);
-          if (effectIndex !== -1) {
-            activeEpics.splice(effectIndex, 1);
+        action.payload.epics.forEach((epic: Epic) => {
+          const epicIndex = activeEpics.indexOf(epic);
+          if (epicIndex !== -1) {
+            activeEpics.splice(epicIndex, 1);
           }
         });
       }
@@ -51,7 +51,7 @@ const epicsMiddleware = () => {
           }
         },
         complete: () => {
-          // Check if all side effects have completed
+          // Check if all side epics have completed
           if (subscription && subscription.closed) {
             if (resolvePromise) {
               resolvePromise();
@@ -80,6 +80,6 @@ const epicsMiddleware = () => {
 
 export const epics = epicsMiddleware();
 
-export const addEffects = action("ADD_EPICS", (...effects: Epic[]) => ({ effects }));
-export const removeEffects = action("REMOVE_EPICS", (...effects: Epic[]) => ({ effects }));
+export const addEffects = action("ADD_EPICS", (...epics: Epic[]) => ({ epics }));
+export const removeEffects = action("REMOVE_EPICS", (...epics: Epic[]) => ({ epics }));
 

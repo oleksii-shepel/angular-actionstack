@@ -1,7 +1,6 @@
-import { action } from '@actioncrew/actionstack';
+import { Action, action } from '@actioncrew/actionstack';
+import { runSaga, Saga, stdChannel, Task } from 'redux-saga';
 import { call, cancelled } from 'redux-saga/effects';
-import { Action } from '@actioncrew/actionstack';
-import { stdChannel, runSaga, Task, Saga } from 'redux-saga';
 
 const sagasMiddleware = () => {
   let activeSagas = new Map();

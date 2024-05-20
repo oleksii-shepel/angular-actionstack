@@ -94,8 +94,8 @@ const systemActions = {
   storeInitialized: systemAction("STORE_INITIALIZED"),
   moduleLoaded: systemAction("MODULE_LOADED", (module: FeatureModule) => ({module})),
   moduleUnloaded: systemAction("MODULE_UNLOADED", (module: FeatureModule) => ({module})),
-  effectsRegistered: systemAction("EFFECTS_REGISTERED", (effects: Epic[]) => ({effects})),
-  effectsUnregistered: systemAction("EFFECTS_UNREGISTERED", (effects: Epic[]) => ({effects}))
+  epicsRegistered: systemAction("EFFECTS_REGISTERED", (epics: Epic[]) => ({epics})),
+  epicsUnregistered: systemAction("EFFECTS_UNREGISTERED", (epics: Epic[]) => ({epics}))
 };
 
 /**
@@ -366,10 +366,10 @@ export class Store {
 
     let stateUpdated = next(this.currentState, newState);
     let actionHandled = next(this.currentAction, action);
-    let effectsExecuted = this.tracker.allExecuted;
+    let epicsExecuted = this.tracker.allExecuted;
 
     if (this.settings.awaitStatePropagation) {
-      await Promise.allSettled([stateUpdated, actionHandled, effectsExecuted]);
+      await Promise.allSettled([stateUpdated, actionHandled, epicsExecuted]);
     }
 
     return newState;
