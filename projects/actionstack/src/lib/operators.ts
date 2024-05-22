@@ -82,16 +82,17 @@ export function concat<T>(stack: ExecutionStack, ...sources: Observable<T>[]): O
 
       if (index < sources.length) {
         const source = sources[index++];
-        stack.push({operation: OperationType.EFFECT, instance: source});
+        let effect = {operation: OperationType.EFFECT, instance: source}
+        stack.push(effect);
         subscription = source.subscribe({
-          next: value => subscriber.next(value),
+          next: value => subscriber.next(Object.assign({}, value, {source: effect})),
           error: error => {
             subscriber.error(error);
-            stack.pop();
+            stack.pop(effect);
           },
           complete: () => {
             subscription = null;
-            stack.pop();
+            stack.pop(effect);
             next();
           }
         });
@@ -130,9 +131,10 @@ export function merge<T>(stack: ExecutionStack, ...sources: Observable<T>[]): Ob
     };
 
     sources.forEach(source => {
-      stack.push({operation: OperationType.EFFECT, instance: source});
+      let effect = {operation: OperationType.EFFECT, instance: source};
+      stack.push(effect);
       const subscription = source.subscribe({
-        next: value => subscriber.next(value),
+        next: value => subscriber.next(Object.assign({}, value, {source: effect})),
         error: error => {
           // Unsubscribe from all source Observables when an error occurs
           if (subscriptions.length) {
@@ -140,9 +142,9 @@ export function merge<T>(stack: ExecutionStack, ...sources: Observable<T>[]): Ob
             subscriptions = [];
           }
           subscriber.error(error);
-          stack.filter((item) => item.instance === source);
+          stack.pop(effect);
         },
-        complete: () => { stack.filter((item) => item.instance === source); completeIfAllCompleted(); }
+        complete: () => { stack.pop(effect); completeIfAllCompleted(); }
       });
 
       subscriptions.push(subscription);

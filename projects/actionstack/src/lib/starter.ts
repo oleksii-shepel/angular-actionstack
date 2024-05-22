@@ -26,34 +26,29 @@ export const createStarter = () => {
     async function processAction(action: Action<any> | AsyncAction<any>) {
       if (typeof action === 'function') {
         // Process async actions (functions)
-        stack.push({ operation: OperationType.ASYNC_ACTION, instance: action });
-        try {
-          await action(async (action: Action<any>) => {
-            stack.push({ operation: OperationType.ACTION, instance: action });
-            try {
-              await next(action);
-            } finally {
-              stack.pop();
-            }
-          }, getState, dependencies());
-        } finally {
-          stack.pop();
-        }
+        await action(async (syncAction: Action<any>) => {
+          syncAction = Object.assign({}, syncAction, {source: action});
+          const op = { operation: OperationType.ACTION, instance: syncAction, source: action };
+          stack.push(op);
+          try {
+            await next(syncAction);
+          } finally {
+            stack.pop(op);
+          }
+        }, getState, dependencies());
       } else {
         // Pass regular actions to the next middleware
-        stack.push({ operation: OperationType.ACTION, instance: action });
-        try {
-          await next(action);
-        } finally {
-          stack.pop();
-        }
+        await next(action);
       }
     }
 
     await lock.acquire();
+    const op = typeof action === 'function' ? ({ operation: OperationType.ASYNC_ACTION, instance: action, source: action.source }) : ({ operation: OperationType.ACTION, instance: action, source: action.source });
+    stack.push(op);
     try {
       await processAction(action);
     } finally {
+      stack.pop(op);
       lock.release();
     }
   };
@@ -72,19 +67,17 @@ export const createStarter = () => {
       if (typeof action === 'function') {
         // Process async actions asynchronously and track them
         const asyncFunc = (async () => {
-          stack.push({ operation: OperationType.ASYNC_ACTION, instance: action });
-          try {
-            await action(async (action: Action<any>) => {
-              stack.push({ operation: OperationType.ACTION, instance: action });
-              try {
-                await next(action);
-              } finally {
-                stack.pop();
-              }
-            }, getState, dependencies());
-          } finally {
-            stack.pop();
-          }
+          await action(async (syncAction: Action<any>) => {
+            syncAction = Object.assign({}, syncAction, {source: action});
+            const op = { operation: OperationType.ACTION, instance: syncAction, source: action };
+            stack.push(op);
+            try {
+              await next(syncAction);
+            } finally {
+              stack.pop(op);
+            }
+          }, getState, dependencies());
+
           // Remove the function from the array when it's done
           asyncActions = asyncActions.filter(func => func !== asyncFunc);
         })();
@@ -92,19 +85,17 @@ export const createStarter = () => {
         asyncActions.push(asyncFunc);
       } else {
         // Pass regular actions to the next middleware
-        stack.push({ operation: OperationType.ACTION, instance: action });
-        try {
-          await next(action);
-        } finally {
-          stack.pop();
-        }
+        await next(action);
       }
     }
 
     await lock.acquire();
+    const op = typeof action === 'function' ? ({ operation: OperationType.ASYNC_ACTION, instance: action, source: action.source }) : ({ operation: OperationType.ACTION, instance: action, source: action.source });
+    stack.push(op);
     try {
       await processAction(action);
     } finally {
+      stack.pop(op);
       lock.release();
     }
   };

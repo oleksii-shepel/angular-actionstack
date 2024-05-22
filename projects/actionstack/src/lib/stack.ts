@@ -5,13 +5,19 @@ import { waitFor } from './operators';
 export enum OperationType {
   ACTION = "action",
   ASYNC_ACTION = "async action",
-  EFFECT = "effect"
+  EFFECT = "effect",
+  SAGA = "saga"
 }
 
 export interface Operation {
   operation: OperationType;
   instance: any;
+  source?: any;
 }
+
+export const isOperation = (obj: any) => {
+  return obj.operation !== undefined && obj.instance !== undefined;
+};
 
 export class ExecutionStack<T = Operation> {
   private stack = new BehaviorSubject<T[]>([]);
@@ -28,16 +34,13 @@ export class ExecutionStack<T = Operation> {
     return this.stack.value[this.stack.value.length - 1];
   }
 
-  filter(predicate: (item: T) => boolean) {
-    const filtered = this.stack.value.filter(predicate);
-    this.stack.next(filtered);
-    return filtered;
-  }
 
-  pop(): T | undefined {
-    const value = this.peek();
-    this.stack.next(this.stack.value.slice(0, -1));
-    return value;
+  pop(item: T): T | undefined {
+    let index = this.stack.value.lastIndexOf(item);
+    if(index != -1) {
+      this.stack.next([...this.stack.value].splice(index, 1));
+    }
+    return item;
   }
 
   clear() : void {

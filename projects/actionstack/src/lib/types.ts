@@ -16,6 +16,7 @@ export interface Action<T = any> {
   payload?: T;
   error?: boolean;
   meta?: any;
+  source?: any;
 }
 
 /**
@@ -28,6 +29,7 @@ export interface Action<T = any> {
  */
 export interface AsyncAction<T = any> {
   (...args: any[]): Promise<T>;
+  source?: any;
 }
 
 /**
