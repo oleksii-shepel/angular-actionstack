@@ -37,10 +37,11 @@ export class ExecutionStack<T = Operation> {
 
   pop(item: T): T | undefined {
     let index = this.stack.value.lastIndexOf(item);
-    if(index != -1) {
-      this.stack.next([...this.stack.value].splice(index, 1));
+    if(index > -1) {
+      this.stack.next(this.stack.value.filter((_, i) => i !== index));
+      return item;
     }
-    return item;
+    return undefined;
   }
 
   clear() : void {
