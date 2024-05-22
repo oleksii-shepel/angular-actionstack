@@ -29,7 +29,6 @@ export interface Action<T = any> {
  */
 export interface AsyncAction<T = any> {
   (...args: any[]): Promise<T>;
-  source?: any;
 }
 
 /**

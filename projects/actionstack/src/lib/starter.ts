@@ -43,7 +43,7 @@ export const createStarter = () => {
     }
 
     await lock.acquire();
-    const op = typeof action === 'function' ? ({ operation: OperationType.ASYNC_ACTION, instance: action, source: action.source }) : ({ operation: OperationType.ACTION, instance: action, source: action.source });
+    const op = typeof action === 'function' ? ({ operation: OperationType.ASYNC_ACTION, instance: action }) : ({ operation: OperationType.ACTION, instance: action, source: action.source });
     stack.push(op);
     try {
       await processAction(action);
@@ -90,7 +90,7 @@ export const createStarter = () => {
     }
 
     await lock.acquire();
-    const op = typeof action === 'function' ? ({ operation: OperationType.ASYNC_ACTION, instance: action, source: action.source }) : ({ operation: OperationType.ACTION, instance: action, source: action.source });
+    const op = typeof action === 'function' ? ({ operation: OperationType.ASYNC_ACTION, instance: action }) : ({ operation: OperationType.ACTION, instance: action, source: action.source });
     stack.push(op);
     try {
       await processAction(action);
