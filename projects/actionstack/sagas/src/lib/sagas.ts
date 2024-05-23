@@ -1,4 +1,4 @@
-import { Action, action, OperationType } from '@actioncrew/actionstack';
+import { Action, action, Operation, OperationType } from '@actioncrew/actionstack';
 import { runSaga, Saga, SagaMiddlewareOptions, stdChannel, Task } from 'redux-saga';
 import { call, cancelled } from 'redux-saga/effects';
 
@@ -13,8 +13,9 @@ export const createSagasMiddleware = ({
   let middlewareDispatch: any;
   let middlewareGetState: any;
 
-  const customDispatch = (dispatch: any) => (saga: Saga) => (action: Action<any>) => {
-    const actionWithSource = Object.assign({}, action, {source: saga});
+  const customDispatch = ({dispatch, stack }: any) => (saga: Saga) => (action: Action<any>) => {
+    const sagaOp = stack.findLast((item: Operation) => item.source === saga);
+    const actionWithSource = Object.assign({}, action, {source: sagaOp});
     dispatch(actionWithSource);
   };
 
