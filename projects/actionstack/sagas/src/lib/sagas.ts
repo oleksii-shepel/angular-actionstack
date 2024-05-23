@@ -64,10 +64,6 @@ export const createSagasMiddleware = ({
     return result;
   };
 
-  sagaMiddleware.setContext = (props: any) => {
-    Object.assign(context, props);
-  };
-
   return sagaMiddleware;
 };
 
