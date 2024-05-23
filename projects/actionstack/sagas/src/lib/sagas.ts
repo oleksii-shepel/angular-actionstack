@@ -13,8 +13,7 @@ export const createSagasMiddleware = ({
   let middlewareDispatch: any;
   let middlewareGetState: any;
 
-  const customDispatch = ({dispatch, stack }: any) => (saga: Saga) => (action: Action<any>) => {
-    const sagaOp = stack.findLast((item: Operation) => item.source === saga);
+  const customDispatch = (dispatch: any) => (sagaOp: Operation) => (action: Action<any>) => {
     const actionWithSource = Object.assign({}, action, {source: sagaOp});
     dispatch(actionWithSource);
   };
@@ -31,9 +30,13 @@ export const createSagasMiddleware = ({
       if (action.type === 'ADD_SAGAS') {
         action.payload.sagas.forEach((saga: Saga) => {
           if (!activeSagas.has(saga)) {
+            if (typeof saga !== 'function') {
+              throw new Error('saga argument must be a Generator function!');
+            }
+
             const op = {operation: OperationType.SAGA, instance: saga};
             stack.push(op);
-            const task: Task = sagaMiddleware.run(function*(): Generator<any, void, any> {
+            const task: Task = runSaga({ context, channel, dispatch: customDispatch(middlewareDispatch)(op), getState: middlewareGetState }, (function*(): Generator<any, void, any> {
               try {
                 yield call(saga);
               } catch (error) {
@@ -43,7 +46,7 @@ export const createSagasMiddleware = ({
                   stack.pop(op);
                 }
               }
-            });
+            }));
             activeSagas.set(saga, task);
           }
         });
@@ -59,13 +62,6 @@ export const createSagasMiddleware = ({
     }
 
     return result;
-  };
-
-  sagaMiddleware.run = (saga: Saga, ...args: any[]) => {
-    if (typeof saga !== 'function') {
-      throw new Error('saga argument must be a Generator function!');
-    }
-    return runSaga({ context, channel, dispatch: customDispatch(middlewareDispatch)(saga), getState: middlewareGetState }, saga, ...args);
   };
 
   sagaMiddleware.setContext = (props: any) => {
