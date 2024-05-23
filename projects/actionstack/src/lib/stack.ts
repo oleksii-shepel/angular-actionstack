@@ -55,4 +55,8 @@ export class ExecutionStack<T = Operation> {
   async waitForEmpty(): Promise<T[]> {
     return await waitFor(this.stack, value => value.length === 0);
   }
+
+  async waitForIdle(): Promise<T[]> {
+    return await waitFor(this.stack, value => !value.some(item => (item as any).operation === OperationType.ACTION));
+  }
 }

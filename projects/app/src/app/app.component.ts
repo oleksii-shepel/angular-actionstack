@@ -1,7 +1,7 @@
 import { Store } from '@actioncrew/actionstack';
 import { addSagas, removeSagas } from '@actioncrew/actionstack/sagas';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { takeEvery } from 'redux-saga/effects';
+import { put, takeEvery } from 'redux-saga/effects';
 
 
 function* helloSaga() {
@@ -10,6 +10,7 @@ function* helloSaga() {
 
 function* watchHelloSaga() {
   yield takeEvery('*', helloSaga); // Listens for 'ACTION_NAME'
+  yield put({type: "SUKA"});
 }
 
 @Component({

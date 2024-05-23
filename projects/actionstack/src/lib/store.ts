@@ -241,7 +241,7 @@ export class Store {
    */
   read<T = any>(slice: keyof T | string[], callback: (state:  Readonly<T>) => void | Promise<void>): Promise<void> {
     const promise = (async () => {
-      await this.stack.waitForEmpty(); // Wait for stack to become empty
+      await this.stack.waitForIdle(); // Wait for stack to become idle
       await this.lock.acquire(); // Acquire lock after stack is empty
 
       try {
