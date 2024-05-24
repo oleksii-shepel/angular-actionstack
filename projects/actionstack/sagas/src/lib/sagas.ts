@@ -18,12 +18,13 @@ export const createSagasMiddleware = ({
     dispatch(actionWithSource);
   };
 
-  const sagaMiddleware = ({ dispatch, getState, stack }: any) => (next: any) => async (action: Action<any>) => {
+  const sagaMiddleware = ({ dispatch, getState, dependencies, stack }: any) => (next: any) => async (action: Action<any>) => {
     middlewareDispatch = dispatch; middlewareGetState = getState;
 
     // Proceed to the next action
     const result = await next(action);
 
+    Object.assign(context, dependencies());
     channel.put(action);
 
     if (action.type === 'ADD_SAGAS' || action.type === 'REMOVE_SAGAS') {
