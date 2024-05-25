@@ -24,7 +24,6 @@ export const createSagasMiddleware = ({
     // Proceed to the next action
     const result = await next(action);
 
-    Object.assign(context, dependencies());
     channel.put(action);
 
     if (action.type === 'ADD_SAGAS' || action.type === 'REMOVE_SAGAS') {
@@ -36,7 +35,7 @@ export const createSagasMiddleware = ({
             }
 
             const op = {operation: OperationType.SAGA, instance: saga};
-            stack.push(op);
+            stack.push(op); Object.assign(context, dependencies());
             const task: Task = runSaga({ context, channel, dispatch: customDispatch(middlewareDispatch)(op), getState: middlewareGetState }, (function*(): Generator<any, void, any> {
               try {
                 yield call(saga);
