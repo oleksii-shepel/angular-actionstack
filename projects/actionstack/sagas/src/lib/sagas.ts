@@ -42,8 +42,9 @@ export const createSagasMiddleware = ({
               } catch (error) {
                 console.error('Saga error:', error);
               } finally {
+                stack.pop(op);
                 if (yield cancelled()) {
-                  stack.pop(op);
+                  return;
                 }
               }
             }));
