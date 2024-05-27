@@ -34,10 +34,10 @@ export const createSagasMiddleware = ({
               throw new Error('saga argument must be a Generator function!');
             }
 
-            const op = {operation: OperationType.SAGA, instance: saga};
-            stack.push(op); Object.assign(context, dependencies());
             const task: Task = runSaga({ context, channel, dispatch: customDispatch(middlewareDispatch)(op), getState: middlewareGetState }, (function*(): Generator<any, void, any> {
               try {
+                const op = {operation: OperationType.SAGA, instance: saga};
+                stack.push(op); Object.assign(context, dependencies());
                 yield call(saga);
               } catch (error) {
                 console.error('Saga error:', error);
