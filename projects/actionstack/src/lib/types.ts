@@ -268,7 +268,6 @@ export interface MainModule {
   metaReducers?: MetaReducer[];
   dependencies?: Tree<Type<any> | InjectionToken<any>>;
   strategy?: ProcessingStrategy;
-  callback?: Function;
 }
 
 /**
