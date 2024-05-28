@@ -35,15 +35,16 @@ export const createSagasMiddleware = ({
             }
 
             const op = {operation: OperationType.SAGA, instance: saga};
-            stack.push(op); Object.assign(context, dependencies());
             const task: Task = runSaga({ context, channel, dispatch: customDispatch(middlewareDispatch)(op), getState: middlewareGetState }, (function*(): Generator<any, void, any> {
               try {
+                stack.push(op); Object.assign(context, dependencies());
                 yield call(saga);
               } catch (error) {
                 console.error('Saga error:', error);
               } finally {
+                stack.pop(op);
                 if (yield cancelled()) {
-                  stack.pop(op);
+                  return;
                 }
               }
             }));
