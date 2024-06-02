@@ -1,4 +1,4 @@
-import { Action, action, Epic, isAction } from '@actioncrew/actionstack';
+import { Action, action, isAction } from '@actioncrew/actionstack';
 import { Subject } from 'rxjs/internal/Subject';
 import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 import { Observable } from 'rxjs/internal/Observable';
