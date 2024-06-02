@@ -165,8 +165,12 @@ export class Store {
       store.systemActions.initializeState();
 
       console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;");
-      store.setupReducer().then(state => store.currentState.next(state));
-
+      
+      store.lock.acquire()
+        .then(() => store.setupReducer())
+        .then(state => store.currentState.next(state))
+        .finally(() => store.lock.release()))
+      
       store.systemActions.storeInitialized();
 
       return store;
