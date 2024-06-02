@@ -168,7 +168,7 @@ export class Store {
       
       store.lock.acquire()
         .then(() => store.setupReducer())
-        .then(state => store.currentState.next(state))
+        .then(state => this.setState("@global", state))
         .finally(() => store.lock.release()))
       
       store.systemActions.storeInitialized();
