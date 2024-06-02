@@ -167,24 +167,6 @@ export interface ProjectionFunction {
 }
 
 /**
- * Type alias for a side epic function.
- *
- * Side epics are functions that can perform actions outside the core Actionstack dispatch cycle, such as:
- *  - Making network requests
- *  - Logging data
- *  - Persisting state to local storage
- * This type defines the expected signature for a side epic function.
- *
- * @param action - An observable of the dispatched action object.
- * @param state - An observable of the current application state.
- * @param dependencies - A record object containing any additional dependencies required by the side epic.
- * @returns Observable<Action<any>> - An observable that emits new action objects to be dispatched.
- *   The side epic function can use the provided observables and dependencies to perform its tasks
- *   and potentially emit new actions to be dispatched back to the store.
- */
-export type Epic = (action: Observable<Action<any>>, state: Observable<any>, dependencies: Record<string, any>) => Observable<Action<any>>;
-
-/**
  * Type alias representing a recursive tree structure.
  *
  * This type is used to define nested objects in a hierarchical way.
