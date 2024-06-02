@@ -121,8 +121,6 @@ export class Store {
     strategy: "exclusive" as ProcessingStrategy
   };
   protected currentState = new BehaviorSubject<any>(undefined);
-  protected isProcessing = new BehaviorSubject<boolean>(false);
-  protected subscription = Subscription.EMPTY;
   protected systemActions = { ...systemActions };
   protected settings = { ...new StoreSettings(), ...inject(StoreSettings) };
   protected tracker = new Tracker();
@@ -210,9 +208,7 @@ export class Store {
     }
 
     try {
-      this.isProcessing.next(true);
       await this.updateState("@global", async (state) => await this.pipeline.reducer(state, action), action);
-      this.isProcessing.next(false);
     } catch {
       console.warn("Error during processing the action");
     }
