@@ -477,5 +477,12 @@ function isObservable(obj: any): obj is Observable<unknown> {
   return !!obj && (obj instanceof Observable || (typeof obj.lift === 'function' && typeof obj.subscribe === 'function'));
 }
 
+/**
+ * Observable that immediately completes without emitting any values
+ */
+export const EMPTY = new Observable<never>((subscriber) => {
+  subscriber.complete();
+});
+
 export { isAction, isAsync, isBoxed, isObservable, isPlainObject, isPromise, kindOf };
 
