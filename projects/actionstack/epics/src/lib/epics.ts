@@ -7,6 +7,24 @@ import { Subscription } from 'rxjs/internal/Subscription';
 import { ExecutionStack, OperationType } from './stack';
 
 /**
+ * Type alias for an epic function.
+ *
+ * Epics are functions that can perform actions outside the core Actionstack dispatch cycle, such as:
+ *  - Making network requests
+ *  - Logging data
+ *  - Persisting state to local storage
+ * This type defines the expected signature for the epic function.
+ *
+ * @param action - An observable of the dispatched action object.
+ * @param state - An observable of the current application state.
+ * @param dependencies - A record object containing any additional dependencies required by the epic.
+ * @returns Observable<Action<any>> - An observable that emits new action objects to be dispatched.
+ *   The epic function can use the provided observables and dependencies to perform its tasks
+ *   and potentially emit new actions to be dispatched back to the store.
+ */
+export type Epic = (action: Observable<Action<any>>, state: Observable<any>, dependencies: Record<string, any>) => Observable<Action<any>>;
+
+/**
  * Concatenates multiple source Observables sequentially.
  *
  * @template T The type of the elements in the source Observables.
