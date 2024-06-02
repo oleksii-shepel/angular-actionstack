@@ -1,11 +1,9 @@
-import { BehaviorSubject } from 'rxjs';
-
-import { waitFor } from './operators';
+import { BehaviorSubject } from 'rxjs/internal/BehaviourSubject';
 
 export enum OperationType {
   ACTION = "action",
   ASYNC_ACTION = "async action",
-  EFFECT = "effect",
+  EPIC = "epic",
   SAGA = "saga"
 }
 
@@ -68,4 +66,40 @@ export class ExecutionStack {
   async waitForIdle(): Promise<Operation[]> {
     return await waitFor(this.stack, value => !value.some(item => item.operation === OperationType.ACTION));
   }
+}
+
+/**
+ * Waits for a condition to be met in an observable stream.
+ * @param {Observable<any>} obs - The observable stream to wait for.
+ * @param {(value: any) => boolean} predicate - The predicate function to evaluate the values emitted by the observable stream.
+ * @returns {Promise<boolean>} A promise that resolves to true when the predicate condition is met, or false if the observable completes without satisfying the predicate.
+ */
+export function waitFor<T>(obs: Observable<T>, predicate: (value: T) => boolean): Promise<T> {
+  let subscription: Subscription | undefined;
+
+  return new Promise<T>((resolve, reject) => {
+    const checkInitialValue = (obs as BehaviorSubject<T>)?.value;
+    if (checkInitialValue !== undefined && predicate(checkInitialValue)) {
+      return resolve(checkInitialValue);
+    }
+
+    subscription = obs.subscribe({
+      next: value => {
+        if (predicate(value)) {
+          if (subscription) {
+            subscription.unsubscribe();
+          }
+          resolve(value);
+        }
+      },
+      error: err => reject(err),
+      complete: () => {
+        reject("Method had completed before predicate condition was met");
+      },
+    });
+  }).finally(() => {
+    if (subscription && !subscription.closed) {
+      subscription.unsubscribe();
+    }
+  });
 }
