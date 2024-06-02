@@ -1,8 +1,8 @@
 import { Observable } from "rxjs/internal/Observable";
 import { Subscription } from "rxjs/internal/Subscription";
-import { EMPTY } from "./operators";
+
 import { TrackableObservable, Tracker } from "./tracker";
-import { Observer, ProjectionFunction, SelectorFunction } from "./types";
+import { EMPTY, Observer, ProjectionFunction, SelectorFunction } from "./types";
 
 export {
   createFeatureSelector as featureSelector,
