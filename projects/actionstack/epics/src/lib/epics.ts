@@ -9,10 +9,6 @@ import { Subscription } from 'rxjs/internal/Subscription';
 import { ExecutionStack, OperationType } from './stack';
 import { Action, isAction } from './types';
 
-export const EMPTY = new Observable<never>((subscriber) => {
-  subscriber.complete();
-});
-
 /**
  * Projects each source value to a Promise which is merged in the output Observable
  * in a serialized fashion waiting for each one to complete before merging the next.
