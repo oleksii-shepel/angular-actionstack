@@ -128,7 +128,6 @@ export interface OperatorFunction<T, R> {
   (source: Observable<T>): Observable<R>
 }
 
-
 /**
  * Type alias for any function that takes any number of arguments and returns anything.
  *
@@ -220,7 +219,6 @@ export interface FeatureModule {
   reducer: Reducer | Tree<Reducer>;
   dependencies?: Tree<Type<any> | InjectionToken<any>>;
 }
-
 
 /**
  * Interface defining the structure of the main application module.
