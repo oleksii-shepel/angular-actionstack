@@ -1,10 +1,9 @@
-import { Action, action, isAction } from '@actioncrew/actionstack';
+import { Action, action, ExecutionStack, isAction, OperationType } from '@actioncrew/actionstack';
 import { Subject } from 'rxjs/internal/Subject';
 import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 import { Observable } from 'rxjs/internal/Observable';
 import { Subscription } from 'rxjs/internal/Subscription';
 
-import { ExecutionStack, OperationType } from './stack';
 
 /**
  * Type alias for an epic function.
