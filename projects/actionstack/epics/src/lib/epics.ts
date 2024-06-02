@@ -25,7 +25,7 @@ export function concat<T>(stack: ExecutionStack, ...sources: Observable<T>[]): O
 
       if (index < sources.length) {
         const source = sources[index++];
-        let effect = {operation: OperationType.EFFECT, instance: source}
+        let effect = {operation: OperationType.EPIC, instance: source}
         stack.push(effect);
         subscription = source.subscribe({
           next: value => subscriber.next(Object.assign({}, value, {source: effect})),
@@ -74,7 +74,7 @@ export function merge<T>(stack: ExecutionStack, ...sources: Observable<T>[]): Ob
     };
 
     sources.forEach(source => {
-      let effect = {operation: OperationType.EFFECT, instance: source};
+      let effect = {operation: OperationType.EPIC, instance: source};
       stack.push(effect);
       const subscription = source.subscribe({
         next: value => subscriber.next(Object.assign({}, value, {source: effect})),
