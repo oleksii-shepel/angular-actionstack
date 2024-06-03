@@ -2,7 +2,6 @@ import { inject, InjectionToken, Injector, Type } from '@angular/core';
 import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 import { Observable } from 'rxjs/internal/Observable';
 import { Subject } from 'rxjs/internal/Subject';
-import { Subscription } from 'rxjs/internal/Subscription';
 
 import { action, bindActionCreators } from './actions';
 import { Lock } from './lock';
@@ -165,12 +164,12 @@ export class Store {
       store.systemActions.initializeState();
 
       console.log("%cYou are using ActionStack. Happy coding! 🎉", "font-weight: bold;");
-      
+
       store.lock.acquire()
         .then(() => store.setupReducer())
-        .then(state => this.setState("@global", state))
-        .finally(() => store.lock.release()))
-      
+        .then(state => store.setState("@global", state))
+        .finally(() => store.lock.release());
+
       store.systemActions.storeInitialized();
 
       return store;

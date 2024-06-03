@@ -1,4 +1,6 @@
-import { BehaviorSubject } from 'rxjs/internal/BehaviourSubject';
+import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
+import { Observable } from 'rxjs/internal/Observable';
+import { Subscription } from 'rxjs/internal/Subscription';
 
 export enum OperationType {
   ACTION = "action",
