@@ -27,7 +27,7 @@ export type Epic = (action: Observable<Action<any>>, state: Observable<any>, dep
  * @returns {(action: Observable<Action<any>>, state: Observable<any>, dependencies: any) => Observable<Action<any>>}
  *   A function that returns an Observable which emits values from the source Observables in order as they are concatenated.
  */
-export function concat(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<Action<any>>, state: Observable<any>, dependencies: any) => Observable<Action<any>> {
+function concat(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<Action<any>>, state: Observable<any>, dependencies: any) => Observable<Action<any>> {
   return (action$: Observable<Action<any>>, state$: Observable<any>, dependencies: any) => {
     return new Observable<Action<any>>(subscriber => {
       let index = 0;
@@ -79,7 +79,7 @@ export function concat(stack: ExecutionStack, ...sources: Epic[]): (action: Obse
  * @returns {(action: Observable<Action<any>>, state: Observable<any>, dependencies: any) => Observable<Action<any>>}
  *   A function that returns an Observable which emits all the values from the source Observables.
  */
-export function merge(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<Action<any>>, state: Observable<any>, dependencies: any) => Observable<Action<any>> {
+function merge(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<Action<any>>, state: Observable<any>, dependencies: any) => Observable<Action<any>> {
   return (action$: Observable<Action<any>>, state$: Observable<any>, dependencies: any) => {
     return new Observable<Action<any>>(subscriber => {
       let completedCount = 0;

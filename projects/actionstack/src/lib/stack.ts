@@ -132,7 +132,7 @@ export class ExecutionStack {
  * @param {(value: T) => boolean} predicate - The predicate function to evaluate the values emitted by the observable stream.
  * @returns {Promise<T>} A promise that resolves to the value when the predicate condition is met, or rejects if the observable completes without satisfying the predicate.
  */
-export function waitFor<T>(obs: Observable<T>, predicate: (value: T) => boolean): Promise<T> {
+function waitFor<T>(obs: Observable<T>, predicate: (value: T) => boolean): Promise<T> {
   let subscription: Subscription | undefined;
 
   return new Promise<T>((resolve, reject) => {
