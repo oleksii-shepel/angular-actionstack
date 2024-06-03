@@ -1,9 +1,4 @@
-ActionStack is a powerful Angular library designed to simplify and enhance state management within your web applications. Developed for the modern Angular developer, it offers a robust and intuitive approach to managing application state, empowering you to create scalable and maintainable UIs. It combines all the good parts of its predecessors and eliminates their shortcomings in asynchronous environment. ```This version does not reference RxJS library, only its type definitions. This is a customized version of the library for confident developers. Minified and well-tuned.```
-
-*** Effects are reimplemented as Epics and Sagas ***<br>
-*** To enable or disable effect dispatch corresponding action ***<br>
-*** New runners for sagas and epics are available within separate middleware packages ***<br>
-*** An execution stack is presented to monitor store workload and detect idle time ***<br>
+ActionStack is a powerful Angular library designed to simplify and enhance state management within your web applications. Developed for the modern Angular developer, it offers a robust and intuitive approach to managing application state, empowering you to create scalable and maintainable UIs. It combines all the good parts of its predecessors and eliminates their shortcomings in asynchronous environment.
 
 [redux-docs](https://redux.js.org/)
 [observable-docs](https://redux-observable.js.org/)
