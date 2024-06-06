@@ -1,8 +1,8 @@
-import { Observable } from "rxjs/internal/Observable";
-import { Subscription } from "rxjs/internal/Subscription";
+import { Observable } from 'rxjs/internal/Observable';
+import { Subscription } from 'rxjs/internal/Subscription';
 
-import { TrackableObservable, Tracker } from "./tracker";
-import { EMPTY, Observer, ProjectionFunction, SelectorFunction } from "./types";
+import { TrackableObservable, Tracker } from './tracker';
+import { EMPTY, Observer, ProjectionFunction, SelectorFunction } from './types';
 
 export {
   createFeatureSelector as featureSelector,
@@ -122,13 +122,14 @@ function createSelector<U = any, T = any>(
             }
           } catch(error: any) {
             console.warn("Error during selector execution:", error.message);
-            tracker && tracker.setStatus(trackable, true);
+
           }
         });
 
         return () => subscription.unsubscribe();
       }, tracker);
 
+      tracker && tracker.setStatus(trackable, true);
       return trackable as Observable<U>;
     };
   };
@@ -185,7 +186,6 @@ function createSelectorAsync<U = any, T = any>(
           }
 
           if (lastSliceState === sliceState) {
-            tracker && tracker.setStatus(trackable, true);
             return;
           } else {
             lastSliceState = sliceState;
@@ -197,7 +197,6 @@ function createSelectorAsync<U = any, T = any>(
             if (Array.isArray(selectors)) {
               const promises = selectors.map(async (selector, index) => {
                 if (unsubscribed || didCancel) {
-                  tracker && tracker.setStatus(trackable, true);
                   return;
                 }
                 return selector(sliceState, props ? props[index] : undefined);
@@ -206,7 +205,6 @@ function createSelectorAsync<U = any, T = any>(
               selectorResults = await Promise.all(promises);
 
               if (unsubscribed || didCancel) {
-                tracker && tracker.setStatus(trackable, true);
                 return;
               }
 
@@ -223,7 +221,6 @@ function createSelectorAsync<U = any, T = any>(
               selectorResults = await selectors(sliceState, props);
 
               if (unsubscribed || didCancel) {
-                tracker && tracker.setStatus(trackable, true);
                 return;
               }
 
@@ -239,13 +236,15 @@ function createSelectorAsync<U = any, T = any>(
             if (!unsubscribed && !didCancel) {
               console.warn("Error during selector execution:", error.message);
               observer.complete();
-              tracker && tracker.setStatus(trackable, true);
             }
           }
         };
 
         const subscription = (featureSelector$ === "@global" ? state$ : (featureSelector$(state$)) as any).subscribe({
-          next: (sliceState: any) => runSelectors(sliceState),
+          next: (sliceState: any) => {
+            runSelectors(sliceState);
+            tracker && tracker.setStatus(trackable, true);
+          },
           error: (error: any) => {
             if (!unsubscribed && !didCancel) {
               console.warn("Error during selector execution:", error.message);
