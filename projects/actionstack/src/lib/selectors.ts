@@ -248,7 +248,6 @@ function createSelectorAsync<U = any, T = any>(
           error: (error: any) => {
             if (!unsubscribed && !didCancel) {
               console.warn("Error during selector execution:", error.message);
-              observer.complete();
               tracker && tracker.setStatus(trackable, true);
             }
           },

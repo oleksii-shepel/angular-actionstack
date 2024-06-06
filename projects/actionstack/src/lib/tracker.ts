@@ -1,7 +1,8 @@
-import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
-import { Observable } from "rxjs/internal/Observable";
+import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
+import { Observable } from 'rxjs/internal/Observable';
 import { Subscription } from 'rxjs/internal/Subscription';
-import { Observer, OperatorFunction, isObservable } from "./types";
+
+import { isObservable, Observer, OperatorFunction } from './types';
 
 /**
  * A utility class for tracking the execution status of Observables.
@@ -103,7 +104,7 @@ export class Tracker {
 
       [...this.entries.values()].forEach(subject => {
         subject.subscribe({
-          next: () => handleCompletion(),
+          next: handleCompletion,
           error: handleError,
           complete: handleCompletion, // Call handleCompletion on complete as well
         });
