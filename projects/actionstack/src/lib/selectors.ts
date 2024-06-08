@@ -87,42 +87,33 @@ function createSelector<U = any, T = any>(
         const subscription: Subscription = sliceState$.subscribe(sliceState => {
           if (sliceState === undefined) {
             observer.next(undefined as U);
-            return;
-          }
-
-          if (lastSliceState === sliceState) {
-            tracker && tracker.setStatus(trackable, true);
-            return;
-          } else {
+          } else if (lastSliceState !== sliceState) {
             lastSliceState = sliceState;
-          }
+            let selectorResults: U[] | U;
+            try {
+              if (Array.isArray(selectors)) {
+                selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]));
 
-          let selectorResults: U[] | U;
-          try {
-            if (Array.isArray(selectors)) {
-              selectorResults = selectors.map((selector, index) => selector(sliceState, props[index]));
+                // Check if any result is undefined and emit undefined immediately
+                if (selectorResults.some(result => result === undefined)) {
+                  subscription.unsubscribe(); // Unsubscribe immediately to prevent further emissions
+                  observer.next(undefined as U);
+                } else {
+                  // If all results are defined, continue with projection or emit results directly
+                  observer.next(projection ? projection(selectorResults, projectionProps) : selectorResults);
+                }
+              } else {
+                selectorResults = selectors && selectors(sliceState, props);
 
-              // Check if any result is undefined and emit undefined immediately
-              if (selectorResults.some(result => result === undefined)) {
-                subscription.unsubscribe(); // Unsubscribe immediately to prevent further emissions
-                observer.next(undefined as U);
-                return;
+                if (selectorResults === undefined) {
+                  observer.next(undefined as U);
+                } else {
+                  observer.next(projection ? projection(projectionProps) : selectorResults);
+                }
               }
-
-              // If all results are defined, continue with projection or emit results directly
-              observer.next(projection ? projection(selectorResults, projectionProps) : selectorResults);
-            } else {
-              selectorResults = selectors && selectors(sliceState, props);
-
-              if (selectorResults === undefined) {
-                observer.next(undefined as U);
-                return;
-              }
-              observer.next(projection ? projection(projectionProps) : selectorResults);
+            } catch(error: any) {
+              console.warn("Error during selector execution:", error.message);
             }
-          } catch(error: any) {
-            console.warn("Error during selector execution:", error.message);
-
           }
         });
 
