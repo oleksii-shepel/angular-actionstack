@@ -226,7 +226,6 @@ function createSelectorAsync<U = any, T = any>(
           } catch (error: any) {
             if (!unsubscribed && !didCancel) {
               console.warn("Error during selector execution:", error.message);
-              observer.complete();
             }
           }
         };
@@ -245,7 +244,6 @@ function createSelectorAsync<U = any, T = any>(
           complete: () => {
             if (!unsubscribed && !didCancel) {
               observer.complete();
-              tracker && tracker.setStatus(trackable, true);
             }
           },
         });
