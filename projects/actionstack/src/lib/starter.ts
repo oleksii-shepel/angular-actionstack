@@ -31,7 +31,7 @@ export const createStarter = () => {
           const op = { operation: OperationType.ACTION, instance: syncAction, source: action };
           stack.push(op);
           try {
-            await next(syncAction);
+            await dispatch(syncAction);
           } finally {
             stack.pop(op);
           }
@@ -72,7 +72,7 @@ export const createStarter = () => {
             const op = { operation: OperationType.ACTION, instance: syncAction, source: action };
             stack.push(op);
             try {
-              await next(syncAction);
+              await dispatch(syncAction);
             } finally {
               stack.pop(op);
             }
