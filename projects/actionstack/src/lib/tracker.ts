@@ -120,8 +120,8 @@ export class Tracker {
 export class TrackableObservable<T> extends Observable<T> {
   /** Indicates whether the observable sequence has completed. */
   isCompleted: boolean = false;
-  /** Indicates whether the observable has produced a value. */
-  isExecuted: boolean = false;
+  /** Indicates whether the observable has emitted a value. */
+  hasEmitted: boolean = false;
   /** Indicates how many times the observable has produced a value. */
   emissionNumber = 0;
   /** Ancestor observable of this observable in the pipe. */
@@ -134,7 +134,7 @@ export class TrackableObservable<T> extends Observable<T> {
   constructor(subscribeOrObservable?: Observable<T> | ((subscriber: Observer<T>) => (() => void) | void), private tracker?: Tracker) {
     super(isObservable(subscribeOrObservable) ? (observer => {
       const subscription = subscribeOrObservable.subscribe({
-        next: (value) => { observer.next(value); this.isExecuted = true; this.emissionNumber++; },
+        next: (value) => { observer.next(value); this.hasEmitted = true; this.emissionNumber++; },
         error: (err) => { this.isCompleted = true; observer.error(err); },
         complete: () => { this.isCompleted = true; observer.complete(); }
       });
@@ -164,7 +164,7 @@ export class TrackableObservable<T> extends Observable<T> {
     observer.next = (value) => {
       if(originalNext) {
         originalNext(value);
-        this.isExecuted = true;
+        this.hasEmitted = true;
         this.emissionNumber++;
       }
     };
