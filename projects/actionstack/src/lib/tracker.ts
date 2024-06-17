@@ -194,6 +194,16 @@ export class TrackableObservable<T> extends Observable<T> {
     if (operators.length === 0) {
       return this;
     }
-    return operators.reduce((prev, fn) => { const obs = new TrackableObservable(fn(prev), this.tracker); prev.descendant = obs; return obs; }, this as any);
+
+    let source = this as TrackableObservable<any>;
+    for (const operator of operators) {
+      const appliedSource = operator(source);
+      if(appliedSource !== source) {
+        source.descendant = new TrackableObservable(appliedSource, this.tracker);
+        source = source.descendant;
+      }
+    }
+
+    return source;
   }
 }
