@@ -66,7 +66,7 @@ export class Tracker {
    */
   reset() {
     for (const [key, value] of [...this.entries.entries()]) {
-      if (key.isCompleted) {
+      if (key.isComplete) {
         this.entries.delete(key); // Remove the entry if its value is true
       } else {
         value.next(false); // Reset the subject to false
@@ -119,7 +119,7 @@ export class Tracker {
  */
 export class TrackableObservable<T> extends Observable<T> {
   /** Indicates whether the observable sequence has completed. */
-  isCompleted: boolean = false;
+  isComplete: boolean = false;
   /** Indicates whether the observable has emitted a value. */
   hasEmitted: boolean = false;
   /** Indicates how many times the observable has produced a value. */
@@ -135,8 +135,8 @@ export class TrackableObservable<T> extends Observable<T> {
     super(isObservable(subscribeOrObservable) ? (observer => {
       const subscription = subscribeOrObservable.subscribe({
         next: (value) => { observer.next(value); this.hasEmitted = true; this.emissionNumber++; },
-        error: (err) => { this.isCompleted = true; observer.error(err); },
-        complete: () => { this.isCompleted = true; observer.complete(); }
+        error: (err) => { this.isComplete = true; observer.error(err); },
+        complete: () => { this.isComplete = true; observer.complete(); }
       });
       return () => subscription.unsubscribe();
     }) : subscribeOrObservable);
@@ -176,7 +176,7 @@ export class TrackableObservable<T> extends Observable<T> {
     const subscription = super.subscribe(observerOrNext);
     const originalComplete = subscription.unsubscribe.bind(subscription);
     subscription.unsubscribe = () => {
-      this.isCompleted = true;
+      this.isComplete = true;
       originalComplete();
     };
 
