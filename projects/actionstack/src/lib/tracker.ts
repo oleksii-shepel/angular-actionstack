@@ -125,7 +125,7 @@ export class TrackableObservable<T> extends Observable<T> {
   /** Indicates how many times the observable has produced a value. */
   emissionNumber = 0;
   /** Ancestor observable of this observable in the pipe. */
-  descendant?: TrackableObservable<any>;
+  descendant?: TrackableObservable<T>;
 
   /**
    * Creates a new TrackableObservable.
