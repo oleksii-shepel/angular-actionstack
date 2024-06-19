@@ -1,4 +1,4 @@
-ActionStack is a powerful Angular library designed to simplify and enhance state management within your web applications. Developed for the modern Angular developer, it offers a robust and intuitive approach to managing application state, empowering you to create scalable and maintainable UIs. It combines all the good parts of its predecessors and eliminates their shortcomings in asynchronous environment.
+ActionStack is a powerful Angular library designed to simplify and enhance state management within your web applications. Designed with Angular Best Practices in mind, it offers a robust and intuitive approach to managing application state, empowering you to create scalable and maintainable UIs. It leverages the best aspects of existing solutions, offering enhanced functionality for handling asynchronous operations.
 
 [redux-docs](https://redux.js.org/)
 [observable-docs](https://redux-observable.js.org/)
