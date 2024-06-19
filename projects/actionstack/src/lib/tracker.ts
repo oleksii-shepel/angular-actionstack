@@ -114,18 +114,29 @@ export class Tracker {
 }
 
 /**
+ * Represents one observable emission value.
+ * @template T The type of the emission value.
+ */
+export class Emission<T> {
+  constructor(public value: T) {}
+  /**
+   * Indicates whether the emission is absorbed.
+   * @type {boolean}
+   */
+  isAbsorbed: boolean = false;
+}
+
+/**
  * Represents an observable sequence with the ability to track completion state.
  * @template T The type of elements in the sequence.
  */
 export class TrackableObservable<T> extends Observable<T> {
   /** Indicates whether the observable sequence has completed. */
   isComplete: boolean = false;
-  /** Indicates whether the observable has emitted a value. */
-  hasEmitted: boolean = false;
-  /** Indicates how many times the observable has produced a value. */
-  emissionNumber = 0;
+  /** Stores all emitted values. */
+  emissionList: Emission<T>[] = [];
   /** Descendant observable of this observable in the pipe. */
-  descendant?: TrackableObservable<T>;
+  parent?: TrackableObservable<T>;
 
   /**
    * Creates a new TrackableObservable.
@@ -134,12 +145,27 @@ export class TrackableObservable<T> extends Observable<T> {
   constructor(subscribeOrObservable?: Observable<T> | ((subscriber: Observer<T>) => (() => void) | void), private tracker?: Tracker) {
     super(isObservable(subscribeOrObservable) ? (observer => {
       const subscription = subscribeOrObservable.subscribe({
-        next: (value) => { observer.next(value); this.hasEmitted = true; this.emissionNumber++; },
+        next: (value) => { this.emissionList.push(new Emission(value)); observer.next(value); },
         error: (err) => { this.isComplete = true; observer.error(err); },
         complete: () => { this.isComplete = true; observer.complete(); }
       });
       return () => subscription.unsubscribe();
-    }) : subscribeOrObservable);
+    }) : (subscriber) => {
+      subscriber.next = subscriber.next ?? (() => {});
+      subscriber.error = subscriber.error ?? ((error) => { console.warn(error.message); });
+      subscriber.complete = subscriber.complete ?? (() => {});
+
+      const originalNext = subscriber.next.bind(subscriber);
+      subscriber.next = (value) => { this.emissionList.push(new Emission(value!)); originalNext(value); };
+
+      const originalError = subscriber.error.bind(subscriber);
+      subscriber.error = (error) => { this.isComplete = true; originalError(error); };
+
+      const originalComplete = subscriber.complete.bind(subscriber);
+      subscriber.complete = () => { this.isComplete = true; originalComplete(); };
+
+      return subscribeOrObservable!(subscriber);
+    });
   }
 
   /**
@@ -150,38 +176,26 @@ export class TrackableObservable<T> extends Observable<T> {
   override subscribe(observerOrNext?: Partial<Observer<T>> | ((value: T) => void) | null, error?: (error: any) => void, complete?: () => void): Subscription {
     const observer: Partial<Observer<T>> = {};
 
-    if (observerOrNext === null) {
-      observerOrNext = {}; // Assign an empty observer object
-    }
-
-    if (typeof observerOrNext === 'function') {
-      observer.next = observerOrNext;
-    } else {
+    if (typeof observerOrNext !== 'function') {
       Object.assign(observer, observerOrNext);
+    } else {
+      observer.next = observerOrNext;
     }
 
-    const originalNext = observer.next?.bind(observer);
-    observer.next = (value) => {
-      if(originalNext) {
-        originalNext(value);
-        this.hasEmitted = true;
-        this.emissionNumber++;
-      }
-    };
+    observer.next = observer.next ?? (() => {});
+    observer.error = observer.error ?? ((error) => { console.warn(error.message); });
+    observer.complete = observer.complete ?? (() => {});
 
-    // Initialize error and complete callbacks if not provided
-    observer.error = observer.error || error;
-    observer.complete = observer.complete || complete;
+    const originalNext = observer.next.bind(observer);
+    observer.next = (value) => { this.emissionList.push(new Emission(value!)); originalNext(value); };
 
-    const subscription = super.subscribe(observerOrNext);
-    const originalComplete = subscription.unsubscribe.bind(subscription);
-    subscription.unsubscribe = () => {
-      this.isComplete = true;
-      originalComplete();
-    };
+    const originalError = observer.error.bind(observer);
+    observer.error = (error) => { this.isComplete = true; originalError(error); };
 
-    (subscription as any).source = this;
-    return subscription;
+    const originalComplete = observer.complete.bind(observer);
+    observer.complete = () => { this.isComplete = true; originalComplete(); };
+
+    return super.subscribe(observer);
   }
 
   /**
@@ -195,15 +209,32 @@ export class TrackableObservable<T> extends Observable<T> {
       return this;
     }
 
-    let source = this as TrackableObservable<any>;
+    let source: TrackableObservable<any> = this;
+
     for (const operator of operators) {
-      const appliedSource = operator(source);
-      if(appliedSource !== source) {
-        source.descendant = new TrackableObservable(appliedSource, this.tracker);
-        source = source.descendant;
+      let piped = operator(source) as TrackableObservable<any>;
+      if (piped !== source) {
+        piped.parent = source;
+        source = piped;
       }
     }
 
     return source;
+  }
+
+  get ancestor(): TrackableObservable<T> {
+    return this.parent || this;
+  }
+
+  get head(): TrackableObservable<T> {
+    let head = this as any;
+    while (head.parent) {
+      head = head.parent;
+    }
+    return head;
+  }
+
+  get lastEmission(): Emission<T> {
+    return this.emissionList[this.emissionList.length - 1];
   }
 }
