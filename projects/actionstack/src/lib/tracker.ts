@@ -222,6 +222,11 @@ export class TrackableObservable<T> extends Observable<T> {
     return source;
   }
 
+  clear() {
+    this.emissionList.splice(0, this.emissionList.length);
+    this.isComplete = false;
+  }
+
   get ancestor(): TrackableObservable<T> {
     return this.parent || this;
   }
