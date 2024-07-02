@@ -212,11 +212,9 @@ export class TrackableObservable<T> extends Observable<T> {
     let source: TrackableObservable<any> = this;
 
     for (const operator of operators) {
-      let piped = operator(source) as TrackableObservable<any>;
-      if (piped !== source) {
-        piped.parent = source;
-        source = piped;
-      }
+      let piped = new TrackableObservable(operator(source));
+      piped.parent = source;
+      source = piped;
     }
 
     return source;
