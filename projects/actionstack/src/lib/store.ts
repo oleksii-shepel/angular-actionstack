@@ -7,7 +7,7 @@ import { action, bindActionCreators } from './actions';
 import { Lock } from './lock';
 import { ExecutionStack } from './stack';
 import { starter } from './starter';
-import { TrackableObservable, Tracker } from './tracker';
+import { Tracker } from './tracker';
 import {
   Action,
   AnyFn,
@@ -246,9 +246,9 @@ export class Store {
    */
   select<T = any, R = any>(selector: (obs: Observable<T>, tracker?: Tracker) => Observable<R>, defaultValue?: any): Observable<R> {
     let lastValue: any;
-    let selected$: TrackableObservable<R> | undefined;
-    return new TrackableObservable<R>((subscriber: Observer<R>) => {
-      const subscription = this.currentState.pipe((state) => (selected$ = selector(state, this.tracker) as TrackableObservable<R>)).subscribe(selectedValue => {
+    let selected$: Observable<R> | undefined;
+    return new Observable<R>((subscriber: Observer<R>) => {
+      const subscription = this.currentState.pipe((state) => (selected$ = selector(state, this.tracker) as Observable<R>)).subscribe(selectedValue => {
         const filteredValue = selectedValue === undefined ? defaultValue : selectedValue;
         if(filteredValue !== lastValue) {
           Promise.resolve(subscriber.next(filteredValue))
@@ -260,7 +260,7 @@ export class Store {
       });
 
       return () => subscription.unsubscribe();
-    }, this.tracker);
+    });
   }
 
 

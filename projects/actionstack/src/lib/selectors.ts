@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs/internal/Observable';
 import { Subscription } from 'rxjs/internal/Subscription';
 
-import { TrackableObservable, Tracker } from './tracker';
+import { Tracker } from './tracker';
 import { EMPTY, Observer, ProjectionFunction, SelectorFunction } from './types';
 
 export {
@@ -76,7 +76,7 @@ function createSelector<U = any, T = any>(
 
     let lastSliceState: any, emitted = false;
     return (state$: Observable<T>, tracker?: Tracker) => {
-      const trackable = new TrackableObservable<U>((observer: Observer<U>) => {
+      const trackable = new Observable<U>((observer: Observer<U>) => {
         let sliceState$: Observable<U>;
         if (featureSelector$ === "@global") {
           sliceState$ = state$ as any;
@@ -115,12 +115,12 @@ function createSelector<U = any, T = any>(
               console.warn("Error during selector execution:", error.message);
             }
           }
-        });
+        }, error => tracker?.setStatus(trackable, true), () => tracker?.setCompletion(trackable));
 
         return () => subscription.unsubscribe();
-      }, tracker);
+      });
 
-      tracker && tracker.setStatus(trackable, true);
+      tracker?.setStatus(trackable, true);
       return trackable as Observable<U>;
     };
   };
@@ -165,7 +165,7 @@ function createSelectorAsync<U = any, T = any>(
 
     let lastSliceState: any;
     return (state$: Observable<T>, tracker?: Tracker) => {
-      const trackable = new TrackableObservable<U>((observer: Observer<U>) => {
+      const trackable = new Observable<U>((observer: Observer<U>) => {
 
         let unsubscribed = false;
         let didCancel = false;
@@ -233,16 +233,17 @@ function createSelectorAsync<U = any, T = any>(
         const subscription = (featureSelector$ === "@global" ? state$ : (featureSelector$(state$)) as any).subscribe({
           next: (sliceState: any) => {
             runSelectors(sliceState);
-            tracker && tracker.setStatus(trackable, true);
+            tracker?.setStatus(trackable, true);
           },
           error: (error: any) => {
             if (!unsubscribed && !didCancel) {
               console.warn("Error during selector execution:", error.message);
-              tracker && tracker.setStatus(trackable, true);
+              tracker?.setStatus(trackable, true);
             }
           },
           complete: () => {
             if (!unsubscribed && !didCancel) {
+              tracker?.setCompletion(trackable);
               observer.complete();
             }
           },
@@ -252,7 +253,7 @@ function createSelectorAsync<U = any, T = any>(
           unsubscribed = true;
           subscription.unsubscribe();
         };
-      }, tracker);
+      });
 
       return trackable;
     };
