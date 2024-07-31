@@ -225,7 +225,7 @@ export class Store {
   read<T = any>(slice: keyof T | string[], callback: (state:  Readonly<T>) => void | Promise<void>): Promise<void> {
     const promise = (async () => {
       try {
-        await this.lock.acquire(); // Acquire lock after stack is empty
+        await this.lock.acquire(); //Potentially we can check here for an idle of the pipeline
         const state = await this.getState(slice); // Get state after acquiring lock
         callback(state);
       } finally {
