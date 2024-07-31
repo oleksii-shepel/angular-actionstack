@@ -16,7 +16,7 @@ export type OperationType = "action" | "async action" | "epic" | "saga";
  */
 export class Operation {
   operation: OperationType;
-  instance: Function;
+  instance: Action<any> | AsyncAction<any>;
   source?: Operation;
 
   constructor(operation: OperationType, instance: Function, source?: Operation) {
@@ -25,9 +25,9 @@ export class Operation {
     this.source = source;
   }
 
-  static action(action: AsyncAction<any> | Action<any>): Operation {
+  static action(action: Action<any> | AsyncAction<any>): Operation {
     const operationType = typeof action === 'function' ? "async action" : "action";
-    const instance = action as Function;
+    const instance = action;
     const source = (action as any).source;
     return new Operation(operationType, instance, source);
   }
