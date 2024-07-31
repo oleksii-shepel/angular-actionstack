@@ -32,7 +32,7 @@ ActionStack excels in managing state for large-scale applications by offering fu
 The tracker and execution stack components provide valuable insights into the system's behavior at any given moment. The tracker monitors how state changes propagate from their initial update in reducers through to the selectors, while the execution stack keeps track of the sequence of operations and function calls. Together, they help diagnose issues and understand the flow of execution, enabling more effective debugging and performance analysis.
 
 ## Extending the Store with Side Effects
-ActionStack enables extending the store to handle side effects, such as epics and sagas, by registering them with specific actions to manage complex asynchronous flows. This approach minimizes the core store's complexity while leveraging middleware concepts to effectively manage side effects and enhance scalability. For convenience, you can use subclasses such as EpicStore or SagaStore defined in each module. They add an extend method to the store, and offer an enhanced version of the store for injection. Just remember to load these modules into the AppModule.
+ActionStack enables extending the store to handle side effects, such as epics and sagas, by registering them with specific actions to manage complex asynchronous flows. This approach minimizes the core store's complexity while leveraging middleware concepts to effectively manage side effects and enhance scalability.
 
 ### Epics
 Epics, a concept from the Redux ecosystem popular in Angular via NgRx, use RxJS operators to transform actions into other actions, leveraging reactive programming for managing complex asynchronous events and interactions.
