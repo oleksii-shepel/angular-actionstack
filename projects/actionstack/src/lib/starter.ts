@@ -1,6 +1,5 @@
-import { ExecutionStack, Lock } from '@actioncrew/actionstack';
-
-import { Operation } from './stack';
+import { Lock } from './lock';
+import { ExecutionStack, Operation } from './stack';
 import { Action, AsyncAction } from './types';
 
 /**
