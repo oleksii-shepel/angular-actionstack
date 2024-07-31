@@ -1,4 +1,4 @@
-ActionStack is a powerful Angular library designed to simplify and enhance state management within your web applications. Designed with Angular Best Practices in mind, it offers a robust and intuitive approach to managing application state, empowering you to create scalable and maintainable UIs. It leverages the best aspects of existing solutions, offering enhanced functionality for handling asynchronous operations.
+ActionStack is a powerful Angular library designed to enhance state management in web applications. It integrates seamlessly with Angular best practices, providing a scalable and maintainable approach to managing application state while handling asynchronous operations effectively.
 
 [redux-docs](https://redux.js.org/)
 [observable-docs](https://redux-observable.js.org/)
@@ -17,26 +17,35 @@ ActionStack is a powerful Angular library designed to simplify and enhance state
 - Angular Integration: Seamlessly integrates with Angular concepts like components, directives, and services, providing a familiar development workflow.
 - Community-Driven: Backed by an active community and comprehensive documentation, ensuring ongoing support and learning opportunities.
 
-## Benefits
-Are you an Angular developer battling against unpredictable state management and tangled asynchronous operations? ActionStack comes to the rescue, offering a powerful arsenal of features to conquer your state management woes.
+## What Sets ActionStack Apart
+ActionStack differentiates itself from other state management solutions with its robust support for asynchronous operations. This includes:
 
-- Manage Asynchronous Code with Confidence: Fear not the intricate pathways of asynchronous operations! Even within complex data flows, your application remains firmly under your command, banishing unforeseen disruptions and ensuring predictable state updates. No more unpredictable surprises!
+- Asynchronous Actions: Actions can be asynchronous, allowing for operations like API calls to be seamlessly integrated.
+- Asynchronous Reducers: Reducers can handle asynchronous processes, ensuring state updates occur smoothly.
+- Asynchronous Meta-Reducers: Meta-reducers can also operate asynchronously, providing an additional layer of state management.
+- Asynchronous Selectors: Selectors can fetch and transform state data asynchronously, ensuring your views are always up-to-date.
 
-- Queue Up Actions for Orderly Execution: Take full command of the action workflow with queueing. Subsequent actions patiently wait their turn, guaranteeing they only fire after their predecessors have completed, leading to a well-organized and predictable state update journey.
+State management in ActionStack is streamlined by defining the initial state within reducers, allowing for automatic state tree construction and a clean, modular architecture.
 
-- Chain Reactions, Cascading Side Effects Made Easy: Unleash the power of chained side effects! Actions can trigger additional actions, creating a streamlined and organized flow that simplifies complex logic. Forget about messy code - embrace the elegance of cascading side effects.
+ActionStack excels in managing state for large-scale applications by offering full featured support for multiple store modules. Modules can dynamically attach and detach their states from the central store, optimizing memory usage and simplifying state management by avoiding unnecessary data retention and facilitating smoother state transitions.
 
-- Action Defusion, Ordering Chaos: ActionStack guarantees the exclusive execution of actions and their descendants within a dedicated context, preventing interference from concurrent actions. This ensures predictable outcomes and eliminates unintended side effects, particularly crucial for actions interacting with shared resources or performing sensitive operations. This exclusive execution approach significantly enhances the reliability and control over state updates compared to simple action merging!
+The tracker and execution stack components provide valuable insights into the system's behavior at any given moment. The tracker monitors how state changes propagate from their initial update in reducers through to the selectors, while the execution stack keeps track of the sequence of operations and function calls. Together, they help diagnose issues and understand the flow of execution, enabling more effective debugging and performance analysis.
 
-- Transparent Pipeline, Every Step, Crystal Clear: Gain complete control and visibility into the action processing pipeline. Every step your actions take is laid bare, empowering you to pinpoint any issues and optimize your state management flow.
+## Extending the Store with Side Effects
+ActionStack enables extending the store to handle side effects, such as epics and sagas, by registering them with specific actions to manage complex asynchronous flows. This approach minimizes the core store's complexity while leveraging middleware concepts to effectively manage side effects and enhance scalability. For convenience, you can use subclasses such as EpicStore or SagaStore defined in each module. They add an extend method to the store, and offer an enhanced version of the store for injection. Just remember to load these modules into the AppModule.
 
-- Secure Your State, Consistent Updates: The library enforces consistent and predictable state changes, eliminating the risk of unintended modifications and ensuring rock-solid stability.
+### Epics
+Epics, a concept from the Redux ecosystem popular in Angular via NgRx, use RxJS operators to transform actions into other actions, leveraging reactive programming for managing complex asynchronous events and interactions.
 
-- Adapt to Any Challenge, Customizable Action Handling: Need a unique approach to handling specific actions? No problem! ActionStack's extensible system of strategies allows you to create custom solutions, making it incredibly flexible and adaptable to your specific needs.
+### Sagas
+Sagas, an alternative to RxJS, manage side effects by executing asynchronous tasks in response to actions. They use generator functions for handling complex workflows, such as concurrent tasks and action coordination.
 
-- Performance Insights, Optimize Like a Pro: Analyze action processing times with built-in performance analytics. Identify bottlenecks and optimize your code, ensuring your app stays responsive and delivers a seamless user experience.
+## Tools
+As part of the ActionStack bundle, several tools are provided to enhance development and debugging:
 
-- The Legacy of Redux Lives On, Leverage Redux Middlewares: Want to access the vast ecosystem of Redux middlewares? ActionStack welcomes them with open arms, allowing you to leverage existing solutions and expand your state management toolkit further.
+- Logger: Logs state changes and actions to the console for easier debugging.
+- Performance Monitor: Monitors the performance of state changes and actions, helping to identify bottlenecks.
+- State Freezer: Freezes the state to prevent accidental mutations, ensuring state immutability.
 
 # Conclusion
 With ActionStack by your side, state management in your Angular applications becomes a breeze. Its distinctive features make it an invaluable tool for developers seeking control, efficiency, predictability and scalability in their Angular applications. Conquer the wild west of state with confidence and build amazing, performant applications!

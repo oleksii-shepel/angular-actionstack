@@ -1,5 +1,25 @@
+import { ExecutionStack, Lock } from '@actioncrew/actionstack';
+
 import { OperationType } from './stack';
 import { Action, AsyncAction } from './types';
+
+/**
+ * Configuration object for the middleware.
+ *
+ * @typedef {Object} MiddlewareConfig
+ * @property {Function} dispatch - Function to dispatch actions.
+ * @property {Function} getState - Function to get the current state.
+ * @property {Function} dependencies - Function to get dependencies.
+ * @property {Lock} lock - Lock instance to manage action processing concurrency.
+ * @property {ExecutionStack} stack - Stack instance to track action execution.
+ */
+interface MiddlewareConfig {
+  dispatch: Function;
+  getState: Function;
+  dependencies: Function;
+  lock: Lock;
+  stack: ExecutionStack;
+}
 
 /**
  * Function to create the starter middleware factory.
@@ -9,6 +29,69 @@ import { Action, AsyncAction } from './types';
  */
 export const createStarter = () => {
   let asyncActions: Promise<any>[] = [];
+
+  /**
+   * Class responsible for handling actions within the middleware.
+   */
+  class ActionHandler {
+    private stack: ExecutionStack;
+    private getState: Function;
+    private dependencies: Function;
+
+    /**
+     * Creates an instance of ActionHandler.
+     *
+     * @param {MiddlewareConfig} config - The configuration object for the middleware.
+     */
+    constructor(config: MiddlewareConfig) {
+      this.stack = config.stack;
+      this.getState = config.getState;
+      this.dependencies = config.dependencies;
+    }
+
+    /**
+     * Handles the given action, processing it either synchronously or asynchronously.
+     *
+     * @param {Action<any> | AsyncAction<any>} action - The action to be processed.
+     * @param {Function} next - The next middleware function in the chain.
+     * @param {Lock} lockInstance - The lock instance to manage concurrency for this action.
+     * @returns {Promise<void> | void} - A promise if the action is asynchronous, otherwise void.
+     */
+    async handleAction(action: Action<any> | AsyncAction<any>, next: Function, lockInstance: any) {
+
+      await lockInstance.acquire();
+
+      const op = {
+        operation: typeof action === 'function' ? OperationType.ASYNC_ACTION : OperationType.ACTION,
+        instance: action as AsyncAction<any>,
+        source: typeof action === 'function' ? undefined : action.source
+      };
+      this.stack.push(op);
+
+      try {
+        if (typeof action === 'function') {
+          let innerLock = new Lock();
+          // Process async actions asynchronously and track them
+          const asyncFunc = (async () => {
+            await action(
+              async (syncAction: Action<any>) => {
+                  await this.handleAction(syncAction, next, innerLock);
+              },
+              this.getState,
+              this.dependencies()
+            );
+          })();
+          return asyncFunc;
+        } else {
+          // Process regular synchronous actions
+          await next(action);
+        }
+      } finally {
+        this.stack.pop(op);
+        lockInstance.release();
+      }
+    }
+  }
 
   /**
    * Middleware function for handling actions exclusively.
@@ -22,35 +105,10 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const exclusive = ({ dispatch, getState, dependencies, lock, stack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
-    async function processAction(action: Action<any> | AsyncAction<any>) {
-      if (typeof action === 'function') {
-        // Process async actions (functions)
-        await action(async (syncAction: Action<any>) => {
-          syncAction = Object.assign({}, syncAction, {source: action});
-          const op = { operation: OperationType.ACTION, instance: syncAction, source: action };
-          stack.push(op);
-          try {
-            await dispatch(syncAction);
-          } finally {
-            stack.pop(op);
-          }
-        }, getState, dependencies());
-      } else {
-        // Pass regular actions to the next middleware
-        await next(action);
-      }
-    }
-
-    await lock.acquire();
-    const op = typeof action === 'function' ? ({ operation: OperationType.ASYNC_ACTION, instance: action }) : ({ operation: OperationType.ACTION, instance: action, source: action.source });
-    stack.push(op);
-    try {
-      await processAction(action);
-    } finally {
-      stack.pop(op);
-      lock.release();
-    }
+  const exclusive = (config: MiddlewareConfig) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+    const handler = new ActionHandler(config);
+    const lockInstance = config.lock;
+    await handler.handleAction(action, next, lockInstance);
   };
 
   /**
@@ -62,41 +120,17 @@ export const createStarter = () => {
    * @param next - Function to call the next middleware in the chain.
    * @returns Function - The actual middleware function that handles actions.
    */
-  const concurrent = ({ dispatch, getState, dependencies, lock, stack }: any) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
-    async function processAction(action: Action<any> | AsyncAction<any>) {
-      if (typeof action === 'function') {
-        // Process async actions asynchronously and track them
-        const asyncFunc = (async () => {
-          await action(async (syncAction: Action<any>) => {
-            syncAction = Object.assign({}, syncAction, {source: action});
-            const op = { operation: OperationType.ACTION, instance: syncAction, source: action };
-            stack.push(op);
-            try {
-              await dispatch(syncAction);
-            } finally {
-              stack.pop(op);
-            }
-          }, getState, dependencies());
+  const concurrent = (config: MiddlewareConfig) => (next: Function) => async (action: Action<any> | AsyncAction<any>) => {
+    let asyncActions: Promise<void>[] = [];
+    const handler = new ActionHandler(config);
+    const lockInstance = config.lock;
 
-          // Remove the function from the array when it's done
-          asyncActions = asyncActions.filter(func => func !== asyncFunc);
-        })();
-        // Add the function to the array
-        asyncActions.push(asyncFunc);
-      } else {
-        // Pass regular actions to the next middleware
-        await next(action);
-      }
-    }
-
-    await lock.acquire();
-    const op = typeof action === 'function' ? ({ operation: OperationType.ASYNC_ACTION, instance: action }) : ({ operation: OperationType.ACTION, instance: action, source: action.source });
-    stack.push(op);
-    try {
-      await processAction(action);
-    } finally {
-      stack.pop(op);
-      lock.release();
+    const asyncFunc = handler.handleAction(action, next, lockInstance);
+    if (asyncFunc) {
+      asyncActions.push(asyncFunc);
+      asyncFunc.finally(() => {
+        asyncActions = asyncActions.filter(func => func !== asyncFunc);
+      });
     }
   };
 

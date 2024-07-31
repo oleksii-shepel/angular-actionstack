@@ -1,7 +1,10 @@
-import { Injector, ModuleWithProviders, NgModule } from "@angular/core";
-import { Store, StoreSettings } from "./store";
-import { FeatureModule, MainModule } from "./types";
+import { InjectionToken, Injector, ModuleWithProviders, NgModule, Optional } from '@angular/core';
 
+import { Store, StoreSettings } from './store';
+import { FeatureModule, MainModule, StoreEnhancer } from './types';
+
+
+export const STORE_ENHANCER = new InjectionToken<StoreEnhancer>("Store Enhancer");
 
 /**
  * This module provides a centralized mechanism for managing application state
@@ -53,15 +56,17 @@ export class StoreModule {
         },
         {
           provide: Store,
-          useFactory: () => {
-            if (!StoreModule.store) {
-              StoreModule.store = Store.create(module) as Store;
-            }
+          useFactory: (settings: StoreSettings, enhancer: StoreEnhancer) => {
+              if (!StoreModule.store) {
+                StoreModule.store = enhancer
+                  ? (Store.create(module, enhancer))
+                  : Store.create(module);
+              }
 
             queueMicrotask(() => StoreModule.modulesFn.forEach(fn => fn()));
             return StoreModule.store;
           },
-          deps: [StoreSettings]
+          deps: [StoreSettings, [new Optional(), STORE_ENHANCER]]
         }
       ]
     };

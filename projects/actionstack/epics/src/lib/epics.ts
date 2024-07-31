@@ -1,4 +1,16 @@
-import { Action, action, ExecutionStack, isAction, OperationType } from '@actioncrew/actionstack';
+import {
+  Action,
+  action,
+  ExecutionStack,
+  isAction,
+  MainModule,
+  Observer,
+  OperationType,
+  Store,
+  STORE_ENHANCER,
+  StoreEnhancer,
+} from '@actioncrew/actionstack';
+import { NgModule } from '@angular/core';
 import { Observable } from 'rxjs/internal/Observable';
 import { Subject } from 'rxjs/internal/Subject';
 import { Subscription } from 'rxjs/internal/Subscription';
@@ -251,3 +263,70 @@ export const addEpics = action("ADD_EPICS", (...epics: Epic[]) => ({ epics }));
  * @returns {Action<any>} - The action object.
  */
 export const removeEpics = action("REMOVE_EPICS", (...epics: Epic[]) => ({ epics }));
+
+/**
+ * A store enhancer to extend the store with epics.
+ *
+ * @param {Function} createStore - The function to create the store.
+ * @returns {Function} - A function that accepts the main module and optional enhancer to create an epic store.
+ */
+export const storeEnhancer: StoreEnhancer = (createStore) => (module: MainModule, enhancer?: StoreEnhancer): EpicStore => {
+  const store = createStore(module, enhancer) as EpicStore;
+
+  /**
+   * Extends the store with the given epics.
+   *
+   * @template U
+   * @param {...Epic[]} args - The epics to be added to the store.
+   * @returns {Observable<U>} - An observable that completes when the epics are removed.
+   */
+  store.extend = <U>(...args: Epic[]): Observable<U> => {
+    const effects$ = new Observable<U>((subscriber: Observer<U>) => {
+      return () => {
+        store.dispatch(removeEpics(args));
+      }
+    });
+
+    store.dispatch(addEpics(args));
+    return effects$;
+  };
+
+  return store;
+}
+
+/**
+ * An abstract class for the epic store.
+ *
+ * @extends {Store}
+ */
+export abstract class EpicStore extends Store {
+  /**
+   * Abstract method to extend the store with epics.
+   *
+   * @template U
+   * @param {...Epic[]} args - The epics to be added to the store.
+   * @returns {Observable<U>} - An observable that completes when the epics are removed.
+   */
+  abstract extend<U>(...args: Epic[]): Observable<U>;
+}
+
+/**
+ * NgModule for providing the epic store and its enhancer.
+ *
+ * @ngModule
+ */
+@NgModule({
+  providers: [
+    {
+      provide: STORE_ENHANCER,
+      useValue: storeEnhancer,
+      multi: false
+    },
+    {
+      provide: EpicStore,
+      useFactory: (store: Store) => store,
+      deps: [Store]
+    }
+  ]
+})
+export class EpicModule { }

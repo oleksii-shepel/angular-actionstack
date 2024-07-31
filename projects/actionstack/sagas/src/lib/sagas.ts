@@ -1,6 +1,18 @@
-import { Action, action, Operation, OperationType } from '@actioncrew/actionstack';
+import {
+  Action,
+  action,
+  MainModule,
+  Observer,
+  Operation,
+  OperationType,
+  Store,
+  STORE_ENHANCER,
+  StoreEnhancer,
+} from '@actioncrew/actionstack';
+import { NgModule } from '@angular/core';
 import { runSaga, Saga, SagaMiddlewareOptions, stdChannel, Task } from 'redux-saga';
 import { call, cancelled } from 'redux-saga/effects';
+import { Observable } from 'rxjs/internal/Observable';
 
 export const createSagasMiddleware = ({
     context = {},
@@ -74,3 +86,70 @@ export const sagas = createSagasMiddleware({});
 
 export const addSagas = action('ADD_SAGAS', (...sagas: any[]) => ({sagas}));
 export const removeSagas = action('REMOVE_SAGAS', (...sagas: any[]) => ({sagas}));
+
+/**
+ * A store enhancer to extend the store with sagas.
+ *
+ * @param {Function} createStore - The function to create the store.
+ * @returns {Function} - A function that accepts the main module and optional enhancer to create an saga store.
+ */
+export const storeEnhancer: StoreEnhancer = (createStore) => (module: MainModule, enhancer?: StoreEnhancer): SagaStore => {
+  const store = createStore(module, enhancer) as SagaStore;
+
+  /**
+   * Extends the store with the given sagas.
+   *
+   * @template U
+   * @param {...Saga[]} args - The sagas to be added to the store.
+   * @returns {Observable<U>} - An observable that completes when the sagas are removed.
+   */
+  store.extend = <U>(...args: Saga[]): Observable<U> => {
+    const effects$ = new Observable<U>((subscriber: Observer<U>) => {
+      return () => {
+        store.dispatch(removeSagas(args));
+      }
+    });
+
+    store.dispatch(addSagas(args));
+    return effects$;
+  };
+
+  return store;
+}
+
+/**
+ * An abstract class for the epic store.
+ *
+ * @extends {Store}
+ */
+export abstract class SagaStore extends Store {
+  /**
+   * Abstract method to extend the store with sagas.
+   *
+   * @template U
+   * @param {...Saga[]} args - The sagas to be added to the store.
+   * @returns {Observable<U>} - An observable that completes when the sagas are removed.
+   */
+  abstract extend<U>(...args: Saga[]): Observable<U>;
+}
+
+/**
+ * NgModule for providing the saga store and its enhancer.
+ *
+ * @ngModule
+ */
+@NgModule({
+  providers: [
+    {
+      provide: STORE_ENHANCER,
+      useValue: storeEnhancer,
+      multi: false
+    },
+    {
+      provide: SagaStore,
+      useValue: Store,
+      deps: [Store]
+    }
+  ]
+})
+export class SagaModule { }

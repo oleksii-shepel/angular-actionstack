@@ -1,6 +1,8 @@
-import { Action, action, featureSelector, selector } from "@actioncrew/actionstack";
-import { firstValueFrom } from "rxjs";
-import { Hero } from "../hero";
+import { Action, action, featureSelector, selector } from '@actioncrew/actionstack';
+import { firstValueFrom } from 'rxjs';
+
+import { Hero } from '../hero';
+import { addMessage } from '../messages/messages.slice';
 
 export const slice = "hero-details";
 
@@ -13,6 +15,7 @@ export const loadHero = action((id: number) => async (dispatch: Function, getSta
   try {
     const heroService = dependencies.heroService;
     const hero = await firstValueFrom(heroService.getHero(id));
+    dispatch(addMessage(`HeroService: fetched hero id=${id}`));
     dispatch(loadHeroSuccess(hero));
   } catch (error) {
     dispatch(loadHeroFailure(error));

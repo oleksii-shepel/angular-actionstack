@@ -1,9 +1,10 @@
 import { Action, action, featureSelector, selector } from '@actioncrew/actionstack';
 import { ofType } from '@actioncrew/actionstack/epics';
-import { concatMap, map, take, withLatestFrom } from 'rxjs';
+import { concatMap, take, withLatestFrom } from 'rxjs';
 import { Observable } from 'rxjs/internal/Observable';
 
 import { Hero } from '../hero';
+import { addMessage } from '../messages/messages.slice';
 
 export const slice = "heroes";
 
@@ -14,8 +15,15 @@ export const loadHeroes = (action$: Observable<Action<any>>, state$: Observable<
   return action$.pipe(
     ofType(getHeroesRequest.type),
     withLatestFrom(state$!),
-    concatMap(([action, state]) => heroService.getHeroes().pipe(map(heroes => getHeroesSuccess(heroes))) as Observable<Action<any>>),
-    take(1)
+    concatMap(([action, state]) =>
+      heroService.getHeroes().pipe(
+        concatMap((heroes) => [
+          getHeroesSuccess(heroes),
+          addMessage('HeroService: fetched heroes')  // Dispatch addMessage action
+        ])
+      ) as Observable<Action<any>>
+    ),
+    take(2)
   );
 };
 
