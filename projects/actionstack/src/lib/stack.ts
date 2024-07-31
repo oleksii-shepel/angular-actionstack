@@ -5,15 +5,10 @@ import { Subscription } from 'rxjs/internal/Subscription';
 import { Action, AsyncAction } from './types';
 
 /**
- * Enum representing different types of operations.
- * @enum {string}
+ * Type representing different types of operations.
+ * @type {string}
  */
-export enum OperationType {
-  ACTION = "action",
-  ASYNC_ACTION = "async action",
-  EPIC = "epic",
-  SAGA = "saga"
-}
+export type OperationType = "action" | "async action" | "epic" | "saga";
 
 /**
  * Class representing an operation.
@@ -31,18 +26,18 @@ export class Operation {
   }
 
   static action(action: AsyncAction<any> | Action<any>): Operation {
-    const operationType = typeof action === 'function' ? OperationType.ASYNC_ACTION : OperationType.ACTION;
+    const operationType = typeof action === 'function' ? "async action" : "action";
     const instance = action as Function;
     const source = typeof action === 'function' ? undefined : (action as any).source;
     return new Operation(operationType, instance, source);
   }
 
   static saga(saga: Function): Operation {
-    return new Operation(OperationType.SAGA, saga);
+    return new Operation("saga", saga);
   }
 
   static epic(source: Function): Operation {
-    return new Operation(OperationType.EPIC, source);
+    return new Operation("epic", source);
   }
 }
 
