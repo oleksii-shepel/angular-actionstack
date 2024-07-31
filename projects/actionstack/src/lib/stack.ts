@@ -36,8 +36,8 @@ export class Operation {
     return new Operation("saga", saga);
   }
 
-  static epic(source: Function): Operation {
-    return new Operation("epic", source);
+  static epic: Function): Operation {
+    return new Operation("epic", epic);
   }
 }
 
