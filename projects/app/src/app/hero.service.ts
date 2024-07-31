@@ -1,10 +1,8 @@
-import { Injectable } from '@angular/core';
-
-import { Observable, from, tap } from 'rxjs';
-
 import { Store } from '@actioncrew/actionstack';
+import { Injectable } from '@angular/core';
+import { from, Observable } from 'rxjs';
+
 import { Hero } from './hero';
-import { addMessage } from './messages/messages.slice';
 import { HEROES } from './mock-heroes';
 
 @Injectable({ providedIn: 'root' })
@@ -18,9 +16,7 @@ export class HeroService {
       setTimeout(() => {
         resolve(HEROES);
       }, this.timeout);
-    })).pipe(
-      tap(() => this.store.dispatch(addMessage('HeroService: fetched heroes')))
-    );
+    }));
   }
 
   getHero(id: number): Observable<Hero> {
@@ -29,8 +25,6 @@ export class HeroService {
         const hero = HEROES.find(h => h.id === id)!;
         resolve(hero);
       }, this.timeout);
-    })).pipe(
-      tap(() => this.store.dispatch(addMessage(`HeroService: fetched hero id=${id}`)))
-    );
+    }));
   }
 }

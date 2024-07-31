@@ -1,7 +1,7 @@
-import { Store } from '@actioncrew/actionstack';
-import { addSagas, removeSagas } from '@actioncrew/actionstack/sagas';
+import { EpicStore } from '@actioncrew/actionstack/epics';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { takeEvery } from 'redux-saga/effects';
+import { Subscription } from 'rxjs/internal/Subscription';
 
 
 function* helloSaga() {
@@ -19,15 +19,13 @@ function* watchHelloSaga() {
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'Tour of Heroes';
-
-  constructor(private store: Store) {
+  subscription!: Subscription;
+  constructor(private store: EpicStore) {
   }
 
   ngOnInit() {
-    this.store.dispatch(addSagas(watchHelloSaga));
   }
 
   ngOnDestroy() {
-    this.store.dispatch(removeSagas(watchHelloSaga));
   }
 }

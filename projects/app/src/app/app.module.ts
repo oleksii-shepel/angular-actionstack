@@ -1,5 +1,5 @@
 import { Action, provideStore } from '@actioncrew/actionstack';
-import { epics } from '@actioncrew/actionstack/epics';
+import { EpicModule, epics } from '@actioncrew/actionstack/epics';
 import { perfmon } from '@actioncrew/actionstack/tools';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +14,7 @@ import { MessagesModule } from './messages/messages.module';
     BrowserModule,
     FormsModule,
     AppRoutingModule,
+    EpicModule,
     provideStore({
       middleware: [epics, perfmon],
       reducer: (state: any = {}, action: Action<any>) => state,
