@@ -5,7 +5,7 @@ import {
   isAction,
   MainModule,
   Observer,
-  OperationType,
+  Operation,
   Store,
   STORE_ENHANCER,
   StoreEnhancer,
@@ -52,7 +52,7 @@ function concat(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<
 
         if (index < sources.length) {
           const source = sources[index++];
-          let effect = { operation: OperationType.EPIC, instance: source };
+          let effect = Operation.epic(source);
           stack.push(effect);
           subscription = source(action$, state$, dependencies).subscribe({
             next: value => subscriber.next(Object.assign({}, value, { source: effect })),
@@ -104,7 +104,7 @@ function merge(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<A
       };
 
       sources.forEach(source => {
-        let effect = { operation: OperationType.EPIC, instance: source };
+        let effect = Operation.epic(source);
         stack.push(effect);
         const subscription = source(action$, state$, dependencies).subscribe({
           next: value => subscriber.next(Object.assign({}, value, { source: effect })),

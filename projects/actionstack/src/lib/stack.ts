@@ -2,6 +2,8 @@ import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 import { Observable } from 'rxjs/internal/Observable';
 import { Subscription } from 'rxjs/internal/Subscription';
 
+import { Action, AsyncAction } from './types';
+
 /**
  * Enum representing different types of operations.
  * @enum {string}
@@ -14,16 +16,34 @@ export enum OperationType {
 }
 
 /**
- * Interface representing an operation.
+ * Class representing an operation.
  * @interface
  */
-export interface Operation {
-  /** The type of operation. */
+export class Operation {
   operation: OperationType;
-  /** The instance associated with the operation. */
   instance: Function;
-  /** Optional source of the operation. */
   source?: Operation;
+
+  constructor(operation: OperationType, instance: Function, source?: Operation) {
+    this.operation = operation;
+    this.instance = instance;
+    this.source = source;
+  }
+
+  static action(action: AsyncAction<any> | Action<any>): Operation {
+    const operationType = typeof action === 'function' ? OperationType.ASYNC_ACTION : OperationType.ACTION;
+    const instance = action as Function;
+    const source = typeof action === 'function' ? undefined : (action as any).source;
+    return new Operation(operationType, instance, source);
+  }
+
+  static saga(saga: Function): Operation {
+    return new Operation(OperationType.SAGA, saga);
+  }
+
+  static epic(source: Function): Operation {
+    return new Operation(OperationType.EPIC, source);
+  }
 }
 
 /**

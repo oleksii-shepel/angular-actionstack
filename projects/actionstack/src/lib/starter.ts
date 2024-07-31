@@ -1,6 +1,6 @@
 import { ExecutionStack, Lock } from '@actioncrew/actionstack';
 
-import { OperationType } from './stack';
+import { Operation } from './stack';
 import { Action, AsyncAction } from './types';
 
 /**
@@ -61,11 +61,7 @@ export const createStarter = () => {
 
       await lockInstance.acquire();
 
-      const op = {
-        operation: typeof action === 'function' ? OperationType.ASYNC_ACTION : OperationType.ACTION,
-        instance: action as AsyncAction<any>,
-        source: typeof action === 'function' ? undefined : action.source
-      };
+      const op = Operation.action(action);
       this.stack.push(op);
 
       try {

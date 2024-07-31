@@ -4,7 +4,6 @@ import {
   MainModule,
   Observer,
   Operation,
-  OperationType,
   Store,
   STORE_ENHANCER,
   StoreEnhancer,
@@ -46,7 +45,7 @@ export const createSagasMiddleware = ({
               throw new Error('saga argument must be a Generator function!');
             }
 
-            const op = {operation: OperationType.SAGA, instance: saga};
+            const op = Operation.saga(saga);
             const task: Task = runSaga({ context, channel, dispatch: customDispatch(middlewareDispatch)(op), getState: middlewareGetState }, (function*(): Generator<any, void, any> {
               try {
                 stack.push(op); Object.assign(context, dependencies());
