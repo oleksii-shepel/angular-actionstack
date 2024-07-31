@@ -53,16 +53,16 @@ function concat(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<
         if (index < sources.length) {
           const source = sources[index++];
           let effect = Operation.epic(source);
-          stack.push(effect);
+          stack.add(effect);
           subscription = source(action$, state$, dependencies).subscribe({
             next: value => subscriber.next(Object.assign({}, value, { source: effect })),
             error: error => {
               subscriber.error(error);
-              stack.pop(effect);
+              stack.remove(effect);
             },
             complete: () => {
               subscription = null;
-              stack.pop(effect);
+              stack.remove(effect);
               next();
             }
           });
@@ -105,7 +105,7 @@ function merge(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<A
 
       sources.forEach(source => {
         let effect = Operation.epic(source);
-        stack.push(effect);
+        stack.add(effect);
         const subscription = source(action$, state$, dependencies).subscribe({
           next: value => subscriber.next(Object.assign({}, value, { source: effect })),
           error: error => {
@@ -115,10 +115,10 @@ function merge(stack: ExecutionStack, ...sources: Epic[]): (action: Observable<A
               subscriptions = [];
             }
             subscriber.error(error);
-            stack.pop(effect);
+            stack.remove(effect);
           },
           complete: () => {
-            stack.pop(effect);
+            stack.remove(effect);
             completeIfAllCompleted();
           }
         });

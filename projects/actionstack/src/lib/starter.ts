@@ -62,7 +62,7 @@ export const createStarter = () => {
       await lockInstance.acquire();
 
       const op = Operation.action(action);
-      this.stack.push(op);
+      this.stack.add(op);
 
       try {
         if (typeof action === 'function') {
@@ -83,7 +83,7 @@ export const createStarter = () => {
           await next(action);
         }
       } finally {
-        this.stack.pop(op);
+        this.stack.remove(op);
         lockInstance.release();
       }
     }

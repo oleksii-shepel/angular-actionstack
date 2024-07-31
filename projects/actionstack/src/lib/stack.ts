@@ -73,7 +73,7 @@ export class ExecutionStack {
    * Pushes an item onto the stack.
    * @param {Operation} item - The item to push onto the stack.
    */
-  push(item: Operation): void {
+  add(item: Operation): void {
     this.stack.next([...this.stack.value, item]);
   }
 
@@ -90,7 +90,7 @@ export class ExecutionStack {
    * @param {Operation} item - The item to pop from the stack.
    * @returns {Operation | undefined} The popped item, or undefined if the item is not found.
    */
-  pop(item: Operation): Operation | undefined {
+  remove(item: Operation): Operation | undefined {
     let index = this.stack.value.lastIndexOf(item);
     if(index > -1) {
       this.stack.next(this.stack.value.filter((_, i) => i !== index));
