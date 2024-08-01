@@ -6,7 +6,7 @@ import { Action, AsyncAction } from './types';
 
 /**
  * Type representing different types of operations.
- * @type {string}
+ * @typedef {("action" | "async action" | "epic" | "saga")} OperationType
  */
 export type OperationType = "action" | "async action" | "epic" | "saga";
 
