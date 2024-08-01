@@ -136,7 +136,7 @@ export class ExecutionStack {
    * @returns {Promise<Operation[]>} A promise that resolves with the stack when it becomes idle.
    */
   async waitForIdle(): Promise<Operation[]> {
-    return await waitFor(this.stack, value => !value.some(item => item.operation === OperationType.ACTION));
+    return await waitFor(this.stack, value => !value.some(item => item.operation === "action"));
   }
 }
 
